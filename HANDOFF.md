@@ -182,8 +182,8 @@ public/index.html + app.js + styles.css
 
 ### 高优先级
 
-1. **新联合匹配口径尚未重新回测。** 当前阈值、可靠性规则和挑战模型的历史配置主要基于旧的三市场统一/各市场独立流程，不能视为对最新“SPF+HHAD 联合”生产路径的验证。
-2. **调参/回测脚本与生产匹配池不完全一致。** 多个脚本仍以 `getVerifiedHistory()` 的三市场完整样本为主要输入，而生产现在使用独立市场池和 SPF+HHAD 配对池。应先统一离线评估与线上逻辑，再生成新配置。
+1. **联合口径的基础阈值已 dry-run，但尚未上线新配置。** 新 walk-forward 建议 SPF/HHAD 从 7% 放宽到 10%，调参与验证段的 Log Loss、Brier 均改善且命中率未下降，但 95% Bootstrap 命中率区间跨过 0，只属于“观察中”；生产仍保留 7% / 7% / 1.5pp。
+2. **高级调参/回测脚本仍未全部复用生产匹配池。** `scripts/tune_parameters.mjs` 已改为复用生产联合/回退匹配器及独立 Goals 池；adaptive、segment、weighting、movement、smoothing、goal-pair、challenger 和完整 rolling backtest 仍有旧的 `getVerifiedHistory()` 三市场输入，不能据此重新启用高级模型。
 
 ### 数据/账本问题
 
@@ -206,15 +206,18 @@ public/index.html + app.js + styles.css
 - 前端支持 `goals=null`，缺盘时展示“未开售”并禁用对应页签/走势按钮；
 - 联合预测的 SPF/HHAD 稳定性改用联合样本；单盘口和联合零样本回退继续使用各自独立历史池；
 - 新增真实 HTTP 集成测试，使用临时 SQLite 备份覆盖联合、联合零样本回退、只有 HAD、只有 HHAD、只有 Goals、缺 Goals；
-- Playwright 实测缺 Goals 页面，浏览器控制台 0 error、0 warning。
+- Playwright 实测缺 Goals 页面，浏览器控制台 0 error、0 warning；
+- 抽出共享的 `lib/three-way-matching.mjs`；生产 API 和基础阈值调参使用同一份联合、联合零样本回退及单盘口逻辑；
+- 配对历史补齐来源文件/行号，离线事件按同一来源文件的 `source_row` 递增，只允许目标行读取更早记录；
+- 基础阈值 dry-run 使用 SPF 8,921、HHAD 9,315、配对 8,921、Goals 8,531 条生产历史池；未覆盖正式 `data/model-config.json`。
 
-生产路径和现有测试已通过。但仍未完成“离线回测逻辑同步、重新调参、重新验证可靠性门禁”，这是下一会话应接着处理的主线。
+生产路径、基础阈值 dry-run 和现有测试已通过。但高级离线脚本仍未完成口径同步，观察中的 10% 阈值也尚未获准上线；这是下一会话应接着处理的主线。
 
 ## 9. 下一步最合理的工作顺序
 
-1. **让离线评估复用生产匹配器。** 抽出 `buildThreeWayPredictionResults` 或更底层的联合匹配服务，使调参、滚动回测和线上 API 调同一份逻辑。
-2. **补齐时间顺序规则。** 明确独立 SPF、HHAD、Goals 来源行以及配对池在 walk-forward 中的历史边界，避免离线评估看到目标行之后的数据。
-3. **用当前数据库重新回测和生成配置。** 先阈值，再动态/分段/0 球模型，之后再评估加权、走势、平滑、进球双选筛选和挑战模型；未通过门禁继续停用。
+1. **决定是否采用基础阈值观察结果。** dry-run 建议 SPF/HHAD 10%，但未通过严格显著性门禁；在明确接受“表现优先、观察中”策略前不要覆盖 `data/model-config.json`。
+2. **让其余离线评估复用生产匹配器。** 依次改造 adaptive、segment、weighting、movement、smoothing、rolling 和 challenger；每个脚本继续遵守同源文件、只看更早 `source_row` 的边界。
+3. **重新生成高级配置。** 只有对应脚本口径统一后才运行并评估门禁；未通过的模型继续停用。
 4. **清理账本语义。** 处理 `2040729` 旧快照和 `valid=0,status=pending`；先备份数据库并写迁移测试，不要直接删除。
 5. **增加队名诊断。** 输出待结算记录与历史赛果中最接近的队名候选，由用户确认后写入 `teamname.json`，仍不自动模糊合并。
 6. **补依赖说明并逐步拆分。** 增加 Python 依赖清单/最小运行说明；在行为测试固定后，将 `server.mjs` 拆成配置、预测、账本、API 模块。
@@ -240,7 +243,7 @@ PORT=8766 npm start
 npm test
 ```
 
-2026-08-07 实测：86 个 Node 测试 + 7 个 Python 测试全部通过。
+2026-08-07 实测：88 个 Node 测试 + 7 个 Python 测试全部通过。
 
 ### 更新数据库
 
@@ -307,6 +310,7 @@ npm run report:goal-multiples
 - 当前 branch：`main`。
 - 基线提交：`0a976c5 chore: establish project baseline`。
 - 市场独立预测修复：`6b5006c fix: predict available markets independently`。
+- 生产/基础阈值共享匹配器：`81b007a refactor: share production matching with threshold tuning`。
 - Git 作者只在本仓库配置为 `Codex <codex@local>`，未修改全局配置。
 - `.gitignore` 已排除数据库/WAL、备份、Excel/CSV、实时 JSON、Playwright 输出、处理后数据和大模型文件。
 
