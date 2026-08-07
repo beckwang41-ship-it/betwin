@@ -45,6 +45,10 @@ import {
   summarizeStability,
 } from "./lib/predictor.mjs";
 import { selectHistoricalPrior } from "./lib/smoothing.mjs";
+import {
+  THREE_WAY_MATCHING_VERSION,
+  selectThreeWaySimilarity,
+} from "./lib/three-way-matching.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, "public");
@@ -179,7 +183,8 @@ function loadModelConfig() {
     const stale =
       config.data?.verifiedMatches !== counts.verifiedHistory ||
       !config.data?.sourceUpdatedAt ||
-      config.data.sourceUpdatedAt !== sourceUpdatedAt;
+      config.data.sourceUpdatedAt !== sourceUpdatedAt ||
+      config.methodology?.matchingVersion !== THREE_WAY_MATCHING_VERSION;
     if (!stale) return { ...config, stale: false };
     return {
       ...config,
@@ -2110,45 +2115,43 @@ function buildThreeWayPredictionResults(
     challenger: challenger?.hhad,
     sameLeague,
   });
-
-  if (match.had && match.hhad && spfResult && hhadResult) {
-    const hadOdds = [match.had.h, match.had.d, match.had.a];
-    const hhadOdds = [match.hhad.h, match.hhad.d, match.hhad.a];
-    const handicap = hhadResult.handicap;
-    const joint = pairedHistory.filter(
-      (row) =>
-        row.hhad.handicap === handicap &&
-        spfDistance(row.spf.odds, hadOdds) <= spfResult.tolerance &&
-        spfDistance(row.hhad.odds, hhadOdds) <= hhadResult.tolerance,
+  const selection = selectThreeWaySimilarity(
+    match,
+    { spfHistory, hhadHistory, pairedHistory },
+    {
+      spfTolerance: spfResult?.tolerance ?? spfTolerance,
+      hhadTolerance: hhadResult?.tolerance ?? hhadTolerance,
+    },
+  );
+  if (selection.spf && spfResult) {
+    spfResult = buildSpfPrediction(match, spfHistory, {
+      tolerance: spfTolerance,
+      challenger: challenger?.spf,
+      sameLeague,
+      similarOverride: selection.spf.similar,
+    });
+    spfResult = attachMatchingMode(
+      spfResult,
+      selection.spf.mode,
+      "spf",
+      selection.spf.jointSamples,
     );
-    if (joint.length) {
-      spfResult = buildSpfPrediction(match, spfHistory, {
-        tolerance: spfTolerance,
-        challenger: challenger?.spf,
-        sameLeague,
-        similarOverride: joint.map((row) => row.spf),
-      });
-      hhadResult = buildHhadPrediction(match, hhadHistory, {
-        tolerance: hhadTolerance,
-        challenger: challenger?.hhad,
-        sameLeague,
-        similarOverride: joint.map((row) => row.hhad),
-      });
-      return {
-        spfResult: attachMatchingMode(spfResult, "joint", "spf", joint.length),
-        hhadResult: attachMatchingMode(hhadResult, "joint", "hhad", joint.length),
-      };
-    }
-    return {
-      spfResult: attachMatchingMode(spfResult, "standalone-fallback", "spf"),
-      hhadResult: attachMatchingMode(hhadResult, "standalone-fallback", "hhad"),
-    };
   }
-
-  return {
-    spfResult: attachMatchingMode(spfResult, "standalone", "spf"),
-    hhadResult: attachMatchingMode(hhadResult, "standalone", "hhad"),
-  };
+  if (selection.hhad && hhadResult) {
+    hhadResult = buildHhadPrediction(match, hhadHistory, {
+      tolerance: hhadTolerance,
+      challenger: challenger?.hhad,
+      sameLeague,
+      similarOverride: selection.hhad.similar,
+    });
+    hhadResult = attachMatchingMode(
+      hhadResult,
+      selection.hhad.mode,
+      "hhad",
+      selection.hhad.jointSamples,
+    );
+  }
+  return { spfResult, hhadResult };
 }
 
 function marketCandidate(match, market, prediction, handicap = null) {
