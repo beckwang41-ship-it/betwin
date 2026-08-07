@@ -1,0 +1,633 @@
+{
+  "version": 3,
+  "generatedAt": "2026-07-29T06:06:06.656181+00:00",
+  "data": {
+    "database": "betwin.db",
+    "verifiedMatches": 7866,
+    "modelRows": 7825,
+    "sourceUpdatedAt": "2026-07-29T06:05:00+00:00",
+    "includedSources": [
+      "lsspfpl.xlsx"
+    ],
+    "excludedSources": {
+      "initspfpl.xlsx": 41
+    }
+  },
+  "methodology": {
+    "ordering": "主历史来源按 source_row 从小到大，最后一行视为最新",
+    "split": "较早60%训练、中间20%选模型并做温度校准、最新20%只做最终测试",
+    "features": "三个玩法的初赔、终赔、去水概率、概率变化、返还率、让球数、进球期望、联赛独热编码，以及三个玩法在多档阈值下仅使用此前比赛计算的相似赛果占比、整数样本数、分布集中度和方向稳定性",
+    "historicalFeatures": "胜平负、让球胜平负和总进球分别匹配，不取三市场交集；让球玩法只使用相同让球数；没有相似样本时使用均匀占位并提供缺失标记，1场或10场均保留真实占比及整数样本数",
+    "missingOpeningOdds": "缺失初赔用同场终赔填充，并增加初赔缺失标记",
+    "baseline": "最新20%每场仅使用此前历史，按生产阈值计算原始相似赛果占比",
+    "calibration": "只在中间20%选择模型参数及温度，不查看最新20%结果",
+    "gate": "最新20%命中率至少提高1个百分点，Log Loss与Brier同时下降，且95%连续20场区块Bootstrap确认改善",
+    "marketsIndependent": "三个目标分别训练；多市场赔率只作为赛前特征，不作为相似样本交集"
+  },
+  "split": {
+    "train": 4695,
+    "calibration": 1565,
+    "test": 1565
+  },
+  "featureCount": 265,
+  "leagueCount": 54,
+  "searchSpace": [
+    {
+      "id": "rf-depth6-leaf20",
+      "max_depth": 6,
+      "min_samples_leaf": 20,
+      "max_features": 0.5
+    },
+    {
+      "id": "rf-depth8-leaf15",
+      "max_depth": 8,
+      "min_samples_leaf": 15,
+      "max_features": 0.5
+    },
+    {
+      "id": "rf-depth10-leaf10",
+      "max_depth": 10,
+      "min_samples_leaf": 10,
+      "max_features": "sqrt"
+    },
+    {
+      "id": "rf-depth12-leaf8",
+      "max_depth": 12,
+      "min_samples_leaf": 8,
+      "max_features": 0.5
+    },
+    {
+      "id": "rf-unlimited-leaf20",
+      "max_depth": null,
+      "min_samples_leaf": 20,
+      "max_features": 0.5
+    }
+  ],
+  "markets": {
+    "spf": {
+      "selectedCandidate": "rf-unlimited-leaf20",
+      "temperature": 1.0,
+      "calibration": {
+        "accuracy": 0.5099041533546326,
+        "logLoss": 0.9952149581466282,
+        "brier": 0.5931176935361184
+      },
+      "candidates": [
+        {
+          "id": "rf-depth6-leaf20",
+          "max_depth": 6,
+          "min_samples_leaf": 20,
+          "max_features": 0.5,
+          "temperature": 1.0,
+          "calibration": {
+            "accuracy": 0.5086261980830671,
+            "logLoss": 0.9955017337214829,
+            "brier": 0.5938245518790515
+          }
+        },
+        {
+          "id": "rf-depth8-leaf15",
+          "max_depth": 8,
+          "min_samples_leaf": 15,
+          "max_features": 0.5,
+          "temperature": 1.0,
+          "calibration": {
+            "accuracy": 0.5060702875399361,
+            "logLoss": 0.9974508840968648,
+            "brier": 0.595003000421053
+          }
+        },
+        {
+          "id": "rf-depth10-leaf10",
+          "max_depth": 10,
+          "min_samples_leaf": 10,
+          "max_features": "sqrt",
+          "temperature": 1.0,
+          "calibration": {
+            "accuracy": 0.5041533546325878,
+            "logLoss": 0.997620519377756,
+            "brier": 0.5949500618007668
+          }
+        },
+        {
+          "id": "rf-depth12-leaf8",
+          "max_depth": 12,
+          "min_samples_leaf": 8,
+          "max_features": 0.5,
+          "temperature": 0.9750000000000001,
+          "calibration": {
+            "accuracy": 0.5035143769968051,
+            "logLoss": 1.000882567182075,
+            "brier": 0.5976917723474737
+          }
+        },
+        {
+          "id": "rf-unlimited-leaf20",
+          "max_depth": null,
+          "min_samples_leaf": 20,
+          "max_features": 0.5,
+          "temperature": 1.0,
+          "calibration": {
+            "accuracy": 0.5099041533546326,
+            "logLoss": 0.9952149581466282,
+            "brier": 0.5931176935361184
+          }
+        }
+      ],
+      "test": {
+        "evaluated": 1562,
+        "coverage": 0.9980830670926517,
+        "baseline": {
+          "accuracy": 0.5042680324370465,
+          "logLoss": 1.0858517769624993,
+          "brier": 0.6015900237409004
+        },
+        "challenger": {
+          "accuracy": 0.5032010243277849,
+          "logLoss": 1.0067647775767259,
+          "brier": 0.6013114496755727
+        },
+        "delta": {
+          "accuracy": -0.0010670081092616357,
+          "logLoss": -0.07908699938577346,
+          "brier": -0.0002785740653277191
+        }
+      },
+      "significance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "metrics": {
+          "accuracy": {
+            "delta": -0.00106700810926163,
+            "lower": -0.014207212974818606,
+            "upper": 0.012273260776781902
+          },
+          "logLoss": {
+            "delta": -0.07908699938577352,
+            "lower": -0.15363964971077898,
+            "upper": -0.018810597289844834
+          },
+          "brier": {
+            "delta": -0.0002785740653277234,
+            "lower": -0.006193222910203051,
+            "upper": 0.005630027836171306
+          }
+        }
+      },
+      "gate": {
+        "passed": false,
+        "meanPassed": false,
+        "significancePassed": false,
+        "minimumAccuracyLift": 0.01,
+        "reason": "最新20%没有同时满足命中率至少提高1个百分点、Log Loss下降和Brier下降，继续保留历史相似模型"
+      },
+      "production": {
+        "enabled": false,
+        "policy": "historical-similarity"
+      }
+    },
+    "hhad": {
+      "selectedCandidate": "rf-depth8-leaf15",
+      "temperature": 1.1,
+      "calibration": {
+        "accuracy": 0.5143769968051118,
+        "logLoss": 1.0177139865830673,
+        "brier": 0.6086344067169395
+      },
+      "candidates": [
+        {
+          "id": "rf-depth6-leaf20",
+          "max_depth": 6,
+          "min_samples_leaf": 20,
+          "max_features": 0.5,
+          "temperature": 1.1,
+          "calibration": {
+            "accuracy": 0.513738019169329,
+            "logLoss": 1.0188258309028189,
+            "brier": 0.6099941637082517
+          }
+        },
+        {
+          "id": "rf-depth8-leaf15",
+          "max_depth": 8,
+          "min_samples_leaf": 15,
+          "max_features": 0.5,
+          "temperature": 1.1,
+          "calibration": {
+            "accuracy": 0.5143769968051118,
+            "logLoss": 1.0177139865830673,
+            "brier": 0.6086344067169395
+          }
+        },
+        {
+          "id": "rf-depth10-leaf10",
+          "max_depth": 10,
+          "min_samples_leaf": 10,
+          "max_features": "sqrt",
+          "temperature": 1.1,
+          "calibration": {
+            "accuracy": 0.5194888178913738,
+            "logLoss": 1.0196988632395374,
+            "brier": 0.6105320779836302
+          }
+        },
+        {
+          "id": "rf-depth12-leaf8",
+          "max_depth": 12,
+          "min_samples_leaf": 8,
+          "max_features": 0.5,
+          "temperature": 1.125,
+          "calibration": {
+            "accuracy": 0.5118210862619809,
+            "logLoss": 1.0261290750274112,
+            "brier": 0.6139659376539135
+          }
+        },
+        {
+          "id": "rf-unlimited-leaf20",
+          "max_depth": null,
+          "min_samples_leaf": 20,
+          "max_features": 0.5,
+          "temperature": 1.125,
+          "calibration": {
+            "accuracy": 0.5130990415335464,
+            "logLoss": 1.0200723999431929,
+            "brier": 0.6104697218230043
+          }
+        }
+      ],
+      "test": {
+        "evaluated": 1560,
+        "coverage": 0.9968051118210862,
+        "baseline": {
+          "accuracy": 0.517948717948718,
+          "logLoss": 1.06004203624875,
+          "brier": 0.607108294202519
+        },
+        "challenger": {
+          "accuracy": 0.5153846153846153,
+          "logLoss": 1.0093386701310563,
+          "brier": 0.6046919249564948
+        },
+        "delta": {
+          "accuracy": -0.002564102564102666,
+          "logLoss": -0.05070336611769366,
+          "brier": -0.002416369246024175
+        }
+      },
+      "significance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "metrics": {
+          "accuracy": {
+            "delta": -0.002564102564102564,
+            "lower": -0.013782051282051282,
+            "upper": 0.007692307692307693
+          },
+          "logLoss": {
+            "delta": -0.05070336611769364,
+            "lower": -0.11456451435414501,
+            "upper": 0.00014663180072523805
+          },
+          "brier": {
+            "delta": -0.0024163692460242568,
+            "lower": -0.008099838397134624,
+            "upper": 0.0036823651846017895
+          }
+        }
+      },
+      "gate": {
+        "passed": false,
+        "meanPassed": false,
+        "significancePassed": false,
+        "minimumAccuracyLift": 0.01,
+        "reason": "最新20%没有同时满足命中率至少提高1个百分点、Log Loss下降和Brier下降，继续保留历史相似模型"
+      },
+      "production": {
+        "enabled": false,
+        "policy": "historical-similarity"
+      }
+    },
+    "goals": {
+      "selectedCandidate": "rf-depth10-leaf10",
+      "temperature": 1.0750000000000002,
+      "calibration": {
+        "accuracy": 0.2281150159744409,
+        "logLoss": 1.8176712831839648,
+        "brier": 0.8209145707395114
+      },
+      "candidates": [
+        {
+          "id": "rf-depth6-leaf20",
+          "max_depth": 6,
+          "min_samples_leaf": 20,
+          "max_features": 0.5,
+          "temperature": 1.05,
+          "calibration": {
+            "accuracy": 0.23003194888178913,
+            "logLoss": 1.8176802598920985,
+            "brier": 0.8205897109945914
+          }
+        },
+        {
+          "id": "rf-depth8-leaf15",
+          "max_depth": 8,
+          "min_samples_leaf": 15,
+          "max_features": 0.5,
+          "temperature": 1.05,
+          "calibration": {
+            "accuracy": 0.23386581469648562,
+            "logLoss": 1.8182933505905756,
+            "brier": 0.8206472238684548
+          }
+        },
+        {
+          "id": "rf-depth10-leaf10",
+          "max_depth": 10,
+          "min_samples_leaf": 10,
+          "max_features": "sqrt",
+          "temperature": 1.0750000000000002,
+          "calibration": {
+            "accuracy": 0.2281150159744409,
+            "logLoss": 1.8176712831839648,
+            "brier": 0.8209145707395114
+          }
+        },
+        {
+          "id": "rf-depth12-leaf8",
+          "max_depth": 12,
+          "min_samples_leaf": 8,
+          "max_features": 0.5,
+          "temperature": 1.125,
+          "calibration": {
+            "accuracy": 0.23833865814696487,
+            "logLoss": 1.828829736762265,
+            "brier": 0.8240996975705893
+          }
+        },
+        {
+          "id": "rf-unlimited-leaf20",
+          "max_depth": null,
+          "min_samples_leaf": 20,
+          "max_features": 0.5,
+          "temperature": 1.1,
+          "calibration": {
+            "accuracy": 0.23258785942492013,
+            "logLoss": 1.8199734098014784,
+            "brier": 0.821470925392202
+          }
+        }
+      ],
+      "test": {
+        "evaluated": 1563,
+        "coverage": 0.9987220447284345,
+        "baseline": {
+          "accuracy": 0.254638515674984,
+          "logLoss": 1.7997684247989514,
+          "brier": 0.8139575001274493
+        },
+        "challenger": {
+          "accuracy": 0.24056301983365322,
+          "logLoss": 1.806228914824283,
+          "brier": 0.8169907933841735
+        },
+        "delta": {
+          "accuracy": -0.014075495841330804,
+          "logLoss": 0.006460490025331556,
+          "brier": 0.00303329325672419
+        }
+      },
+      "significance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "metrics": {
+          "accuracy": {
+            "delta": -0.014075495841330775,
+            "lower": -0.03840371081253998,
+            "upper": 0.008637236084452975
+          },
+          "logLoss": {
+            "delta": 0.006460490025331321,
+            "lower": -0.0014368195756355193,
+            "upper": 0.013931595064207845
+          },
+          "brier": {
+            "delta": 0.0030332932567242927,
+            "lower": 0.0006819262813139574,
+            "upper": 0.005418770351799661
+          }
+        }
+      },
+      "gate": {
+        "passed": false,
+        "meanPassed": false,
+        "significancePassed": false,
+        "minimumAccuracyLift": 0.01,
+        "reason": "最新20%没有同时满足命中率至少提高1个百分点、Log Loss下降和Brier下降，继续保留历史相似模型"
+      },
+      "production": {
+        "enabled": false,
+        "policy": "historical-similarity"
+      }
+    }
+  },
+  "selection": {
+    "methodology": "较早60%只用于选择筛选规则，中间20%验证规则能否复现，最新20%只做最终门禁；只使用赛前可见的相似样本数、最高历史占比、领先差和多阈值方向一致性",
+    "labels": {
+      "recommended": "建议预测",
+      "cautious": "谨慎参考",
+      "skip": "建议跳过"
+    },
+    "markets": {
+      "spf": {
+        "enabled": true,
+        "rule": {
+          "threshold": 0.07,
+          "minSamples": 1,
+          "minTopProbability": 0.6000000238,
+          "minMargin": 0.3369565308,
+          "requireStable": true,
+          "minConsensus": 0.0
+        },
+        "train": {
+          "available": 4601,
+          "selected": 751,
+          "coverage": 0.16322538578569876,
+          "baselineAccuracy": 0.4888792291530826,
+          "selectedAccuracy": 0.6631158455392809,
+          "accuracyLift": 0.17423661638619836
+        },
+        "calibration": {
+          "available": 1560,
+          "selected": 294,
+          "coverage": 0.18846153846153846,
+          "baselineAccuracy": 0.5101495726495726,
+          "selectedAccuracy": 0.6904761904761905,
+          "accuracyLift": 0.18032661782661785
+        },
+        "calibrationSignificance": {
+          "iterations": 1000,
+          "blockSize": 20,
+          "confidence": 0.95,
+          "accuracyLift": {
+            "lower": 0.13380708086590903,
+            "upper": 0.22751986746621788
+          }
+        },
+        "test": {
+          "available": 1562,
+          "selected": 339,
+          "coverage": 0.21702944942381563,
+          "baselineAccuracy": 0.5042680324370465,
+          "selectedAccuracy": 0.696165191740413,
+          "accuracyLift": 0.19189715930336648
+        },
+        "testSignificance": {
+          "iterations": 1000,
+          "blockSize": 20,
+          "confidence": 0.95,
+          "accuracyLift": {
+            "lower": 0.14792458231808295,
+            "upper": 0.23377159156272254
+          }
+        },
+        "gate": {
+          "passed": true,
+          "calibrationPassed": true,
+          "testPassed": true,
+          "minimumTrainLift": 0.03,
+          "minimumCalibrationLift": 0.03,
+          "minimumTestLift": 0.02,
+          "reason": "训练段选出的规则在中间20%和最新20%均提高命中率，且连续区块Bootstrap的95%下界不低于0"
+        }
+      },
+      "hhad": {
+        "enabled": true,
+        "rule": {
+          "threshold": 0.07,
+          "minSamples": 24,
+          "minTopProbability": 0.3333333433,
+          "minMargin": 0.380952388,
+          "requireStable": false,
+          "minConsensus": 1.0
+        },
+        "train": {
+          "available": 4598,
+          "selected": 643,
+          "coverage": 0.1398434101783384,
+          "baselineAccuracy": 0.5044947078439902,
+          "selectedAccuracy": 0.6174183514774495,
+          "accuracyLift": 0.1129236436334593
+        },
+        "calibration": {
+          "available": 1560,
+          "selected": 268,
+          "coverage": 0.1717948717948718,
+          "baselineAccuracy": 0.507051282051282,
+          "selectedAccuracy": 0.6007462686567164,
+          "accuracyLift": 0.0936949866054344
+        },
+        "calibrationSignificance": {
+          "iterations": 1000,
+          "blockSize": 20,
+          "confidence": 0.95,
+          "accuracyLift": {
+            "lower": 0.048180108439396414,
+            "upper": 0.14180508153344049
+          }
+        },
+        "test": {
+          "available": 1560,
+          "selected": 270,
+          "coverage": 0.17307692307692307,
+          "baselineAccuracy": 0.517948717948718,
+          "selectedAccuracy": 0.6481481481481481,
+          "accuracyLift": 0.13019943019943014
+        },
+        "testSignificance": {
+          "iterations": 1000,
+          "blockSize": 20,
+          "confidence": 0.95,
+          "accuracyLift": {
+            "lower": 0.08477692279876374,
+            "upper": 0.17720068440821155
+          }
+        },
+        "gate": {
+          "passed": true,
+          "calibrationPassed": true,
+          "testPassed": true,
+          "minimumTrainLift": 0.03,
+          "minimumCalibrationLift": 0.03,
+          "minimumTestLift": 0.02,
+          "reason": "训练段选出的规则在中间20%和最新20%均提高命中率，且连续区块Bootstrap的95%下界不低于0"
+        }
+      },
+      "goals": {
+        "enabled": false,
+        "rule": {
+          "threshold": 0.015,
+          "minSamples": 140,
+          "minTopProbability": 0.257469058,
+          "minMargin": 0.0393665023,
+          "requireStable": false,
+          "minConsensus": 1.0
+        },
+        "train": {
+          "available": 4685,
+          "selected": 681,
+          "coverage": 0.14535752401280683,
+          "baselineAccuracy": 0.23980789754535753,
+          "selectedAccuracy": 0.27165932452276065,
+          "accuracyLift": 0.03185142697740312
+        },
+        "calibration": {
+          "available": 1565,
+          "selected": 80,
+          "coverage": 0.051118210862619806,
+          "baselineAccuracy": 0.2498402555910543,
+          "selectedAccuracy": 0.1875,
+          "accuracyLift": -0.0623402555910543
+        },
+        "calibrationSignificance": {
+          "iterations": 1000,
+          "blockSize": 20,
+          "confidence": 0.95,
+          "accuracyLift": {
+            "lower": -0.13644864645139207,
+            "upper": 0.020716158431186918
+          }
+        },
+        "test": {
+          "available": 1563,
+          "selected": 95,
+          "coverage": 0.060780550223928344,
+          "baselineAccuracy": 0.254638515674984,
+          "selectedAccuracy": 0.2736842105263158,
+          "accuracyLift": 0.019045694851331785
+        },
+        "testSignificance": {
+          "iterations": 1000,
+          "blockSize": 20,
+          "confidence": 0.95,
+          "accuracyLift": {
+            "lower": -0.07376613477004512,
+            "upper": 0.11547838619365357
+          }
+        },
+        "gate": {
+          "passed": false,
+          "calibrationPassed": false,
+          "testPassed": false,
+          "minimumTrainLift": 0.03,
+          "minimumCalibrationLift": 0.03,
+          "minimumTestLift": 0.02,
+          "reason": "训练段筛选规则未能在中间20%稳定复现，本玩法不标记“建议预测”"
+        }
+      }
+    }
+  }
+}

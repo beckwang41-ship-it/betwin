@@ -1,0 +1,1304 @@
+{
+  "version": 2,
+  "generatedAt": "2026-07-27T10:00:08.868Z",
+  "data": {
+    "database": "betwin.db",
+    "verifiedMatches": 7835,
+    "sourceUpdatedAt": "2026-07-27T05:31:22+00:00"
+  },
+  "methodology": {
+    "ordering": "每个来源文件按 source_row 递增，每场只使用此前记录",
+    "warmup": 500,
+    "tuningFraction": 0.8,
+    "validationFraction": 0.2,
+    "selection": "仅在较早80%选择最低权重与衰减幂次，最新20%不参与选择",
+    "gate": "最新验证段 Log Loss、Brier 必须同时优于等权统计且命中率不得下降，并通过95%连续区块Bootstrap",
+    "significance": "最新20%按连续20场为区块重采样1,000次；Log Loss和Brier区间上界须小于0，命中率区间下界须不小于0",
+    "fallback": "门禁未通过则生产环境自动使用等权历史占比",
+    "marketsIndependent": true
+  },
+  "searchSpace": {
+    "floors": [
+      0.1,
+      0.2,
+      0.35,
+      0.5,
+      0.65,
+      0.8
+    ],
+    "powers": [
+      1,
+      2,
+      3
+    ],
+    "thresholds": {
+      "spf": 0.07,
+      "hhad": 0.07,
+      "goals": 0.015
+    }
+  },
+  "markets": {
+    "spf": {
+      "threshold": 0.07,
+      "selected": {
+        "id": "floor-0.5-power-3",
+        "uniform": false,
+        "enabled": true,
+        "floor": 0.5,
+        "power": 3,
+        "tuning": {
+          "evaluated": 5715,
+          "accuracy": 0.49711286089238843,
+          "logLoss": 1.3801246978691026,
+          "brier": 0.6153315329925773
+        },
+        "validation": {
+          "evaluated": 1556,
+          "accuracy": 0.5070694087403599,
+          "logLoss": 1.086870780894361,
+          "brier": 0.6015792995189757
+        },
+        "significance": {
+          "passed": false,
+          "status": "not-run",
+          "reason": "基础指标门禁未通过，未运行显著性检验",
+          "iterations": 0,
+          "blockSize": 20,
+          "confidence": 0.95,
+          "evaluated": 0,
+          "metrics": null
+        }
+      },
+      "baseline": {
+        "id": "uniform",
+        "uniform": true,
+        "enabled": false,
+        "floor": 1,
+        "power": 1,
+        "tuning": {
+          "evaluated": 5715,
+          "accuracy": 0.4967629046369204,
+          "logLoss": 1.3805659928110607,
+          "brier": 0.6157436832496533
+        },
+        "validation": {
+          "evaluated": 1556,
+          "accuracy": 0.5057840616966581,
+          "logLoss": 1.0853846039752018,
+          "brier": 0.6008238150016392
+        }
+      },
+      "candidates": [
+        {
+          "id": "floor-0.1-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.1,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.4990376202974628,
+            "logLoss": 1.3892590484935252,
+            "brier": 0.6198690319664006
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5134961439588689,
+            "logLoss": 1.0945215341251031,
+            "brier": 0.6055132351422435
+          }
+        },
+        {
+          "id": "floor-0.1-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.1,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.494838145231846,
+            "logLoss": 1.3919063740834405,
+            "brier": 0.621250517112444
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5154241645244216,
+            "logLoss": 1.0990938087595912,
+            "brier": 0.6080886756670975
+          }
+        },
+        {
+          "id": "floor-0.1-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.1,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.4927384076990376,
+            "logLoss": 1.3909429084836542,
+            "brier": 0.6209607298638965
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5141388174807198,
+            "logLoss": 1.0995500684956854,
+            "brier": 0.6084452562658236
+          }
+        },
+        {
+          "id": "floor-0.2-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.2,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.49816272965879266,
+            "logLoss": 1.3850486840450613,
+            "brier": 0.6179079848817814
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5109254498714653,
+            "logLoss": 1.091364053068398,
+            "brier": 0.6039297636182347
+          }
+        },
+        {
+          "id": "floor-0.2-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.2,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.49763779527559054,
+            "logLoss": 1.3845717685913348,
+            "brier": 0.6175798028581055
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.512853470437018,
+            "logLoss": 1.092736582650347,
+            "brier": 0.6047447185473541
+          }
+        },
+        {
+          "id": "floor-0.2-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.2,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.4967629046369204,
+            "logLoss": 1.3831754167517472,
+            "brier": 0.6168250128678142
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5147814910025706,
+            "logLoss": 1.09203613497436,
+            "brier": 0.6043667300129507
+          }
+        },
+        {
+          "id": "floor-0.35-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.35,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.4978127734033246,
+            "logLoss": 1.382272525659196,
+            "brier": 0.6165375910237767
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5083547557840618,
+            "logLoss": 1.0887904003740678,
+            "brier": 0.6025948463977426
+          }
+        },
+        {
+          "id": "floor-0.35-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.35,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.49711286089238843,
+            "logLoss": 1.3813400394255628,
+            "brier": 0.6159421868547502
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5077120822622108,
+            "logLoss": 1.08895074217093,
+            "brier": 0.6027062031348028
+          }
+        },
+        {
+          "id": "floor-0.35-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.35,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.4967629046369204,
+            "logLoss": 1.380582961236839,
+            "brier": 0.6154975844840536
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5089974293059126,
+            "logLoss": 1.0883241249999438,
+            "brier": 0.6023513593781563
+          }
+        },
+        {
+          "id": "floor-0.5-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.5,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.4974628171478565,
+            "logLoss": 1.3811323568456844,
+            "brier": 0.6159706883099615
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5077120822622108,
+            "logLoss": 1.0873603815321224,
+            "brier": 0.6018454453206395
+          }
+        },
+        {
+          "id": "floor-0.5-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.5,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.49711286089238843,
+            "logLoss": 1.3804788355354813,
+            "brier": 0.6155474586267897
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5077120822622108,
+            "logLoss": 1.0872766886649783,
+            "brier": 0.6018090291095257
+          }
+        },
+        {
+          "id": "floor-0.5-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.5,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.49711286089238843,
+            "logLoss": 1.3801246978691026,
+            "brier": 0.6153315329925773
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5070694087403599,
+            "logLoss": 1.086870780894361,
+            "brier": 0.6015792995189757
+          },
+          "significance": {
+            "passed": false,
+            "status": "not-run",
+            "reason": "基础指标门禁未通过，未运行显著性检验",
+            "iterations": 0,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "evaluated": 0,
+            "metrics": null
+          }
+        },
+        {
+          "id": "floor-0.65-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.65,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.49728783902012247,
+            "logLoss": 1.3806694960144508,
+            "brier": 0.6157510679774254
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5044987146529563,
+            "logLoss": 1.086478167795614,
+            "brier": 0.6013847461283263
+          }
+        },
+        {
+          "id": "floor-0.65-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.65,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.49728783902012247,
+            "logLoss": 1.380302022809271,
+            "brier": 0.6155085259441617
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5044987146529563,
+            "logLoss": 1.086376068002589,
+            "brier": 0.6013333507026364
+          }
+        },
+        {
+          "id": "floor-0.65-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.65,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.4967629046369204,
+            "logLoss": 1.3801533513553699,
+            "brier": 0.6154145642009171
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5044987146529563,
+            "logLoss": 1.0861408868052007,
+            "brier": 0.6012011662519096
+          }
+        },
+        {
+          "id": "floor-0.8-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.8,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.4967629046369204,
+            "logLoss": 1.3805249311187995,
+            "brier": 0.6156963935265748
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5051413881748072,
+            "logLoss": 1.0858956170982257,
+            "brier": 0.6010836077060115
+          }
+        },
+        {
+          "id": "floor-0.8-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.8,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.49711286089238843,
+            "logLoss": 1.3803625593571565,
+            "brier": 0.615586705772146
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5044987146529563,
+            "logLoss": 1.0858317960993642,
+            "brier": 0.6010509125601512
+          }
+        },
+        {
+          "id": "floor-0.8-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.8,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5715,
+            "accuracy": 0.49728783902012247,
+            "logLoss": 1.380313165659855,
+            "brier": 0.615553893612771
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.5044987146529563,
+            "logLoss": 1.0857191376445716,
+            "brier": 0.6009881032898787
+          }
+        }
+      ],
+      "production": {
+        "enabled": false,
+        "floor": 1,
+        "power": 1,
+        "coreRatio": 0.5
+      },
+      "gate": {
+        "passed": false,
+        "tuningPassed": true,
+        "validationPassed": false,
+        "significancePassed": false,
+        "reason": "较早段选出的权重未通过最新20%独立验证，生产环境回退等权统计"
+      },
+      "sources": [
+        {
+          "sourceFile": "initspfpl.xlsx",
+          "rows": 41,
+          "warmup": 41,
+          "tuningCases": 0,
+          "validationCases": 0
+        },
+        {
+          "sourceFile": "lsspfpl.xlsx",
+          "rows": 7794,
+          "warmup": 500,
+          "tuningCases": 5715,
+          "validationCases": 1556
+        }
+      ]
+    },
+    "hhad": {
+      "threshold": 0.07,
+      "selected": {
+        "id": "uniform",
+        "uniform": true,
+        "enabled": false,
+        "floor": 1,
+        "power": 1,
+        "tuning": {
+          "evaluated": 5707,
+          "accuracy": 0.5077974417382162,
+          "logLoss": 1.2352021803501727,
+          "brier": 0.6183494572448834
+        },
+        "validation": {
+          "evaluated": 1554,
+          "accuracy": 0.5205920205920206,
+          "logLoss": 1.0584206306009445,
+          "brier": 0.6060768307501448
+        }
+      },
+      "baseline": {
+        "id": "uniform",
+        "uniform": true,
+        "enabled": false,
+        "floor": 1,
+        "power": 1,
+        "tuning": {
+          "evaluated": 5707,
+          "accuracy": 0.5077974417382162,
+          "logLoss": 1.2352021803501727,
+          "brier": 0.6183494572448834
+        },
+        "validation": {
+          "evaluated": 1554,
+          "accuracy": 0.5205920205920206,
+          "logLoss": 1.0584206306009445,
+          "brier": 0.6060768307501448
+        }
+      },
+      "candidates": [
+        {
+          "id": "floor-0.1-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.1,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5035920799018749,
+            "logLoss": 1.2438986875869098,
+            "brier": 0.6228824110429599
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5263835263835264,
+            "logLoss": 1.0610316322739026,
+            "brier": 0.6071864975292331
+          }
+        },
+        {
+          "id": "floor-0.1-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.1,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5035920799018749,
+            "logLoss": 1.2501055289639975,
+            "brier": 0.6261868852117782
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5263835263835264,
+            "logLoss": 1.0625592617698567,
+            "brier": 0.6080003337405596
+          }
+        },
+        {
+          "id": "floor-0.1-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.1,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.4999123882950762,
+            "logLoss": 1.251283367008724,
+            "brier": 0.6270496659380104
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.525096525096525,
+            "logLoss": 1.0626287231035423,
+            "brier": 0.6082267721374688
+          }
+        },
+        {
+          "id": "floor-0.2-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.2,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5046434203609602,
+            "logLoss": 1.2401808583431777,
+            "brier": 0.6210184621689643
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5231660231660231,
+            "logLoss": 1.0594556212646937,
+            "brier": 0.6064691805175682
+          }
+        },
+        {
+          "id": "floor-0.2-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.2,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5053443140003504,
+            "logLoss": 1.2420973005514166,
+            "brier": 0.6220926789398783
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5231660231660231,
+            "logLoss": 1.0596770892440657,
+            "brier": 0.6066510976347682
+          }
+        },
+        {
+          "id": "floor-0.2-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.2,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5065708778692833,
+            "logLoss": 1.2417663026693402,
+            "brier": 0.6219838218385226
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5238095238095238,
+            "logLoss": 1.0594143316485394,
+            "brier": 0.6066080267412108
+          }
+        },
+        {
+          "id": "floor-0.35-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.35,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.507096548098826,
+            "logLoss": 1.2375037421803827,
+            "brier": 0.6196144966582531
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5218790218790219,
+            "logLoss": 1.0585483100883764,
+            "brier": 0.6060495289303303
+          }
+        },
+        {
+          "id": "floor-0.35-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.35,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5079726651480638,
+            "logLoss": 1.237934394112371,
+            "brier": 0.6198613915145766
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5238095238095238,
+            "logLoss": 1.0585031250111236,
+            "brier": 0.6060855214546274
+          }
+        },
+        {
+          "id": "floor-0.35-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.35,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5091992290169967,
+            "logLoss": 1.2376452655001304,
+            "brier": 0.619709260987758
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5231660231660231,
+            "logLoss": 1.0583938882906747,
+            "brier": 0.6060750095652234
+          }
+        },
+        {
+          "id": "floor-0.5-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.5,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5091992290169967,
+            "logLoss": 1.236262669494118,
+            "brier": 0.6189451873216538
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5212355212355212,
+            "logLoss": 1.0582685234862979,
+            "brier": 0.6059334198835078
+          }
+        },
+        {
+          "id": "floor-0.5-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.5,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5083231119677589,
+            "logLoss": 1.236395306581952,
+            "brier": 0.6190171486575501
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5218790218790219,
+            "logLoss": 1.0582474350749205,
+            "brier": 0.6059672229364326
+          }
+        },
+        {
+          "id": "floor-0.5-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.5,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.508673558787454,
+            "logLoss": 1.2362671298316121,
+            "brier": 0.6189401252584541
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5205920205920206,
+            "logLoss": 1.0582321467987774,
+            "brier": 0.6059860361584882
+          }
+        },
+        {
+          "id": "floor-0.65-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.65,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5091992290169967,
+            "logLoss": 1.2356515920970077,
+            "brier": 0.6186087291961226
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5205920205920206,
+            "logLoss": 1.0582262589181335,
+            "brier": 0.6059344187827488
+          }
+        },
+        {
+          "id": "floor-0.65-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.65,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5090240056071491,
+            "logLoss": 1.2357165895751083,
+            "brier": 0.6186401363618239
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.51994851994852,
+            "logLoss": 1.0582373165480299,
+            "brier": 0.6059701658999865
+          }
+        },
+        {
+          "id": "floor-0.65-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.65,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5093744524268442,
+            "logLoss": 1.2356760209028999,
+            "brier": 0.6186103535130523
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.5193050193050193,
+            "logLoss": 1.0582543056116094,
+            "brier": 0.6059943368039659
+          }
+        },
+        {
+          "id": "floor-0.8-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.8,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5095496758366918,
+            "logLoss": 1.2353533628281512,
+            "brier": 0.618440269716788
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.51994851994852,
+            "logLoss": 1.0582835543793452,
+            "brier": 0.6059836655533934
+          }
+        },
+        {
+          "id": "floor-0.8-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.8,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5093744524268442,
+            "logLoss": 1.2353919388088639,
+            "brier": 0.618457794778922
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.51994851994852,
+            "logLoss": 1.0583029661174725,
+            "brier": 0.6060100247474705
+          }
+        },
+        {
+          "id": "floor-0.8-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.8,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5707,
+            "accuracy": 0.5097248992465393,
+            "logLoss": 1.235387177751858,
+            "brier": 0.6184502883742624
+          },
+          "validation": {
+            "evaluated": 1554,
+            "accuracy": 0.51994851994852,
+            "logLoss": 1.0583214993409573,
+            "brier": 0.6060271491814931
+          }
+        }
+      ],
+      "production": {
+        "enabled": false,
+        "floor": 1,
+        "power": 1,
+        "coreRatio": 0.5
+      },
+      "gate": {
+        "passed": false,
+        "tuningPassed": false,
+        "validationPassed": false,
+        "significancePassed": false,
+        "reason": "较早调参段没有权重方案同时改善 Log Loss、Brier 且保持命中率"
+      },
+      "sources": [
+        {
+          "sourceFile": "initspfpl.xlsx",
+          "rows": 41,
+          "warmup": 41,
+          "tuningCases": 0,
+          "validationCases": 0
+        },
+        {
+          "sourceFile": "lsspfpl.xlsx",
+          "rows": 7794,
+          "warmup": 500,
+          "tuningCases": 5707,
+          "validationCases": 1554
+        }
+      ]
+    },
+    "goals": {
+      "threshold": 0.015,
+      "selected": {
+        "id": "uniform",
+        "uniform": true,
+        "enabled": false,
+        "floor": 1,
+        "power": 1,
+        "tuning": {
+          "evaluated": 5728,
+          "accuracy": 0.24231843575418993,
+          "logLoss": 1.8358556496038183,
+          "brier": 0.8193776816803133
+        },
+        "validation": {
+          "evaluated": 1556,
+          "accuracy": 0.2583547557840617,
+          "logLoss": 1.801947295127213,
+          "brier": 0.8141947891517209
+        }
+      },
+      "baseline": {
+        "id": "uniform",
+        "uniform": true,
+        "enabled": false,
+        "floor": 1,
+        "power": 1,
+        "tuning": {
+          "evaluated": 5728,
+          "accuracy": 0.24231843575418993,
+          "logLoss": 1.8358556496038183,
+          "brier": 0.8193776816803133
+        },
+        "validation": {
+          "evaluated": 1556,
+          "accuracy": 0.2583547557840617,
+          "logLoss": 1.801947295127213,
+          "brier": 0.8141947891517209
+        }
+      },
+      "candidates": [
+        {
+          "id": "floor-0.1-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.1,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.23935055865921787,
+            "logLoss": 1.8370632856000588,
+            "brier": 0.819913449708334
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2615681233933162,
+            "logLoss": 1.8030915335414852,
+            "brier": 0.8145918580135302
+          }
+        },
+        {
+          "id": "floor-0.1-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.1,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.23935055865921787,
+            "logLoss": 1.837910461059927,
+            "brier": 0.8201549428439111
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.262853470437018,
+            "logLoss": 1.8034507095728365,
+            "brier": 0.8148105126930997
+          }
+        },
+        {
+          "id": "floor-0.1-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.1,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.2409217877094972,
+            "logLoss": 1.8380414506402676,
+            "brier": 0.820153918762266
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.262853470437018,
+            "logLoss": 1.8031136898495257,
+            "brier": 0.8147712063525664
+          }
+        },
+        {
+          "id": "floor-0.2-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.2,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.23935055865921787,
+            "logLoss": 1.8364853651292226,
+            "brier": 0.8197030525195571
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2596401028277635,
+            "logLoss": 1.8026511908806322,
+            "brier": 0.8144545120641432
+          }
+        },
+        {
+          "id": "floor-0.2-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.2,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.23935055865921787,
+            "logLoss": 1.8367148425129067,
+            "brier": 0.8197507438264416
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2577120822622108,
+            "logLoss": 1.8026415414467933,
+            "brier": 0.8145242339914286
+          }
+        },
+        {
+          "id": "floor-0.2-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.2,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.23830307262569833,
+            "logLoss": 1.8366500711550942,
+            "brier": 0.8196977515517847
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2596401028277635,
+            "logLoss": 1.8023896136460236,
+            "brier": 0.8144689243452299
+          }
+        },
+        {
+          "id": "floor-0.35-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.35,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.24039804469273743,
+            "logLoss": 1.8360785079076383,
+            "brier": 0.8195379334048873
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2577120822622108,
+            "logLoss": 1.8023131838302004,
+            "brier": 0.8143426416849314
+          }
+        },
+        {
+          "id": "floor-0.35-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.35,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.24057262569832402,
+            "logLoss": 1.8361196249652685,
+            "brier": 0.8195285677925668
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2589974293059126,
+            "logLoss": 1.802231979095255,
+            "brier": 0.814357546733761
+          }
+        },
+        {
+          "id": "floor-0.35-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.35,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.2410963687150838,
+            "logLoss": 1.8360952871483467,
+            "brier": 0.8194977103914146
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2577120822622108,
+            "logLoss": 1.8021036175299434,
+            "brier": 0.8143215440082437
+          }
+        },
+        {
+          "id": "floor-0.5-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.5,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.24022346368715083,
+            "logLoss": 1.835909782358721,
+            "brier": 0.8194559339560716
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2544987146529563,
+            "logLoss": 1.8021417174107561,
+            "brier": 0.8142806849705382
+          }
+        },
+        {
+          "id": "floor-0.5-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.5,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.2409217877094972,
+            "logLoss": 1.8359284807245868,
+            "brier": 0.8194442920749548
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2544987146529563,
+            "logLoss": 1.8020789599177676,
+            "brier": 0.8142831526574504
+          }
+        },
+        {
+          "id": "floor-0.5-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.5,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.24231843575418993,
+            "logLoss": 1.8359354190430062,
+            "brier": 0.8194306734958547
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.25578406169665807,
+            "logLoss": 1.8020138843573938,
+            "brier": 0.8142619025199219
+          }
+        },
+        {
+          "id": "floor-0.65-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.65,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.24162011173184358,
+            "logLoss": 1.8358464469752256,
+            "brier": 0.8194131573398367
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.256426735218509,
+            "logLoss": 1.802046121505844,
+            "brier": 0.814242456313895
+          }
+        },
+        {
+          "id": "floor-0.65-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.65,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.24196927374301677,
+            "logLoss": 1.8358642463933421,
+            "brier": 0.8194066884432338
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.256426735218509,
+            "logLoss": 1.8020085242986807,
+            "brier": 0.8142421483614236
+          }
+        },
+        {
+          "id": "floor-0.65-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.65,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.2430167597765363,
+            "logLoss": 1.8358798166211094,
+            "brier": 0.819401695093358
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2570694087403599,
+            "logLoss": 1.8019766717970997,
+            "brier": 0.8142303811990317
+          }
+        },
+        {
+          "id": "floor-0.8-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.8,
+          "power": 1,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.24231843575418993,
+            "logLoss": 1.8358341921066839,
+            "brier": 0.819390794925411
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2583547557840617,
+            "logLoss": 1.8019897812485581,
+            "brier": 0.8142171376134887
+          }
+        },
+        {
+          "id": "floor-0.8-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.8,
+          "power": 2,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.24214385474860337,
+            "logLoss": 1.8358481644786273,
+            "brier": 0.8193885135509957
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2583547557840617,
+            "logLoss": 1.8019721075024395,
+            "brier": 0.8142166017635314
+          }
+        },
+        {
+          "id": "floor-0.8-power-3",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.8,
+          "power": 3,
+          "tuning": {
+            "evaluated": 5728,
+            "accuracy": 0.24179469273743018,
+            "logLoss": 1.8358604487204715,
+            "brier": 0.8193872740883296
+          },
+          "validation": {
+            "evaluated": 1556,
+            "accuracy": 0.2583547557840617,
+            "logLoss": 1.8019587687877185,
+            "brier": 0.8142111097772003
+          }
+        }
+      ],
+      "production": {
+        "enabled": false,
+        "floor": 1,
+        "power": 1,
+        "coreRatio": 0.5
+      },
+      "gate": {
+        "passed": false,
+        "tuningPassed": false,
+        "validationPassed": false,
+        "significancePassed": false,
+        "reason": "较早调参段没有权重方案同时改善 Log Loss、Brier 且保持命中率"
+      },
+      "sources": [
+        {
+          "sourceFile": "lottery_goals_data_df1cda93.xlsx",
+          "rows": 47,
+          "warmup": 47,
+          "tuningCases": 0,
+          "validationCases": 0
+        },
+        {
+          "sourceFile": "历史进球数.xlsx",
+          "rows": 7788,
+          "warmup": 500,
+          "tuningCases": 5728,
+          "validationCases": 1556
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "betwin-odds-radar",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "db:import-only": "python3 scripts/import_sqlite.py",
+    "db:import": "npm run db:import-only && npm run model:tune && npm run model:tune-adaptive && npm run model:tune-segments && npm run model:tune-zero-goals",
+    "backtest:rolling": "node --disable-warning=ExperimentalWarning scripts/rolling_backtest.mjs",
+    "model:tune": "node --disable-warning=ExperimentalWarning scripts/tune_parameters.mjs",
+    "model:tune-adaptive": "node --disable-warning=ExperimentalWarning scripts/tune_adaptive_thresholds.mjs",
+    "model:tune-segments": "node --disable-warning=ExperimentalWarning scripts/tune_segment_thresholds.mjs",
+    "model:tune-zero-goals": "node --disable-warning=ExperimentalWarning scripts/tune_goal_zero_odds.mjs",
+    "model:tune-weighting": "node --disable-warning=ExperimentalWarning scripts/tune_weighting.mjs",
+    "model:tune-movement": "node --disable-warning=ExperimentalWarning scripts/tune_movement.mjs",
+    "model:tune-smoothing": "node --disable-warning=ExperimentalWarning scripts/tune_smoothing.mjs",
+    "model:tune-goal-pair": "node --disable-warning=ExperimentalWarning scripts/tune_goal_pair_selection.mjs",
+    "model:train-challenger": "python3 scripts/train_challenger.py",
+    "report:goal-multiples": "node --disable-warning=ExperimentalWarning scripts/generate_goal_multiple_report.mjs",
+    "start": "node --disable-warning=ExperimentalWarning server.mjs",
+    "test": "node --disable-warning=ExperimentalWarning --test tests/*.test.mjs && python3 -m unittest discover -s tests -p 'test_*.py'"
+  }
+}

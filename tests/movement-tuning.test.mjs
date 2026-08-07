@@ -1,0 +1,56 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { tuneMovementCorrection } from "../lib/movement-tuning.mjs";
+
+function rows(length, { reverseValidation = false } = {}) {
+  return Array.from({ length }, (_, index) => {
+    const cluster = index % 2;
+    const inValidation = index >= Math.floor(length * 0.75);
+    const reversed = reverseValidation && inValidation;
+    return {
+      sourceFile: "history.xlsx",
+      sourceRow: index + 1,
+      initialOdds: cluster
+        ? [1.7, 3.2, 4]
+        : [2.4, 3.2, 4],
+      odds: [2, 3.2, 4],
+      result:
+        cluster === Number(reversed)
+          ? "胜"
+          : "负",
+    };
+  });
+}
+
+function tune(input) {
+  return tuneMovementCorrection(input, {
+    market: "spf",
+    labels: ["胜", "平", "负"],
+    outcomeField: "result",
+    tolerance: 0.1,
+    weights: [0.05, 0.1, 0.2],
+    warmup: 4,
+    validationFraction: 0.25,
+  });
+}
+
+test("movement correction is enabled only after earlier and latest segments pass", () => {
+  const result = tune(rows(24));
+
+  assert.equal(result.gate.tuningPassed, true);
+  assert.equal(result.gate.validationPassed, true);
+  assert.equal(result.production.enabled, true);
+  assert.equal(result.production.fixedWeight, 0.2);
+  assert.ok(result.selected.validation.logLoss < result.baseline.validation.logLoss);
+  assert.ok(result.selected.validation.brier < result.baseline.validation.brier);
+});
+
+test("latest segment can reject a movement correction selected earlier", () => {
+  const result = tune(rows(24, { reverseValidation: true }));
+
+  assert.equal(result.gate.tuningPassed, true);
+  assert.equal(result.gate.validationPassed, false);
+  assert.equal(result.production.enabled, false);
+  assert.equal(result.production.fixedWeight, 0);
+  assert.match(result.gate.reason, /仅展示走势参考/);
+});

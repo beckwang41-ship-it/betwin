@@ -1,0 +1,27 @@
+# macOS and local environment
+.DS_Store
+.env
+.env.*
+!.env.example
+node_modules/
+__pycache__/
+*.py[cod]
+
+# Runtime databases and backups
+/betwin.db
+/betwin.db-*
+/backups/
+
+# Imported source data
+/*.xlsx
+/historydata/
+/realtime_matches_had_hhad_history.json
+/realtime_matches_history.json
+/match_data1.json
+
+# Generated model data and reports
+/data/processed/
+/data/challenger-model.json
+/output/
+/.playwright-cli/
+/倍数赔率历史比赛.html
