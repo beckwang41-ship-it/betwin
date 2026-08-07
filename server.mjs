@@ -1264,9 +1264,17 @@ function historicalPriorFor(
   });
 }
 
-function buildSpfStability(history, odds, market, league) {
+function buildSpfStability(
+  history,
+  odds,
+  market,
+  league,
+  similarAtThreshold = null,
+) {
   const points = STABILITY_THRESHOLDS[market].map((threshold) => {
-    const similar = findSimilarSpf(history, odds, { tolerance: threshold });
+    const similar = similarAtThreshold
+      ? similarAtThreshold(threshold)
+      : findSimilarSpf(history, odds, { tolerance: threshold });
     const decision = modelDecision(market, threshold);
     const prior = historicalPriorFor(
       history,
@@ -1288,6 +1296,81 @@ function buildSpfStability(history, odds, market, league) {
     return stabilityPoint(threshold, prediction);
   });
   return summarizeStability(points);
+}
+
+function buildThreeWayStability(
+  match,
+  { spfHistory, hhadHistory, pairedHistory, spfResult, hhadResult },
+) {
+  const hadOdds = match.had
+    ? [match.had.h, match.had.d, match.had.a]
+    : null;
+  const hhadOdds = match.hhad
+    ? [match.hhad.h, match.hhad.d, match.hhad.a]
+    : null;
+  const usesJoint =
+    spfResult?.matchingMode === "joint" &&
+    hhadResult?.matchingMode === "joint" &&
+    hadOdds &&
+    hhadOdds;
+
+  if (!usesJoint) {
+    return {
+      spf: hadOdds
+        ? buildSpfStability(spfHistory, hadOdds, "spf", match.league)
+        : null,
+      hhad: hhadResult
+        ? buildSpfStability(
+            hhadHistory.filter(
+              (row) => row.handicap === hhadResult.handicap,
+            ),
+            hhadOdds,
+            "hhad",
+            match.league,
+          )
+        : null,
+    };
+  }
+
+  const handicap = hhadResult.handicap;
+  const jointSimilar = (market, threshold) =>
+    pairedHistory
+      .filter(
+        (row) =>
+          row.hhad.handicap === handicap &&
+          spfDistance(row.spf.odds, hadOdds) <=
+            (market === "spf" ? threshold : spfResult.tolerance) &&
+          spfDistance(row.hhad.odds, hhadOdds) <=
+            (market === "hhad" ? threshold : hhadResult.tolerance),
+      )
+      .map((row) => {
+        const selected = market === "spf" ? row.spf : row.hhad;
+        const target = market === "spf" ? hadOdds : hhadOdds;
+        return {
+          ...selected,
+          distance: spfDistance(selected.odds, target),
+        };
+      });
+  const pairedSpfHistory = pairedHistory.map((row) => row.spf);
+  const pairedHhadHistory = pairedHistory
+    .filter((row) => row.hhad.handicap === handicap)
+    .map((row) => row.hhad);
+  return {
+    spf: buildSpfStability(
+      pairedSpfHistory,
+      hadOdds,
+      "spf",
+      match.league,
+      (threshold) => jointSimilar("spf", threshold),
+    ),
+    hhad: buildSpfStability(
+      pairedHhadHistory,
+      hhadOdds,
+      "hhad",
+      match.league,
+      (threshold) => jointSimilar("hhad", threshold),
+    ),
+  };
 }
 
 function buildGoalStability(history, odds, league) {
@@ -2102,11 +2185,11 @@ function marketCandidate(match, market, prediction, handicap = null) {
   };
 }
 
-function buildGoalPairCandidate(
+function buildGoalPredictionResult(
   match,
   history,
   goalTolerance,
-  challenger,
+  challenger = null,
   { sameLeague = false } = {},
 ) {
   if (!match.goals) return null;
@@ -2161,8 +2244,55 @@ function buildGoalPairCandidate(
       ),
     },
   );
-  const prediction = attachChallenger(base, "goals", challenger);
-  const pair = selectTopGoalPair(prediction.final, odds);
+  const predictionWithChallenger = attachChallenger(
+    base,
+    "goals",
+    challenger,
+  );
+  const prediction = {
+    ...predictionWithChallenger,
+    goalPair: selectTopGoalPair(predictionWithChallenger.final, odds),
+  };
+  const stability = buildGoalStability(history, odds, match.league);
+  const reliability = reliabilityView("goals", prediction, stability, {
+    threshold: effectiveTolerance,
+    sameLeague,
+  });
+  return {
+    odds,
+    initialOdds,
+    scope,
+    similar,
+    tolerance: effectiveTolerance,
+    model,
+    prediction,
+    stability,
+    reliability,
+  };
+}
+
+function buildGoalPairCandidate(
+  match,
+  history,
+  goalTolerance,
+  challenger,
+  { sameLeague = false } = {},
+) {
+  const result = buildGoalPredictionResult(
+    match,
+    history,
+    goalTolerance,
+    challenger,
+    { sameLeague },
+  );
+  if (!result) return null;
+  const {
+    odds,
+    scope,
+    tolerance: effectiveTolerance,
+    prediction,
+  } = result;
+  const pair = prediction.goalPair;
   if (!prediction.available || !pair.available) return null;
   const stability = buildGoalPairStability(
     history,
@@ -2275,14 +2405,16 @@ function buildParlayCandidate(
       challenger,
       sameLeague,
     });
+  const threeWayStability = buildThreeWayStability(match, {
+    spfHistory,
+    hhadHistory,
+    pairedHistory,
+    spfResult: hadResult,
+    hhadResult: hhad,
+  });
   const had = hadResult
     ? (() => {
-        const stability = buildSpfStability(
-          spfHistory,
-          [match.had.h, match.had.d, match.had.a],
-          "spf",
-          match.league,
-        );
+        const stability = threeWayStability.spf;
         return {
           ...hadResult.prediction,
           reliability: reliabilityView(
@@ -2296,12 +2428,7 @@ function buildParlayCandidate(
     : null;
   const hhadPrediction = hhad
     ? (() => {
-        const stability = buildSpfStability(
-          hhadHistory.filter((row) => row.handicap === hhad.handicap),
-          [match.hhad.h, match.hhad.d, match.hhad.a],
-          "hhad",
-          match.league,
-        );
+        const stability = threeWayStability.hhad;
         return {
           ...hhad.prediction,
           reliability: reliabilityView(
@@ -2763,7 +2890,6 @@ async function handleApi(request, url, response) {
     const matches = dataStore.getMatches();
     const match = matches.find((item) => item.id === url.searchParams.get("matchId"));
     if (!match) return sendJson(response, 404, { error: "没有找到这场比赛" });
-    if (!match.goals) return sendJson(response, 422, { error: "这场比赛缺少进球赔率" });
 
     const spfTolerance = numberParam(
       url.searchParams,
@@ -2795,20 +2921,6 @@ async function handleApi(request, url, response) {
     const hadOdds = match.had
       ? [match.had.h, match.had.d, match.had.a]
       : null;
-    const currentGoalOdds = [
-      match.goals.g0,
-      match.goals.g1,
-      match.goals.g2,
-      match.goals.g3,
-      match.goals.g4,
-      match.goals.g5,
-      match.goals.g6,
-      match.goals.g7plus,
-    ];
-    const initialGoalOdds = goalOdds(
-      match.goals.history?.initial,
-      match.goals,
-    );
     const verifiedHistory = dataStore.getVerifiedHistory({
       league: match.league,
       sameLeague,
@@ -2823,7 +2935,9 @@ async function handleApi(request, url, response) {
     const pairedHistory = match.had && match.hhad
       ? dataStore.getPairedSpfHhadHistory(historyOptions)
       : [];
-    const goalHistory = dataStore.getGoalHistory(historyOptions);
+    const goalHistory = match.goals
+      ? dataStore.getGoalHistory(historyOptions)
+      : [];
     const challengerHistory = sameLeague
       ? dataStore.getVerifiedHistory()
       : verifiedHistory;
@@ -2843,91 +2957,29 @@ async function handleApi(request, url, response) {
     });
     const spfPrediction = spfResult?.prediction || null;
     const similarSpf = spfResult?.similar || [];
-    const goalScope = resolveSimilarity(
-      "goals",
+    const goalResult = buildGoalPredictionResult(
+      match,
       goalHistory,
-      currentGoalOdds,
       goalTolerance,
-      findSimilarGoals,
+      challenger?.goals,
       { sameLeague },
     );
-    const similarGoals = goalScope.similar;
-    const effectiveGoalTolerance = goalScope.threshold;
-    const goalModel = modelDecision("goals", effectiveGoalTolerance, {
-      sameLeague,
-      adaptive: goalScope.adaptive,
-      segmented: goalScope.segmented,
-      zeroOdds: goalScope.zeroOdds,
+    const goalScope = goalResult?.scope || null;
+    const similarGoals = goalResult?.similar || [];
+    const effectiveGoalTolerance = goalResult?.tolerance ?? null;
+    const goalModel = goalResult?.model || null;
+    const goalPrediction = goalResult?.prediction || null;
+    const {
+      spf: spfStability,
+      hhad: hhadStability,
+    } = buildThreeWayStability(match, {
+      spfHistory,
+      hhadHistory,
+      pairedHistory,
+      spfResult,
+      hhadResult,
     });
-    const goalPrior = historicalPriorFor(
-      goalHistory,
-      { odds: currentGoalOdds, league: match.league },
-      "goals",
-      {
-        labels: GOAL_LABELS,
-        outcomeField: "goals",
-        distance: (left, right) => goalDistance(left.odds, right.odds),
-        threshold: effectiveGoalTolerance,
-      },
-    );
-    const movementSimilarGoals = findSimilarGoalMovements(
-      similarGoals,
-      initialGoalOdds,
-      currentGoalOdds,
-      { finalTolerance: effectiveGoalTolerance },
-    );
-    const goalPredictionBase = predictGoalsWithMovement(
-      currentGoalOdds,
-      similarGoals,
-      movementSimilarGoals,
-      initialGoalOdds,
-      {
-        ...movementOptions("goals"),
-        blendOptions: blendOptions(
-          goalModel,
-          smoothingOptions(
-            "goals",
-            goalPrior,
-            goalModel.usesRecommendedThreshold,
-          ),
-        ),
-      },
-    );
-    const goalPredictionWithChallenger = attachChallenger(
-      goalPredictionBase,
-      "goals",
-      challenger?.goals,
-    );
-    const goalPrediction = {
-      ...goalPredictionWithChallenger,
-      goalPair: selectTopGoalPair(
-        goalPredictionWithChallenger.final,
-        currentGoalOdds,
-      ),
-    };
-    const spfStability = hadOdds
-      ? buildSpfStability(
-          spfHistory,
-          hadOdds,
-          "spf",
-          match.league,
-        )
-      : null;
-    const hhadStability = hhadResult
-      ? buildSpfStability(
-          hhadHistory.filter(
-            (row) => row.handicap === hhadResult.handicap,
-          ),
-          [match.hhad.h, match.hhad.d, match.hhad.a],
-          "hhad",
-          match.league,
-        )
-      : null;
-    const goalStability = buildGoalStability(
-      goalHistory,
-      currentGoalOdds,
-      match.league,
-    );
+    const goalStability = goalResult?.stability || null;
     const spfReliability = spfPrediction
       ? reliabilityView(
           "spf",
@@ -2944,12 +2996,7 @@ async function handleApi(request, url, response) {
           { threshold: hhadResult.tolerance, sameLeague },
         )
       : null;
-    const goalReliability = reliabilityView(
-      "goals",
-      goalPrediction,
-      goalStability,
-      { threshold: effectiveGoalTolerance, sameLeague },
-    );
+    const goalReliability = goalResult?.reliability || null;
 
     const initialHad = match.had?.history?.initial;
     const initialHadOdds = initialHad
@@ -2996,7 +3043,7 @@ async function handleApi(request, url, response) {
         matching: {
           spf: spfResult?.matchingLabel || null,
           hhad: hhadResult?.matchingLabel || null,
-          goals: "总进球独立匹配",
+          goals: goalResult ? "总进球独立匹配" : null,
           jointSamples: Math.max(
             spfResult?.jointSamples || 0,
             hhadResult?.jointSamples || 0,
@@ -3018,8 +3065,9 @@ async function handleApi(request, url, response) {
           applied: Boolean(hhadResult?.prediction.available),
         },
         goals: {
-          ...goalModel,
-          applied: goalPrediction.available,
+          ...(goalModel ||
+            modelDecision("goals", goalTolerance, { sameLeague })),
+          applied: Boolean(goalPrediction?.available),
         },
       },
       spf: spfPrediction
@@ -3035,10 +3083,12 @@ async function handleApi(request, url, response) {
             reliability: hhadReliability,
           }
         : null,
-      goals: {
-        ...goalPrediction,
-        reliability: goalReliability,
-      },
+      goals: goalPrediction
+        ? {
+            ...goalPrediction,
+            reliability: goalReliability,
+          }
+        : null,
       stability: {
         spf: spfStability
           ? {
@@ -3052,10 +3102,12 @@ async function handleApi(request, url, response) {
               selectedThreshold: hhadResult.tolerance,
             }
           : null,
-        goals: {
-          ...goalStability,
-          selectedThreshold: effectiveGoalTolerance,
-        },
+        goals: goalStability
+          ? {
+              ...goalStability,
+              selectedThreshold: effectiveGoalTolerance,
+            }
+          : null,
       },
       similarSpf: paginate(
         spfPrediction
@@ -3072,7 +3124,9 @@ async function handleApi(request, url, response) {
         pageSize,
       ),
       similarGoals: paginate(
-        similarGoals.map((row) => compactGoalRow(row, goalPrediction)),
+        goalPrediction
+          ? similarGoals.map((row) => compactGoalRow(row, goalPrediction))
+          : [],
         goalPage,
         pageSize,
       ),
@@ -3083,9 +3137,11 @@ async function handleApi(request, url, response) {
         hhad: hhadResult
           ? `${hhadResult.matchingLabel}；让球数 ${hhadResult.handicap > 0 ? "+" : ""}${hhadResult.handicap}，三项让球赔率误差均不超过 ±${(hhadResult.tolerance * 100).toFixed(0)}%；${historicalMethodText(hhadResult.prediction, "按赔率距离加权")}；${smoothingMethodText(hhadResult.prediction)}；${movementMethodText(hhadResult.prediction)}`
           : "缺少让球胜平负赔率",
-        goals: goalScope.zeroOdds
-          ? `总进球独立匹配；${zeroOddsMethodText(goalScope, goalPrediction)}；${smoothingMethodText(goalPrediction)}；${movementMethodText(goalPrediction)}`
-          : `总进球独立匹配；八档最新去水概率每一档差值均不超过 ${(effectiveGoalTolerance * 100).toFixed(1)} 个百分点；${historicalMethodText(goalPrediction, "按概率距离加权")}；${smoothingMethodText(goalPrediction)}；${movementMethodText(goalPrediction)}`,
+        goals: !goalResult
+          ? "缺少总进球赔率"
+          : goalScope.zeroOdds
+            ? `总进球独立匹配；${zeroOddsMethodText(goalScope, goalPrediction)}；${smoothingMethodText(goalPrediction)}；${movementMethodText(goalPrediction)}`
+            : `总进球独立匹配；八档最新去水概率每一档差值均不超过 ${(effectiveGoalTolerance * 100).toFixed(1)} 个百分点；${historicalMethodText(goalPrediction, "按概率距离加权")}；${smoothingMethodText(goalPrediction)}；${movementMethodText(goalPrediction)}`,
       },
       dataStats: {
         ...dataStore.getCounts(),

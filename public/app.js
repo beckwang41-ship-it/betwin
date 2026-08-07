@@ -39,6 +39,16 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const MIN_PARLAY_LEG_ODDS = 1.7;
+const GOAL_DISPLAY_LABELS = [
+  "0球",
+  "1球",
+  "2球",
+  "3球",
+  "4球",
+  "5球",
+  "6球",
+  "7+球",
+];
 const pct = (value, digits = 1) => `${(value * 100).toFixed(digits)}%`;
 const compactNumber = (value, maximumFractionDigits = 2) => {
   const number = Number(value);
@@ -719,11 +729,16 @@ function updateModelConfigStatus() {
     goals: Number($("#goal-tolerance").value),
   };
   const effective = state.data?.settings?.effectiveThresholds;
+  const availableMarkets = {
+    spf: Boolean(state.data?.match?.had),
+    hhad: Boolean(state.data?.match?.hhad),
+    goals: Boolean(state.data?.match?.goals),
+  };
   const current = effective
     ? {
-        spf: Number(effective.spf) * 100,
-        hhad: Number(effective.hhad) * 100,
-        goals: Number(effective.goals) * 1000,
+        spf: availableMarkets.spf ? Number(effective.spf) * 100 : null,
+        hhad: availableMarkets.hhad ? Number(effective.hhad) * 100 : null,
+        goals: availableMarkets.goals ? Number(effective.goals) * 1000 : null,
       }
     : requested;
   const deviations = [
@@ -767,11 +782,19 @@ function updateModelConfigStatus() {
     : adaptiveApplied
       ? "本场动态采用"
       : "当前使用";
-  const goalScopeText = zeroOddsApplied
+  const goalScopeText = !availableMarkets.goals
+    ? "未开售"
+    : zeroOddsApplied
     ? `0球${zeroOddsScope.intervalLabel || "五档"}${zeroOddsScope.distanceEnabled ? ` · 七项≤${compactNumber(Number(zeroOddsScope.threshold) * 100)}pp` : " · 整档统计"}`
     : `${compactNumber(current.goals / 10)}pp`;
+  const spfScopeText = availableMarkets.spf
+    ? `±${compactNumber(current.spf)}%`
+    : "未开售";
+  const hhadScopeText = availableMarkets.hhad
+    ? `±${compactNumber(current.hhad)}%`
+    : "未开售";
   $("#control-scope-summary").textContent =
-    `${scopeLabel}：${sameLeague ? "只匹配同联赛" : "全部联赛"} · 胜平负 ±${compactNumber(current.spf)}% · 让球 ±${compactNumber(current.hhad)}% · 进球 ${goalScopeText}`;
+    `${scopeLabel}：${sameLeague ? "只匹配同联赛" : "全部联赛"} · 胜平负 ${spfScopeText} · 让球 ${hhadScopeText} · 进球 ${goalScopeText}`;
   $("#model-config-status").textContent = deviations.length
     ? `${deviations.join("、")}使用自定义阈值`
     : thresholdStale
@@ -1262,7 +1285,7 @@ function renderSmoothingInsights(spf, hhad, goals) {
     smoothingInsightCard(
       "总进球",
       goals,
-      goals.labels.map((label) => `${label}球`),
+      goals?.labels?.map((label) => `${label}球`) || GOAL_DISPLAY_LABELS,
     ),
   ].join("");
 }
@@ -1367,7 +1390,7 @@ function renderChallengerInsights(spf, hhad, goals) {
     challengerCard(
       "总进球",
       goals,
-      goals.labels.map((label) => `${label}球`),
+      goals?.labels?.map((label) => `${label}球`) || GOAL_DISPLAY_LABELS,
       3,
     ),
   ].join("");
@@ -1457,7 +1480,7 @@ function renderMovementInsights(spf, hhad, goals) {
     movementInsightCard(
       "总进球",
       goals,
-      goals.labels.map((label) => `${label}球`),
+      goals?.labels?.map((label) => `${label}球`) || GOAL_DISPLAY_LABELS,
     ),
   ].join("");
 }
@@ -1515,6 +1538,11 @@ function renderOutcomeDonut(spf, hhad) {
 }
 
 function renderGoalChart(goals) {
+  if (!goals) {
+    $("#goal-chart").innerHTML =
+      '<div class="empty-state">本场未开售总进球赔率</div>';
+    return;
+  }
   const stable = stableProbabilities(goals);
   const max = Math.max(...stable, 0.01);
   $("#goal-chart").innerHTML = goals.labels
