@@ -3,7 +3,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { createParlayLedger } from "../lib/parlay-ledger.mjs";
+import {
+  createParlayLedger,
+  parlaySettlementDecision,
+  settlementRowEligible,
+} from "../lib/parlay-ledger.mjs";
 
 function snapshot(mode = "standard") {
   const goalsPair = mode === "goalsPair";
@@ -106,6 +110,117 @@ test("进球双选串关按四注成本结算整组盈亏", () => {
   }
 });
 
+test("串关一腿未中即可结算，部分命中则继续等待", () => {
+  assert.deepEqual(
+    parlaySettlementDecision(2, [{ correct: true }]),
+    { ready: false, correct: null },
+  );
+  assert.deepEqual(
+    parlaySettlementDecision(2, [{ correct: false }]),
+    { ready: true, correct: false },
+  );
+  assert.deepEqual(
+    parlaySettlementDecision(2, [{ correct: true }, { correct: true }]),
+    { ready: true, correct: true },
+  );
+});
+
+test("历史文件更新后允许结算水位行被替换的新赛果", () => {
+  assert.equal(settlementRowEligible(101, 100, false), true);
+  assert.equal(settlementRowEligible(100, 100, false), false);
+  assert.equal(settlementRowEligible(100, 100, true), true);
+  assert.equal(settlementRowEligible(99, 100, true), false);
+});
+
+test("待结算串关会保存已经到达的单腿赛果", () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "betwin-parlay-progress-"));
+  const ledger = createParlayLedger(path.join(directory, "ledger.db"));
+  try {
+    const recorded = ledger.record(snapshot());
+    assert.equal(
+      ledger.updateProgress(recorded.row.id, [
+        {
+          matchId: "a",
+          actualResult: "胜",
+          score: "2:0",
+          correct: true,
+          selectedOdds: 1.8,
+          sourceFile: "history.xlsx",
+          sourceRow: 101,
+        },
+      ]),
+      true,
+    );
+    const summary = ledger.summary();
+    assert.equal(summary.rows[0].status, "pending");
+    assert.equal(summary.rows[0].actualResults.length, 1);
+    assert.equal(summary.rows[0].actualResults[0].score, "2:0");
+  } finally {
+    ledger.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("提前判负的已结算串关仍会补齐迟到赛果且不改盈亏", () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "betwin-parlay-backfill-"));
+  const ledger = createParlayLedger(path.join(directory, "ledger.db"));
+  try {
+    const recorded = ledger.record(snapshot("goalsPair"));
+    ledger.settle(recorded.row.id, {
+      correct: false,
+      simulatedReturn: 0,
+      totalStake: 4,
+      actualResults: [
+        {
+          matchId: "b",
+          actualResult: "3",
+          score: "1:2",
+          correct: false,
+          selectedOdds: null,
+          sourceFile: "history.xlsx",
+          sourceRow: 101,
+        },
+      ],
+      settledAt: "2026-07-31T10:00:00.000Z",
+    });
+
+    assert.equal(ledger.incompleteSettled().length, 1);
+    assert.equal(
+      ledger.updateProgress(recorded.row.id, [
+        {
+          matchId: "a",
+          actualResult: "3",
+          score: "2:1",
+          correct: true,
+          selectedOdds: 3.5,
+          sourceFile: "history.xlsx",
+          sourceRow: 102,
+        },
+        {
+          matchId: "b",
+          actualResult: "3",
+          score: "1:2",
+          correct: false,
+          selectedOdds: null,
+          sourceFile: "history.xlsx",
+          sourceRow: 101,
+        },
+      ]),
+      true,
+    );
+
+    const row = ledger.summary().rows[0];
+    assert.equal(row.status, "settled");
+    assert.equal(row.correct, false);
+    assert.equal(row.simulatedProfit, -4);
+    assert.equal(row.actualResults.length, 2);
+    assert.equal(ledger.incompleteSettled().length, 0);
+  } finally {
+    ledger.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("串关账本支持玩法、球队筛选和分页", () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "betwin-parlay-page-"));
   const ledger = createParlayLedger(path.join(directory, "ledger.db"));
@@ -130,6 +245,62 @@ test("串关账本支持玩法、球队筛选和分页", () => {
     const searched = ledger.summary({ query: "主队3", pageSize: 20 });
     assert.equal(searched.filtered.total, 1);
     assert.equal(searched.rows[0].mode, "goalsPair");
+  } finally {
+    ledger.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("串关账本可按当前预测模型版本统计", () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "betwin-parlay-version-"));
+  const ledger = createParlayLedger(path.join(directory, "ledger.db"));
+  try {
+    ledger.record(snapshot());
+    const currentSnapshot = snapshot();
+    currentSnapshot.combinationId = "current-combo";
+    currentSnapshot.policyVersion =
+      "historical-similarity-v2:selection-v3@test:all-leagues";
+    ledger.record(currentSnapshot);
+    const oldSameFamily = snapshot();
+    oldSameFamily.combinationId = "old-same-family-combo";
+    oldSameFamily.policyVersion =
+      "historical-similarity-v2:selection-v3@old:all-leagues";
+    ledger.record(oldSameFamily);
+
+    const current = ledger.summary({
+      policyVersion: "current",
+      currentPolicyPrefix: "historical-similarity-v2:",
+      currentPolicyVersions: [currentSnapshot.policyVersion],
+    });
+    assert.equal(current.totals.total, 1);
+    assert.equal(current.rows[0].policyVersion, currentSnapshot.policyVersion);
+  } finally {
+    ledger.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("串关批量结算异常时事务整体回滚", () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "betwin-parlay-tx-"));
+  const ledger = createParlayLedger(path.join(directory, "ledger.db"));
+  try {
+    const recorded = ledger.record(snapshot());
+    assert.throws(
+      () =>
+        ledger.transaction(() => {
+          ledger.settle(recorded.row.id, {
+            correct: true,
+            simulatedReturn: 2.88,
+            totalStake: 1,
+            actualResults: [],
+            settledAt: "2026-07-31T10:00:00.000Z",
+          });
+          throw new Error("模拟串关结算失败");
+        }),
+      /模拟串关结算失败/,
+    );
+    assert.equal(ledger.pending().length, 1);
+    assert.equal(ledger.summary().totals.settled, 0);
   } finally {
     ledger.close();
     rmSync(directory, { recursive: true, force: true });

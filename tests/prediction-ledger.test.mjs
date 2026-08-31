@@ -9,6 +9,9 @@ function snapshot(overrides = {}) {
   return {
     matchId: "fixture-001",
     policyVersion: "selection-v3@test",
+    algorithmVersion: "historical-similarity-v3:spf:test-algorithm",
+    dataVersion: "history@2026-07-26T01:00:00.000Z",
+    validationStatus: "validated",
     market: "spf",
     handicap: null,
     capturedAt: "2026-07-27T01:00:00.000Z",
@@ -30,7 +33,11 @@ function snapshot(overrides = {}) {
     reliabilityReason: "最新测试通过",
     threshold: 0.07,
     samples: 37,
-    settings: { spfTolerance: 0.07, sameLeague: false },
+    settings: {
+      spfTolerance: 0.07,
+      sameLeague: false,
+      diagnostics: { initialOdds: [3.5, 3.2, 2.1] },
+    },
     ...overrides,
   };
 }
@@ -64,6 +71,15 @@ test("账本快照不可重复，并能结算命中与模拟盈亏", () => {
     assert.equal(summary.totals.pending, 1);
     assert.equal(summary.byReliability.recommended.accuracy, null);
     assert.equal(summary.rows[0].policyVersion, "selection-v4@before-result");
+    assert.equal(
+      summary.rows[0].algorithmVersion,
+      "historical-similarity-v3:spf:test-algorithm",
+    );
+    assert.equal(
+      summary.rows[0].dataVersion,
+      "history@2026-07-26T01:00:00.000Z",
+    );
+    assert.equal(summary.rows[0].validationStatus, "validated");
     assert.equal(summary.rows[0].capturedAt, "2026-07-27T02:00:00.000Z");
     assert.equal(summary.rows[0].predicted, "负");
     assert.equal(summary.rows[0].selectedOdds, 3.8);
@@ -95,8 +111,64 @@ test("账本快照不可重复，并能结算命中与模拟盈亏", () => {
     assert.equal(summary.totals.settledFixtures, 1);
     assert.equal(summary.byReliability.recommended.accuracy, 1);
     assert.equal(summary.byReliability.recommended.simulatedProfit, 2.8);
+    assert.equal(summary.overall.sampleLevel, "insufficient");
+    assert.equal(summary.overall.accuracyLow, 0.2065);
+    assert.equal(summary.overall.accuracyHigh, 1);
+    assert.equal(summary.calibration.settled, 1);
+    assert.equal(summary.calibration.bins[2].settled, 1);
+    assert.equal(summary.calibration.bins[2].predictedAverage, 0.55);
+    assert.equal(summary.calibration.bins[2].actualAccuracy, 1);
+    assert.equal(summary.oddsBenchmark.byMarketScope.spf.all.compared, 1);
+    assert.equal(summary.oddsBenchmark.byMarketScope.spf.all.modelCorrect, 1);
+    assert.equal(summary.oddsBenchmark.byMarketScope.spf.all.oddsCorrect, 0);
+    assert.equal(summary.oddsBenchmark.byMarketScope.spf.all.netWins, 1);
+    assert.equal(summary.oddsBenchmark.byMarketScope.spf.all.lift, 1);
+    assert.equal(
+      summary.oddsBenchmark.byMarketScope.spf.all.liftMethod,
+      "chronological-block-bootstrap",
+    );
+    assert.equal(
+      summary.oddsBenchmark.byMarketScope.spf.all.liftIterations,
+      1000,
+    );
+    assert.equal(
+      summary.oddsBenchmark.byMarketScope.spf.all.liftImprovementProbability,
+      1,
+    );
+    assert.equal(
+      summary.oddsBenchmark.byMarketScope.spf.all.liftStatus,
+      "insufficient",
+    );
+    assert.equal(summary.errorDiagnosis.overall.settled, 1);
+    assert.equal(summary.errorDiagnosis.overall.misses, 0);
+    assert.equal(summary.errorDiagnosis.byMarket.spf.accuracy, 1);
+    assert.equal(summary.errorDiagnosis.byOddsBand[3].label, "3.01以上");
+    assert.equal(summary.errorDiagnosis.byOddsBand[3].settled, 1);
+    assert.equal(summary.errorDiagnosis.byLeague[0].label, "英超");
+    assert.equal(summary.errorDiagnosis.oddsDirection.different.settled, 1);
+    assert.equal(summary.errorDiagnosis.oddsDirection.different.accuracy, 1);
+    assert.equal(summary.errorDiagnosis.movementDirection.changed.settled, 1);
+    assert.equal(summary.errorDiagnosis.movementDirection.unavailable, 0);
+    assert.deepEqual(summary.errorDiagnosis.confusion.spf.labels, ["胜", "平", "负"]);
+    assert.equal(summary.errorDiagnosis.confusion.spf.singlePredictions, 1);
+    assert.equal(summary.errorDiagnosis.confusion.spf.matrix[2][2], 1);
+    assert.equal(summary.errorDiagnosis.confusion.spf.topErrors.length, 0);
+    assert.equal(summary.errorDiagnosis.confusion.goals.singlePredictions, 0);
     assert.equal(summary.rows[0].correct, true);
     assert.equal(summary.rows[0].score, "2:0");
+
+    const drilldown = ledger.summary({
+      status: "settled",
+      market: "spf",
+      predicted: "负",
+      actual: "负",
+    });
+    assert.equal(drilldown.filtered.fixtures, 1);
+    assert.equal(drilldown.rows.length, 1);
+    assert.equal(
+      ledger.summary({ predicted: "胜", actual: "负" }).filtered.fixtures,
+      0,
+    );
   } finally {
     ledger.close();
     rmSync(directory, { recursive: true, force: true });
@@ -157,6 +229,115 @@ test("单场账本按比赛筛选并分页，汇总数字使用同一筛选结�
     const searched = ledger.summary({ query: "主队2", pageSize: 20 });
     assert.equal(searched.filtered.fixtures, 1);
     assert.equal(searched.rows[0].matchId, "fixture-002");
+  } finally {
+    ledger.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("单场账本可只统计当前预测模型版本", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "betwin-ledger-version-"));
+  const ledger = createPredictionLedger(path.join(directory, "ledger.db"));
+  try {
+    ledger.record(snapshot({ matchId: "legacy-fixture" }));
+    ledger.record(
+      snapshot({
+        matchId: "current-fixture",
+        policyVersion: "historical-similarity-v2:selection-v3@test:all-leagues",
+      }),
+    );
+    ledger.record(
+      snapshot({
+        matchId: "old-same-family-fixture",
+        policyVersion: "historical-similarity-v2:selection-v3@old:all-leagues",
+      }),
+    );
+    const current = ledger.summary({
+      policyVersion: "current",
+      currentPolicyPrefix: "historical-similarity-v2:",
+      currentPolicyVersions: [
+        "historical-similarity-v2:selection-v3@test:all-leagues",
+      ],
+    });
+    assert.equal(current.totals.fixtures, 1);
+    assert.equal(current.rows[0].matchId, "current-fixture");
+
+    const legacy = ledger.summary({
+      policyVersion: "legacy",
+      currentPolicyPrefix: "historical-similarity-v2:",
+      currentPolicyVersions: [
+        "historical-similarity-v2:selection-v3@test:all-leagues",
+      ],
+    });
+    assert.equal(legacy.totals.fixtures, 2);
+    assert.ok(
+      legacy.rows.every((row) => row.matchId !== "current-fixture"),
+    );
+  } finally {
+    ledger.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("当前算法跨数据和验证版本累计，但排除不同生产阈值", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "betwin-ledger-algorithm-"));
+  const ledger = createPredictionLedger(path.join(directory, "ledger.db"));
+  const stableVersion =
+    "historical-similarity-v3:spf:spf-hhad-joint-v1:tolerance-7.00pct:all-leagues";
+  try {
+    ledger.record(
+      snapshot({
+        matchId: "current-validated",
+        policyVersion:
+          "historical-similarity-v3:selection-v1@old:all-leagues",
+        algorithmVersion: null,
+        threshold: 0.07,
+        validationStatus: "validated",
+      }),
+    );
+    ledger.record(
+      snapshot({
+        matchId: "current-pending-validation",
+        policyVersion:
+          "historical-similarity-v3:selection-v1@new:pending-validation:all-leagues",
+        algorithmVersion: null,
+        threshold: 0.07,
+        validationStatus: "pending_revalidation",
+      }),
+    );
+    ledger.record(
+      snapshot({
+        matchId: "different-threshold",
+        policyVersion:
+          "historical-similarity-v3:selection-v1@new:all-leagues",
+        algorithmVersion: null,
+        threshold: 0.1,
+      }),
+    );
+
+    const current = ledger.summary({
+      policyVersion: "current",
+      currentPolicyVersions: [stableVersion],
+      currentAlgorithmSpec: {
+        probabilityPolicy: "historical-similarity-v3",
+        thresholds: { spf: 0.07, hhad: 0.07, goals: 0.015 },
+        goalZeroToleranceAll: 2,
+        goalZeroToleranceSameLeague: 2.5,
+        versions: {
+          spf: { all: stableVersion, sameLeague: `${stableVersion}:same` },
+        },
+      },
+    });
+    assert.equal(current.totals.fixtures, 2);
+    assert.deepEqual(
+      new Set(current.rows.map((row) => row.algorithmVersion)),
+      new Set([stableVersion]),
+    );
+    assert.ok(
+      current.rows.some(
+        (row) => row.validationStatus === "pending_revalidation",
+      ),
+    );
   } finally {
     ledger.close();
     rmSync(directory, { recursive: true, force: true });
@@ -227,10 +408,32 @@ test("全部联赛和同联赛作为两本独立账保存", () => {
     assert.equal(summary.totals.snapshots, 2);
     assert.equal(summary.byScope.all.total, 1);
     assert.equal(summary.byScope.sameLeague.total, 1);
+    assert.equal(summary.byMarketScope.spf.all.total, 1);
+    assert.equal(summary.byMarketScope.spf.sameLeague.total, 1);
+    assert.equal(summary.byMarketScope.hhad.all.total, 0);
     assert.deepEqual(
       summary.rows.map((row) => row.sampleScope).sort(),
       ["全部联赛", "同联赛"],
     );
+
+    for (const pending of ledger.pending()) {
+      const labels = JSON.parse(pending.top_labels_json || "[]");
+      ledger.settle(pending.id, {
+        actualResult: "胜",
+        score: "1:0",
+        correct: labels.includes("胜"),
+        selectedOdds: pending.selected_odds,
+        sourceFile: "历史进球.xlsx",
+        sourceRow: 101,
+        settledAt: "2026-07-27T03:00:00.000Z",
+      });
+    }
+    const paired = ledger.summary().scopeComparison.byMarket.spf;
+    assert.equal(paired.paired, 1);
+    assert.equal(paired.directionsDiffer, 1);
+    assert.equal(paired.allCorrect, 1);
+    assert.equal(paired.sameLeagueCorrect, 0);
+    assert.equal(paired.sameLeagueNetWins, -1);
   } finally {
     ledger.close();
     rmSync(directory, { recursive: true, force: true });
@@ -268,8 +471,174 @@ test("总进球双选按两注成本独立结算", () => {
     assert.equal(summary.byMarket.goalsPair.accuracy, 1);
     assert.equal(summary.byMarket.goalsPair.simulatedProfit, 1.6);
     assert.equal(summary.byMarket.goalsPair.roi, 0.8);
+    assert.equal(summary.errorDiagnosis.confusion.goals.matrix[2][3], 1);
+    assert.equal(summary.errorDiagnosis.confusion.goals.bias.predictedLow, 1);
+    assert.equal(summary.errorDiagnosis.confusion.goals.bias.predictedHigh, 0);
+    assert.equal(summary.errorDiagnosis.confusion.goals.bias.offByOne, 1);
+    assert.deepEqual(summary.errorDiagnosis.confusion.goals.topErrors[0], {
+      predicted: "2",
+      actual: "3",
+      count: 1,
+    });
     assert.deepEqual(summary.rows[0].goalPair.labels, ["2", "3"]);
     assert.equal(summary.rows[0].goalPair.correct, true);
+  } finally {
+    ledger.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("0球倍数双选独立留档并只统计命中率", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "betwin-ledger-"));
+  const ledger = createPredictionLedger(path.join(directory, "ledger.db"));
+  try {
+    ledger.record(
+      snapshot({
+        market: "goalMultiple",
+        policyVersion: "historical-similarity-v2:goal-multiple-v1:all-leagues",
+        predicted: "3 / 4",
+        topLabels: ["3", "4"],
+        selectedProbability: 0.63,
+        selectedOdds: 18,
+        probabilities: [0.38, 0.25],
+        odds: [18, 6.75, 4.05, 3.6, 4.8, 7.5, 13, 17.5],
+        samples: 81,
+        settings: {
+          sameLeague: false,
+          goalMultipleCounts: [31, 20],
+          goalMultipleProbabilities: [31 / 81, 20 / 81],
+          goalMultipleCoverage: 51 / 81,
+          goalMultipleZeroOdds: 18,
+          goalMultipleRelations: [
+            { index: 3, label: "3", multiple: 5 },
+          ],
+          goalMultipleSource: "倍数赔率历史比赛.html",
+        },
+      }),
+    );
+    const [pending] = ledger.pending();
+    ledger.settle(pending.id, {
+      actualResult: "4",
+      score: "2:2",
+      correct: true,
+      selectedOdds: pending.selected_odds,
+      metricsOnly: true,
+      sourceFile: "历史进球数.xlsx",
+      sourceRow: 101,
+      settledAt: "2026-07-27T03:00:00.000Z",
+    });
+
+    const summary = ledger.summary();
+    assert.equal(summary.byMarket.goalMultiple.total, 1);
+    assert.equal(summary.byMarket.goalMultiple.correct, 1);
+    assert.equal(summary.byMarket.goalMultiple.accuracy, 1);
+    assert.equal(summary.byMarket.goalMultiple.stakeUnits, 0);
+    assert.equal(summary.rows[0].simulatedProfit, null);
+    assert.deepEqual(summary.rows[0].goalMultiple.labels, ["3", "4"]);
+    assert.deepEqual(summary.rows[0].goalMultiple.counts, [31, 20]);
+    assert.equal(summary.rows[0].goalMultiple.correct, true);
+  } finally {
+    ledger.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("并列方向按覆盖数量计成本，主命中率只统计严格单选", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "betwin-ledger-ties-"));
+  const ledger = createPredictionLedger(path.join(directory, "ledger.db"));
+  try {
+    ledger.record(snapshot({ matchId: "single" }));
+    ledger.record(
+      snapshot({
+        matchId: "double",
+        predicted: "胜 / 平",
+        topLabels: ["胜", "平"],
+        selectedProbability: 0.4,
+      }),
+    );
+    ledger.record(
+      snapshot({
+        matchId: "full-cover",
+        predicted: "胜 / 平 / 负",
+        topLabels: ["胜", "平", "负"],
+        selectedProbability: 1 / 3,
+      }),
+    );
+
+    for (const pending of ledger.pending()) {
+      const actualResult =
+        pending.match_id === "single"
+          ? "胜"
+          : pending.match_id === "double"
+            ? "平"
+            : "负";
+      ledger.settle(pending.id, {
+        actualResult,
+        score: "1:0",
+        sourceFile: "历史.xlsx",
+        sourceRow: 101,
+        settledAt: "2026-07-27T03:00:00.000Z",
+      });
+    }
+
+    const summary = ledger.summary();
+    assert.equal(summary.overall.recordedSettled, 3);
+    assert.equal(summary.overall.settled, 1);
+    assert.equal(summary.overall.correct, 1);
+    assert.equal(summary.overall.accuracy, 1);
+    assert.deepEqual(summary.overall.multiSelection, {
+      settled: 1,
+      correct: 1,
+      coverageAccuracy: 1,
+    });
+    assert.equal(summary.overall.noPrediction, 1);
+    assert.equal(summary.overall.stakeUnits, 3);
+    assert.ok(Math.abs(summary.overall.simulatedProfit - 2.3) < 1e-12);
+    assert.ok(Math.abs(summary.overall.roi - 2.3 / 3) < 1e-12);
+    assert.equal(summary.calibration.settled, 1);
+    assert.equal(summary.oddsBenchmark.overall.compared, 1);
+    assert.equal(summary.errorDiagnosis.overall.settled, 1);
+
+    const rows = new Map(summary.rows.map((row) => [row.matchId, row]));
+    assert.equal(rows.get("single").strictSingle, true);
+    assert.equal(rows.get("double").multiSelection, true);
+    assert.equal(rows.get("double").stakeUnits, 2);
+    assert.equal(rows.get("double").simulatedReturn, 3.2);
+    assert.ok(
+      Math.abs(rows.get("double").simulatedProfit - 1.2) < 1e-12,
+    );
+    assert.equal(rows.get("full-cover").noPrediction, true);
+    assert.equal(rows.get("full-cover").correct, null);
+    assert.equal(rows.get("full-cover").stakeUnits, 0);
+    assert.equal(rows.get("full-cover").simulatedProfit, null);
+  } finally {
+    ledger.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("单场批量结算异常时事务整体回滚", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "betwin-ledger-tx-"));
+  const ledger = createPredictionLedger(path.join(directory, "ledger.db"));
+  try {
+    ledger.record(snapshot());
+    const [pending] = ledger.pending();
+    assert.throws(
+      () =>
+        ledger.transaction(() => {
+          ledger.settle(pending.id, {
+            actualResult: "胜",
+            score: "1:0",
+            sourceFile: "历史.xlsx",
+            sourceRow: 101,
+            settledAt: "2026-07-27T03:00:00.000Z",
+          });
+          throw new Error("模拟批量结算失败");
+        }),
+      /模拟批量结算失败/,
+    );
+    assert.equal(ledger.pending().length, 1);
+    assert.equal(ledger.summary().totals.settled, 0);
   } finally {
     ledger.close();
     rmSync(directory, { recursive: true, force: true });

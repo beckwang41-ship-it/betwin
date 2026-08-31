@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta id="theme-color" name="theme-color" content="#102126" />
     <meta
       name="description"
       content="从本地比赛 JSON 自动读取赛事，基于中国竞彩赔率检索相似历史并生成概率预测。"
@@ -27,7 +28,8 @@
         </button>
         <button class="mode-button" data-view="parlay" type="button">
           串关选场
-          <span>NEW</span>
+          <span id="topbar-parlay-badge" class="mode-badge" hidden>0</span>
+          <span id="topbar-parlay-tag">NEW</span>
         </button>
         <button class="mode-button" data-view="ledger" type="button">
           实战记录
@@ -39,6 +41,7 @@
         <span>本地数据已接入</span>
         <strong id="match-count">—</strong>
       </div>
+      <button id="theme-toggle-btn" class="theme-toggle-btn" type="button" aria-label="切换夜间深色模式">🌙 深色</button>
     </header>
 
     <main id="single-view" class="shell">
@@ -50,6 +53,29 @@
             <span>⌕</span>
             <input id="match-search" type="search" placeholder="搜索球队或联赛" />
           </label>
+          <div class="match-focus-filter" role="group" aria-label="快捷胶囊筛选比赛">
+            <button class="active" type="button" data-match-filter="all" aria-pressed="true">
+              <span>全部</span><small class="filter-count">—</small>
+            </button>
+            <button type="button" data-match-filter="recommended" aria-pressed="false">
+              <span>🔥 重点</span><small class="filter-count">—</small>
+            </button>
+            <button type="button" data-match-filter="spf" aria-pressed="false">
+              <span>胜平负</span><small class="filter-count">—</small>
+            </button>
+            <button type="button" data-match-filter="hhad" aria-pressed="false">
+              <span>让球</span><small class="filter-count">—</small>
+            </button>
+            <button type="button" data-match-filter="movement" aria-pressed="false">
+              <span>📉 变盘</span><small class="filter-count">—</small>
+            </button>
+            <button type="button" data-match-filter="multiple" aria-pressed="false">
+              <span>⚽ 倍数</span><small class="filter-count">—</small>
+            </button>
+            <button type="button" data-match-filter="equal" aria-pressed="false">
+              <span>同赔</span><small class="filter-count">—</small>
+            </button>
+          </div>
         </div>
         <nav id="match-list" class="match-list" aria-label="比赛列表"></nav>
         <div class="rail-foot">
@@ -81,132 +107,237 @@
                 <h2 id="away-team">—</h2>
               </div>
             </div>
-            <div class="prediction-seal">
-              <span id="primary-market-label">胜平负预测</span>
-              <strong id="prediction-label">—</strong>
-              <small id="confidence-label">置信度 —</small>
-              <small id="spf-hero-sample" class="hero-sample">相似样本 —</small>
+            <div id="match-verdict-banner" class="match-verdict-banner">
+              <span class="verdict-tag">🎯 本场预测速览</span>
+              <div class="verdict-items">
+                <span class="verdict-item"><small>胜平负</small><strong id="verdict-spf">—</strong></span>
+                <span class="verdict-item"><small>让球</small><strong id="verdict-hhad">—</strong></span>
+                <span class="verdict-item"><small>总进球</small><strong id="verdict-goals">—</strong></span>
+                <span class="verdict-item"><small>比分观察</small><strong id="verdict-score">—</strong></span>
+              </div>
             </div>
+            <div id="match-market-signals" class="match-market-signals"></div>
           </section>
 
-          <section class="control-deck reveal delay-1" aria-label="整页预测条件">
-            <div class="control-copy">
+          <section class="decision-board reveal delay-1" aria-label="本场三个玩法预测结论">
+            <article class="market-decision spf-decision">
+              <header>
+                <p class="eyebrow">1X2 / 胜平负</p>
+                <div class="decision-head-meta">
+                  <span id="primary-market-label">胜平负预测</span>
+                  <strong id="spf-decision-reliability" class="decision-reliability-badge cautious">谨慎参考</strong>
+                </div>
+              </header>
+              <div class="decision-lead">
+                <div>
+                  <span>主预测</span>
+                  <strong id="prediction-label">—</strong>
+                </div>
+                <small><span id="confidence-label">置信度 —</span> <button type="button" class="term-tip" data-tip="置信度反映相似历史样本的充足程度与预测方向的一致性" aria-label="说明：置信度反映相似历史样本的充足程度与预测方向的一致性" aria-expanded="false">ⓘ</button></small>
+              </div>
+              <div class="decision-probabilities">
+                <div class="win">
+                  <span id="prob-label-win">主胜</span>
+                  <strong id="prob-win">—</strong>
+                  <div class="prob-mini-track">
+                    <div id="prob-bar-win" class="prob-mini-bar win"></div>
+                    <div id="prob-prev-win" class="prob-prev-marker" hidden></div>
+                  </div>
+                  <small id="odds-win">赔率 —</small>
+                </div>
+                <div class="draw">
+                  <span id="prob-label-draw">平局</span>
+                  <strong id="prob-draw">—</strong>
+                  <div class="prob-mini-track">
+                    <div id="prob-bar-draw" class="prob-mini-bar draw"></div>
+                    <div id="prob-prev-draw" class="prob-prev-marker" hidden></div>
+                  </div>
+                  <small id="odds-draw">赔率 —</small>
+                </div>
+                <div class="loss">
+                  <span id="prob-label-loss">客胜</span>
+                  <strong id="prob-loss">—</strong>
+                  <div class="prob-mini-track">
+                    <div id="prob-bar-loss" class="prob-mini-bar loss"></div>
+                    <div id="prob-prev-loss" class="prob-prev-marker" hidden></div>
+                  </div>
+                  <small id="odds-loss">赔率 —</small>
+                </div>
+              </div>
+              <div id="spf-double-chance" class="decision-double-chance" hidden>
+                <span class="double-chance-tag">概率前两项</span>
+                <strong id="spf-double-chance-picks" class="double-chance-picks">—</strong>
+                <span id="spf-double-chance-cover" class="double-chance-cover">覆盖率 —</span>
+                <small id="spf-double-chance-odds" class="double-chance-odds">组合赔付 —</small>
+              </div>
+              <p id="spf-decision-reason" class="decision-reliability-reason">正在判断当前结果是否适合重点参考…</p>
+              <footer id="spf-hero-sample">相似样本 —</footer>
+            </article>
+
+            <article id="hhad-deck" class="market-decision hhad-decision">
+              <header>
+                <p class="eyebrow">HANDICAP 1X2 / 让球胜平负</p>
+                <div class="decision-head-meta">
+                  <span>主队 <b id="hhad-line" class="hhad-line">—</b></span>
+                  <strong id="hhad-decision-reliability" class="decision-reliability-badge cautious">谨慎参考</strong>
+                </div>
+              </header>
+              <div class="decision-lead hhad-decision-lead">
+                <div>
+                  <span>让球预测</span>
+                  <strong id="hhad-prediction-label">—</strong>
+                </div>
+                <small><span id="hhad-confidence-label">置信度 —</span> <button type="button" class="term-tip" data-tip="置信度反映同让球数下历史相似样本的充足程度与方向一致性" aria-label="说明：置信度反映同让球数下历史相似样本的充足程度与方向一致性" aria-expanded="false">ⓘ</button></small>
+              </div>
+              <div class="decision-probabilities">
+                <div class="win">
+                  <span>让胜</span>
+                  <strong id="hhad-prob-win">—</strong>
+                  <div class="prob-mini-track"><div id="hhad-prob-bar-win" class="prob-mini-bar win"></div></div>
+                  <small id="hhad-odds-win">赔率 —</small>
+                </div>
+                <div class="draw">
+                  <span>让平</span>
+                  <strong id="hhad-prob-draw">—</strong>
+                  <div class="prob-mini-track"><div id="hhad-prob-bar-draw" class="prob-mini-bar draw"></div></div>
+                  <small id="hhad-odds-draw">赔率 —</small>
+                </div>
+                <div class="loss">
+                  <span>让负</span>
+                  <strong id="hhad-prob-loss">—</strong>
+                  <div class="prob-mini-track"><div id="hhad-prob-bar-loss" class="prob-mini-bar loss"></div></div>
+                  <small id="hhad-odds-loss">赔率 —</small>
+                </div>
+              </div>
+              <div id="hhad-double-chance" class="decision-double-chance" hidden>
+                <span class="double-chance-tag">概率前两项</span>
+                <strong id="hhad-double-chance-picks" class="double-chance-picks">—</strong>
+                <span id="hhad-double-chance-cover" class="double-chance-cover">覆盖率 —</span>
+                <small id="hhad-double-chance-odds" class="double-chance-odds">组合赔付 —</small>
+              </div>
+              <p id="hhad-decision-reason" class="decision-reliability-reason">正在判断当前结果是否适合重点参考…</p>
+              <footer class="decision-sample">
+                <strong id="hhad-sample-count">—</strong>
+                <span id="hhad-weighting-note">加权 —</span>
+                <span id="hhad-movement-note">走势 —</span>
+              </footer>
+            </article>
+
+            <article class="market-decision goals-decision">
+              <header>
+                <p class="eyebrow">TOTAL GOALS / 总进球</p>
+                <div class="decision-head-meta">
+                  <span>相似历史预测</span>
+                  <strong id="goal-decision-reliability" class="decision-reliability-badge cautious">谨慎参考</strong>
+                </div>
+              </header>
+              <div class="decision-lead">
+                <div>
+                  <span>精确首选</span>
+                  <strong id="goal-exact-label">—</strong>
+                </div>
+                <small>期望进球 <b id="expected-goals">—</b> <button type="button" class="term-tip" data-tip="基于相似历史比赛进球分布计算的期望进球值" aria-label="说明：基于相似历史比赛进球分布计算的期望进球值" aria-expanded="false">ⓘ</button></small>
+              </div>
+              <div class="goal-decision-pair">
+                <span>概率前两项 <button type="button" class="term-tip" data-tip="历史赛果中发生概率最高的两个进球档位（不强制相邻），仅作概率分布观察" aria-label="说明：历史赛果中发生概率最高的两个进球档位，不强制相邻，仅作概率分布观察" aria-expanded="false">ⓘ</button></span>
+                <strong id="goal-pair-label">—</strong>
+                <small id="top-goals">高概率 —</small>
+              </div>
+              <div class="goal-decision-cover">
+                <span>双选覆盖</span>
+                <strong id="goal-pair-probability">—</strong>
+                <div class="goal-pair-track"><i id="goal-pair-meter"></i></div>
+              </div>
+              <div id="top-scores-box" class="top-scores-box">
+                <div class="top-scores-head">
+                  <div class="top-scores-title-wrap">
+                    <span>相似进球样本比分分布 · 研究观察</span>
+                    <span id="top-scores-validation" class="cross-validation-badge" hidden></span>
+                  </div>
+                  <small id="top-scores-suggest">—</small>
+                </div>
+                <div id="top-scores-chips" class="top-scores-chips"></div>
+              </div>
+              <p id="goal-decision-reason" class="decision-reliability-reason">正在判断当前结果是否适合重点参考…</p>
+              <footer id="goal-pair-odds">每场按两个选项、两注成本独立统计</footer>
+            </article>
+          </section>
+
+          <details class="control-deck reveal delay-1" aria-label="整页预测条件">
+            <summary class="control-deck-summary">
               <div>
                 <p class="eyebrow">PREDICTION SCOPE / 预测条件</p>
-                <h3>先设定相似比赛范围</h3>
+                <h3>相似比赛范围</h3>
               </div>
               <div class="control-summary">
                 <strong id="control-scope-summary">当前使用：全部联赛</strong>
                 <span id="model-config-status" class="model-config-status">正在读取默认参数…</span>
-                <small>以下所有预测、图表和历史比赛都会按这里重新计算。</small>
               </div>
+              <div class="sample-ledger" aria-label="当前条件下三个玩法的相似样本数">
+                <span>胜平负 <strong id="control-spf-samples">— 场</strong></span>
+                <span>让球 <strong id="control-hhad-samples">— 场</strong></span>
+                <span>进球数 <strong id="control-goal-samples">— 场</strong></span>
+              </div>
+              <span class="control-expand-action">调整条件</span>
+            </summary>
+            <div class="control-deck-body">
+              <p class="control-body-note">调整后，整页预测、图表和历史比赛都会按新条件重新计算。</p>
+              <label class="range-control">
+                <span><span>胜平负赔率误差 <em id="spf-recommendation">默认 —</em></span><strong id="spf-tolerance-label">7%</strong></span>
+                <input id="spf-tolerance" type="range" min="3" max="20" value="7" />
+              </label>
+              <label class="range-control">
+                <span><span>让球赔率误差 <em id="hhad-recommendation">默认 —</em></span><strong id="hhad-tolerance-label">7%</strong></span>
+                <input id="hhad-tolerance" type="range" min="3" max="20" value="7" />
+              </label>
+              <label class="range-control">
+                <span><span>总进球0球赔率门槛 <em id="goal-recommendation">已验证固定规则</em></span><strong id="goal-tolerance-label">±2.00</strong></span>
+                <input id="goal-tolerance" type="hidden" value="20" />
+                <small class="fixed-goal-rule">全部联赛使用 ±2.00；只看同联赛时使用 ±2.50。门槛内全部样本按综合距离加权。</small>
+              </label>
+              <label class="switch-control">
+                <input id="same-league" type="checkbox" />
+                <span class="switch"></span>
+                <span>只看同联赛</span>
+              </label>
               <details class="method-note-details">
                 <summary>查看计算说明</summary>
                 <p id="method-note">—</p>
               </details>
             </div>
-            <label class="range-control">
-              <span><span>胜平负赔率误差 <em id="spf-recommendation">默认 —</em></span><strong id="spf-tolerance-label">7%</strong></span>
-              <input id="spf-tolerance" type="range" min="3" max="20" value="7" />
-            </label>
-            <label class="range-control">
-              <span><span>让球赔率误差 <em id="hhad-recommendation">默认 —</em></span><strong id="hhad-tolerance-label">7%</strong></span>
-              <input id="hhad-tolerance" type="range" min="3" max="20" value="7" />
-            </label>
-            <label class="range-control">
-              <span><span>总进球匹配范围 <em id="goal-recommendation">默认 —</em></span><strong id="goal-tolerance-label">2.0pp</strong></span>
-              <input id="goal-tolerance" type="range" min="2" max="30" value="20" />
-            </label>
-            <label class="switch-control">
-              <input id="same-league" type="checkbox" />
-              <span class="switch"></span>
-              <span>只看同联赛</span>
-            </label>
-            <div class="sample-ledger" aria-label="当前条件下三个玩法的相似样本数">
-              <span>当前样本</span>
-              <span>胜平负 <strong id="control-spf-samples">— 场</strong></span>
-              <span>让球 <strong id="control-hhad-samples">— 场</strong></span>
-              <span>进球数 <strong id="control-goal-samples">— 场</strong></span>
+          </details>
+
+          <section id="goal-multiple-strip" class="goal-multiple-strip reveal delay-1" aria-label="0球整数倍历史双选" hidden>
+            <div class="goal-multiple-mark" aria-hidden="true">×N</div>
+            <div class="goal-multiple-copy">
+              <p class="eyebrow">ZERO ODDS MULTIPLE / 精确0球终赔档位</p>
+              <div class="goal-multiple-pick">
+                <span>倍数历史前两位</span>
+                <strong id="goal-multiple-label">—</strong>
+              </div>
+              <p id="goal-multiple-detail">—</p>
+            </div>
+            <div class="goal-multiple-record">
+              <span>历史双选覆盖</span>
+              <strong id="goal-multiple-coverage">—</strong>
+              <small id="goal-multiple-meta">出现整数倍关系时自动进入待结算</small>
             </div>
           </section>
 
-          <section class="score-strip reveal delay-1" aria-label="预测概率">
-            <article class="prob-card win">
-              <span id="prob-label-win">主胜</span>
-              <strong id="prob-win">—</strong>
-              <small id="odds-win">赔率 —</small>
-            </article>
-            <article class="prob-card draw">
-              <span id="prob-label-draw">平局</span>
-              <strong id="prob-draw">—</strong>
-              <small id="odds-draw">赔率 —</small>
-            </article>
-            <article class="prob-card loss">
-              <span id="prob-label-loss">客胜</span>
-              <strong id="prob-loss">—</strong>
-              <small id="odds-loss">赔率 —</small>
-            </article>
-            <article class="prob-card goals">
-              <span>赔率预期进球</span>
-              <strong id="expected-goals">—</strong>
-              <small id="top-goals">高概率 —</small>
-            </article>
-          </section>
-
-          <section class="goal-pair-strip reveal delay-1" aria-label="总进球高频双选">
-            <div class="goal-pair-copy">
-              <p class="eyebrow">GOAL COVER / 历史前两名</p>
-              <div>
-                <span>精确首选 <strong id="goal-exact-label">—</strong></span>
-                <i>→</i>
-                <span>稳健双选 <strong id="goal-pair-label">—</strong></span>
+          <section id="goal-equality-strip" class="goal-multiple-strip goal-equality-strip reveal delay-1" aria-label="同赔历史进球前两位" hidden>
+            <div class="goal-multiple-mark" aria-hidden="true">＝</div>
+            <div class="goal-multiple-copy">
+              <p class="eyebrow">EQUAL ODDS / 同组合同赔率精确档位</p>
+              <div class="goal-multiple-pick">
+                <span>同赔历史前两位</span>
+                <strong>实际进球数</strong>
               </div>
+              <p class="goal-equality-note">同赔组合与终赔值完全一致时，分别统计历史实际进球</p>
+              <div id="goal-equality-results" class="goal-equality-results"></div>
             </div>
-            <div class="goal-pair-confidence">
-              <span>双选覆盖概率</span>
-              <strong id="goal-pair-probability">—</strong>
-              <div class="goal-pair-track"><i id="goal-pair-meter"></i></div>
-              <small id="goal-pair-odds">每场按两个选项、两注成本独立统计</small>
-            </div>
-          </section>
-
-          <section id="hhad-deck" class="hhad-deck reveal delay-1">
-            <div class="hhad-heading">
-              <div>
-                <p class="eyebrow">HANDICAP 1X2 / 让球胜平负</p>
-                <h3>
-                  主队
-                  <span id="hhad-line" class="hhad-line">—</span>
-                </h3>
-              </div>
-              <div class="hhad-prediction">
-                <span>让球预测</span>
-                <strong id="hhad-prediction-label">—</strong>
-                <small id="hhad-confidence-label">置信度 —</small>
-              </div>
-            </div>
-            <div class="hhad-probabilities">
-              <article class="win">
-                <span>让胜</span>
-                <strong id="hhad-prob-win">—</strong>
-                <small id="hhad-odds-win">赔率 —</small>
-              </article>
-              <article class="draw">
-                <span>让平</span>
-                <strong id="hhad-prob-draw">—</strong>
-                <small id="hhad-odds-draw">赔率 —</small>
-              </article>
-              <article class="loss">
-                <span>让负</span>
-                <strong id="hhad-prob-loss">—</strong>
-                <small id="hhad-odds-loss">赔率 —</small>
-              </article>
-              <div class="hhad-sample">
-                <small>同让球相似样本</small>
-                <strong id="hhad-sample-count">—</strong>
-                <small id="hhad-weighting-note">加权 —</small>
-                <small id="hhad-movement-note">走势 —</small>
-              </div>
+            <div class="goal-multiple-record goal-equality-record">
+              <span>匹配到的同赔关系</span>
+              <strong id="goal-equality-count">—</strong>
             </div>
           </section>
 
@@ -218,16 +349,17 @@
               </div>
               <p>先看当前预测和概率；“谨慎”或“跳过”只表示可靠性等级，不会改变上方预测结果。</p>
             </div>
+            <div id="reliability-global-note" class="reliability-global-note" role="status" hidden></div>
             <div id="reliability-cards" class="reliability-cards"></div>
           </section>
 
-          <section class="stability-deck reveal delay-2" aria-label="阈值稳定性分析">
+          <section class="stability-deck reveal delay-2" aria-label="历史支持度分析">
             <div class="stability-head">
               <div>
-                <p class="eyebrow">THRESHOLD STABILITY / 阈值稳定性</p>
-                <h3>换一个合理阈值，方向会不会变</h3>
+                <p class="eyebrow">HISTORY SUPPORT / 历史支持度</p>
+                <h3>不同相似范围，历史预测方向是否一致</h3>
               </div>
-              <p>四档全部有样本、没有并列且方向一致，才判定稳定。</p>
+              <p>当前选择的联赛范围和相似阈值会重新计算历史赛果占比，并直接决定主预测方向；终赔去水概率仅作赔率参考。</p>
             </div>
             <div id="stability-grid" class="stability-grid"></div>
           </section>
@@ -236,7 +368,7 @@
             <div class="advanced-corrections-summary">
               <div>
                 <p class="eyebrow">ADVANCED CORRECTION / 高级修正</p>
-                <h3>本场最终概率已采用额外修正</h3>
+                <h3>本场主预测已采用额外修正</h3>
               </div>
               <strong id="advanced-corrections-label">—</strong>
             </div>
@@ -266,123 +398,139 @@
             </details>
           </section>
 
-          <section class="chart-grid">
-            <article class="panel probability-panel reveal delay-2">
-              <div class="panel-head">
+          <details id="deep-research-drawer" class="history-drawer-deck reveal delay-2">
+            <summary class="history-drawer-summary">
+              <div class="drawer-summary-left">
+                <span class="drawer-icon">📂</span>
                 <div>
-                  <p class="eyebrow">MARKET / RAW / STABLE</p>
-                  <h3 id="probability-panel-title">胜平负：市场、原始占比与稳定概率</h3>
-                </div>
-                <span id="spf-sample-chip" class="sample-chip">— 场相似</span>
-              </div>
-              <div id="probability-bars" class="probability-bars"></div>
-              <div class="legend-row">
-                <span><i class="market-dot"></i>竞彩去水</span>
-                <span><i class="history-dot"></i>历史原始占比</span>
-                <span><i class="model-dot"></i><span id="prediction-method-legend">验证后预测</span></span>
-              </div>
-            </article>
-
-            <article class="panel outcome-panel reveal delay-3">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">HISTORICAL OUTCOMES</p>
-                  <h3>原始赛果与稳定概率</h3>
+                  <h3>深度研究 · 相似历史明细与走势图表</h3>
+                  <p>包含赔率走势轨迹、胜平负/进球分布饼图及全量历史比赛明细</p>
                 </div>
               </div>
-              <div class="outcome-comparison">
-                <section id="spf-outcome-market" class="outcome-market">
-                  <h4>胜平负赛果</h4>
-                  <div class="donut-wrap">
-                    <div id="outcome-donut" class="donut">
-                      <div>
-                        <strong id="donut-total">—</strong>
-                        <span>相似场次</span>
-                      </div>
+              <div class="drawer-summary-right">
+                <span id="deep-research-badge" class="drawer-badge">点击展开查看 ▾</span>
+              </div>
+            </summary>
+            <div class="history-drawer-content">
+              <section class="chart-grid">
+                <article class="panel probability-panel reveal delay-2">
+                  <div class="panel-head">
+                    <div>
+                      <p class="eyebrow">ODDS REFERENCE / HISTORICAL PREDICTION</p>
+                      <h3 id="probability-panel-title">胜平负：赔率隐含概率与相似历史主预测</h3>
                     </div>
-                    <div id="outcome-legend" class="outcome-legend"></div>
+                    <span id="spf-sample-chip" class="sample-chip">— 场相似</span>
                   </div>
-                </section>
-                <section id="hhad-outcome-market" class="outcome-market">
-                  <h4>让球胜平负赛果</h4>
-                  <div class="donut-wrap">
-                    <div id="hhad-outcome-donut" class="donut">
-                      <div>
-                        <strong id="hhad-donut-total">—</strong>
-                        <span>同让球相似</span>
-                      </div>
+                  <div id="probability-bars" class="probability-bars"></div>
+                  <div class="legend-row">
+                    <span><i class="market-dot"></i>赔率隐含概率</span>
+                    <span><i class="history-dot"></i>相似历史原始占比</span>
+                    <span><i class="model-dot"></i><span id="prediction-method-legend">主预测</span></span>
+                  </div>
+                </article>
+
+                <article class="panel outcome-panel reveal delay-3">
+                  <div class="panel-head">
+                    <div>
+                      <p class="eyebrow">HISTORICAL OUTCOMES</p>
+                      <h3>相似历史赛果与主预测概率</h3>
                     </div>
-                    <div id="hhad-outcome-legend" class="outcome-legend"></div>
                   </div>
-                </section>
-              </div>
-            </article>
-
-            <article class="panel goal-panel reveal delay-3">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">TOTAL GOALS DISTRIBUTION</p>
-                  <h3>进球原始占比与稳定概率</h3>
-                </div>
-                <span id="goal-sample-chip" class="sample-chip">— 场相似</span>
-              </div>
-              <div id="goal-chart" class="goal-chart"></div>
-            </article>
-
-            <article class="panel movement-panel reveal delay-4">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">ODDS MOVEMENT</p>
-                  <h3 id="movement-title">胜平负赔率轨迹</h3>
-                </div>
-                <div class="movement-head-tools">
-                  <div class="movement-market-tabs" role="tablist" aria-label="赔率走势玩法">
-                    <button type="button" data-movement-market="spf" aria-selected="true">胜平负</button>
-                    <button type="button" data-movement-market="hhad" aria-selected="false">让球胜平负</button>
-                    <button type="button" data-movement-market="goals" aria-selected="false">总进球</button>
+                  <div class="outcome-comparison">
+                    <section id="spf-outcome-market" class="outcome-market">
+                      <h4>胜平负赛果</h4>
+                      <div class="donut-wrap">
+                        <div id="outcome-donut" class="donut">
+                          <div>
+                            <strong id="donut-total">—</strong>
+                            <span>相似场次</span>
+                          </div>
+                        </div>
+                        <div id="outcome-legend" class="outcome-legend"></div>
+                      </div>
+                    </section>
+                    <section id="hhad-outcome-market" class="outcome-market">
+                      <h4>让球胜平负赛果</h4>
+                      <div class="donut-wrap">
+                        <div id="hhad-outcome-donut" class="donut">
+                          <div>
+                            <strong id="hhad-donut-total">—</strong>
+                            <span>同让球相似</span>
+                          </div>
+                        </div>
+                        <div id="hhad-outcome-legend" class="outcome-legend"></div>
+                      </div>
+                    </section>
                   </div>
-                  <span id="movement-count" class="sample-chip">— 次记录</span>
+                </article>
+
+                <article class="panel goal-panel reveal delay-3">
+                  <div class="panel-head">
+                    <div>
+                      <p class="eyebrow">TOTAL GOALS DISTRIBUTION</p>
+                      <h3>进球相似历史占比与主预测概率</h3>
+                    </div>
+                    <span id="goal-sample-chip" class="sample-chip">— 场相似</span>
+                  </div>
+                  <div id="goal-chart" class="goal-chart"></div>
+                </article>
+
+                <article class="panel movement-panel reveal delay-4">
+                  <div class="panel-head">
+                    <div>
+                      <p class="eyebrow">ODDS MOVEMENT</p>
+                      <h3 id="movement-title">胜平负赔率轨迹</h3>
+                    </div>
+                    <div class="movement-head-tools">
+                      <div class="movement-market-tabs" role="tablist" aria-label="赔率走势玩法">
+                        <button type="button" data-movement-market="spf" aria-selected="true">胜平负</button>
+                        <button type="button" data-movement-market="hhad" aria-selected="false">让球胜平负</button>
+                        <button type="button" data-movement-market="goals" aria-selected="false">总进球</button>
+                      </div>
+                      <span id="movement-count" class="sample-chip">— 次记录</span>
+                    </div>
+                  </div>
+                  <div id="movement-chart" class="movement-chart"></div>
+                  <div id="movement-legend" class="movement-legend"></div>
+                </article>
+              </section>
+
+              <section class="history-section reveal delay-4">
+                <div class="section-head">
+                  <div>
+                    <p class="eyebrow">SIMILAR ARCHIVE</p>
+                    <h3>相似赔率历史比赛</h3>
+                    <p>当前范围内全部命中场次均保留，赛果占比直接形成主预测；终赔赔率只用于寻找相似比赛和展示赔率参考。</p>
+                  </div>
+                  <div class="tabs" role="tablist">
+                    <button class="tab active" data-tab="spf" role="tab">胜平负相似</button>
+                    <button class="tab" data-tab="hhad" role="tab">让球相似</button>
+                    <button class="tab" data-tab="goals" role="tab">进球盘相似</button>
+                  </div>
                 </div>
-              </div>
-              <div id="movement-chart" class="movement-chart"></div>
-              <div id="movement-legend" class="movement-legend"></div>
-            </article>
-          </section>
 
-          <section class="history-section reveal delay-4">
-            <div class="section-head">
-              <div>
-                <p class="eyebrow">SIMILAR ARCHIVE</p>
-                <h3>相似赔率历史比赛</h3>
-                <p>全部命中场次均保留；权重越高，对最终概率的贡献越大。</p>
-              </div>
-              <div class="tabs" role="tablist">
-                <button class="tab active" data-tab="spf" role="tab">胜平负相似</button>
-                <button class="tab" data-tab="hhad" role="tab">让球相似</button>
-                <button class="tab" data-tab="goals" role="tab">进球盘相似</button>
-              </div>
+                <div class="table-shell">
+                  <table>
+                    <thead id="history-head"></thead>
+                    <tbody id="history-body"></tbody>
+                  </table>
+                  <div id="empty-state" class="empty-state" hidden>
+                    当前阈值下没有相似比赛，请放宽相似度范围。
+                  </div>
+                </div>
+                <div class="pagination">
+                  <span id="page-summary">—</span>
+                  <div>
+                    <button id="prev-page" type="button">上一页</button>
+                    <button id="next-page" type="button">下一页</button>
+                  </div>
+                </div>
+              </section>
             </div>
-
-            <div class="table-shell">
-              <table>
-                <thead id="history-head"></thead>
-                <tbody id="history-body"></tbody>
-              </table>
-              <div id="empty-state" class="empty-state" hidden>
-                当前阈值下没有相似比赛，请放宽相似度范围。
-              </div>
-            </div>
-            <div class="pagination">
-              <span id="page-summary">—</span>
-              <div>
-                <button id="prev-page" type="button">上一页</button>
-                <button id="next-page" type="button">下一页</button>
-              </div>
-            </div>
-          </section>
+          </details>
 
           <footer class="method-footer">
-            <span>预测方法：距离权重通过严格验证才启用，否则自动使用等权历史占比</span>
+            <span>预测方法：当前所选联赛范围内的相似历史赛果占比决定方向，终赔去水概率仅作赔率参考</span>
             <span id="history-stats">历史库 —</span>
           </footer>
         </div>
@@ -473,7 +621,7 @@
               </label>
               <label>
                 <input name="parlay-mode" type="radio" value="goalsPair" />
-                <span><strong>进球双选</strong><small>2场 × 每场2个</small></span>
+                <span><strong>进球双选</strong><small>2–5场 × 每场2个</small></span>
               </label>
             </div>
           </fieldset>
@@ -523,15 +671,16 @@
           <label class="rule-field">
             <span>排序方式</span>
             <select id="parlay-sort">
-              <option value="value">回报指数优先</option>
-              <option value="probability">稳健优先</option>
+              <option value="probability" selected>命中率优先（默认）</option>
+              <option value="stability">最弱一环优先（研究观察）</option>
+              <option value="value">回报指数优先（偏差最大）</option>
               <option id="parlay-target-sort-option" value="target">贴近目标赔率</option>
             </select>
           </label>
 
           <div class="rule-explainer">
             <div><span>回报指数</span><strong id="parlay-value-formula">赔率 × 命中率</strong></div>
-            <p id="parlay-value-note">高于 1.00 代表模型概率下的理论正期望，不等于保证盈利。</p>
+            <p id="parlay-value-note">仅为模型概率与赔率的乘积，用于横向排序。离线回测显示该指数越高实际回报反而越差，高于 1.00 不代表值得投注。</p>
           </div>
 
           <button id="generate-parlay" class="generate-button" type="button">
@@ -559,7 +708,7 @@
           <p class="eyebrow">LIVE LEDGER / 只记赛前</p>
           <h1>赛前落笔，赛后对账</h1>
           <p>
-            系统按验证后的默认口径，为当前比赛的胜平负、让球胜平负和总进球各留一份不可重复的快照。
+            系统按默认口径，为当前比赛的胜平负、让球胜平负、总进球以及符合条件的0球倍数双选留下不可重复的快照。
             手动确认保存的串关也会独立留档；新赛果进入历史库后自动结算，真实命中率不再靠回测代替。
           </p>
         </div>
@@ -571,6 +720,29 @@
       </section>
 
       <section class="ledger-workspace reveal delay-1">
+        <div id="ledger-capital-board" class="ledger-capital-board">
+          <div class="capital-card">
+            <small>📊 实战总留档</small>
+            <strong id="capital-total-fixtures">—</strong>
+            <span>单场预测 + 串关记录</span>
+          </div>
+          <div class="capital-card">
+            <small>🎯 已结算命中率</small>
+            <strong id="capital-accuracy">—</strong>
+            <span id="capital-accuracy-detail">—</span>
+          </div>
+          <div class="capital-card">
+            <small>💰 模拟实战总盈亏</small>
+            <strong id="capital-profit" class="profit">—</strong>
+            <span id="capital-return">—</span>
+          </div>
+          <div class="capital-card">
+            <small>📈 实战投资回报率 (ROI)</small>
+            <strong id="capital-roi">—</strong>
+            <span id="capital-roi-detail">按实际注数成本计算</span>
+          </div>
+        </div>
+
         <div class="ledger-view-bar">
           <div class="ledger-view-tabs" role="tablist" aria-label="实战记录分类">
             <button class="active" data-ledger-tab="overview" role="tab" aria-selected="true" type="button">数据总览</button>
@@ -582,48 +754,207 @@
         <div id="ledger-loading" class="ledger-empty">正在读取实战账本…</div>
 
         <section class="ledger-panel" data-ledger-panel="overview" role="tabpanel">
+          <div class="ledger-overview-heading">
+            <div>
+              <p class="eyebrow">ACCURACY AUDIT / 准确率核对</p>
+              <h2>先看样本是否成熟，再判断预测是否有效</h2>
+            </div>
+            <label class="ledger-overview-policy">
+              <span>下方明细口径</span>
+              <select id="ledger-overview-policy">
+                <option value="current" selected>当前算法版本</option>
+                <option value="all">全部实战版本（混合）</option>
+              </select>
+            </label>
+          </div>
+          <section class="ledger-evidence-layers" aria-labelledby="ledger-evidence-title">
+            <header>
+              <p class="eyebrow">THREE LEVELS / 三层证据</p>
+              <h3 id="ledger-evidence-title">历史数据没有减少，只是用途不同</h3>
+            </header>
+            <div class="ledger-evidence-grid">
+              <article class="ledger-evidence-card current">
+                <span class="ledger-evidence-index">01</span>
+                <div>
+                  <small>当前算法 · 赛前实战</small>
+                  <strong id="ledger-evidence-current">—</strong>
+                  <p id="ledger-evidence-current-detail">同一算法跨历史库更新时间持续累计，规则或阈值变化时才切换版本。</p>
+                </div>
+                <em id="ledger-evidence-current-status">核对中</em>
+              </article>
+              <article class="ledger-evidence-card lifetime">
+                <span class="ledger-evidence-index">02</span>
+                <div>
+                  <small>全部版本 · 实战账本</small>
+                  <strong id="ledger-evidence-lifetime">—</strong>
+                  <p id="ledger-evidence-lifetime-detail">保留所有赛前预测，适合观察长期轨迹，不混作当前模型成绩。</p>
+                </div>
+                <em>长期档案</em>
+              </article>
+              <article class="ledger-evidence-card historical">
+                <span class="ledger-evidence-index">03</span>
+                <div>
+                  <small>历史数据库 · 时间滚动验证</small>
+                  <strong id="ledger-evidence-history">—</strong>
+                  <p id="ledger-evidence-history-detail">历史比赛用于相似匹配，并以严格时间顺序进行独立验证。</p>
+                  <div id="ledger-evidence-validation" class="ledger-evidence-validation"></div>
+                </div>
+                <em id="ledger-evidence-history-status">核对中</em>
+              </article>
+            </div>
+          </section>
+          <div id="ledger-maturity-note" class="ledger-maturity-note" role="status">
+            正在核对当前版本的赛前实战样本。
+          </div>
           <div class="ledger-kpis" aria-label="实战汇总">
-            <article class="ledger-kpi pending">
-              <span>待结算</span>
-              <strong id="ledger-pending">—</strong>
-              <small id="ledger-pending-detail">单场与串关合计</small>
-            </article>
             <article class="ledger-kpi accent">
-              <span>单场建议命中率</span>
-              <strong id="ledger-single-accuracy">—</strong>
-              <small id="ledger-single-record">等待首批结算</small>
+              <span>已结算比赛</span>
+              <strong id="ledger-fixtures">—</strong>
+              <small id="ledger-fixtures-detail">待结算不计入统计</small>
             </article>
             <article class="ledger-kpi settled">
-              <span>串关命中率</span>
-              <strong id="ledger-parlay-accuracy">—</strong>
-              <small id="ledger-parlay-record">等待首批结算</small>
+              <span>全部联赛口径</span>
+              <strong id="ledger-settled-all">—</strong>
+              <small id="ledger-settled-all-detail">已结算基础玩法预测</small>
             </article>
-            <article class="ledger-kpi">
-              <span>累计模拟盈亏</span>
-              <strong id="ledger-total-profit">—</strong>
-              <small id="ledger-total-roi">单场建议与已保存串关合计</small>
+            <article class="ledger-kpi same-league">
+              <span>同联赛口径</span>
+              <strong id="ledger-settled-same">—</strong>
+              <small id="ledger-settled-same-detail">已结算基础玩法预测</small>
+            </article>
+            <article class="ledger-kpi pending">
+              <span>待结算比赛</span>
+              <strong id="ledger-pending">—</strong>
+              <small id="ledger-pending-detail">尚未形成实际结果</small>
+            </article>
+            <article class="ledger-kpi maturity">
+              <span>统计状态</span>
+              <strong id="ledger-maturity">—</strong>
+              <small id="ledger-maturity-detail">按已结算预测数量判断</small>
             </article>
           </div>
+          <section class="ledger-benchmark-priority" aria-labelledby="ledger-benchmark-title">
+            <div class="ledger-section-head compact">
+              <div>
+                <p class="eyebrow">MODEL LIFT / 相对基线</p>
+                <h2 id="ledger-benchmark-title">模型是否真的超过终赔基准</h2>
+              </div>
+              <p>逐条比较同场模型与终赔方向，并按比赛时间连续分块重采样；95%提升区间跨过0时，只能记为“尚未证明”。</p>
+            </div>
+            <div id="ledger-benchmark-priority-grid" class="ledger-benchmark-priority-grid" aria-live="polite"></div>
+          </section>
+          <section class="ledger-key-section" aria-labelledby="ledger-key-title">
+            <div class="ledger-section-head compact">
+              <div>
+                <p class="eyebrow">READ THIS FIRST / 先看结论</p>
+                <h2 id="ledger-key-title">现在只需要看这三条</h2>
+              </div>
+              <p>玩法强弱按“模型相对终赔提升”比较，不再直接横比三分类与八分类的原始命中率。</p>
+            </div>
+            <div id="ledger-key-findings" class="ledger-key-findings" aria-live="polite"></div>
+          </section>
           <section class="ledger-breakdown">
             <div class="ledger-section-head">
               <div>
                 <p class="eyebrow">MARKET AUDIT / 分玩法核对</p>
-                <h2>三个玩法，四本独立账</h2>
+                <h2>各玩法真实表现</h2>
               </div>
+              <p>两种范围完全分开；少于20条只记录，不据此判断好坏。</p>
+            </div>
+            <div class="ledger-accuracy-table-wrap">
+              <table class="ledger-accuracy-table">
+                <thead><tr><th>玩法</th><th>全部联赛口径</th><th>同联赛口径</th></tr></thead>
+                <tbody id="ledger-accuracy-body"></tbody>
+              </table>
+            </div>
+          </section>
+          <details class="ledger-advanced">
+            <summary>
+              <span><b>高级分析</b><small>范围比较、概率分档、公平对比、失误定位、偏差矩阵和模拟盈亏</small></span>
+              <strong class="ledger-advanced-action" aria-hidden="true"></strong>
+            </summary>
+            <div class="ledger-advanced-body">
+          <div class="ledger-analysis-grid">
+            <section class="ledger-analysis-card">
+              <div class="ledger-section-head compact">
+                <div><p class="eyebrow">SCOPE / 非配对参考</p><h2>两种范围的原始命中率</h2></div>
+              </div>
+              <p class="ledger-analysis-explain">两边已结算样本可能不同，只用于观察；公平结论以下方同场配对结果为准。</p>
+              <div id="ledger-scope-comparison" class="ledger-scope-comparison"></div>
+            </section>
+            <section class="ledger-analysis-card">
+              <div class="ledger-section-head compact">
+                <div><p class="eyebrow">CALIBRATION / 概率可信度</p><h2>预测概率与实际命中</h2></div>
+              </div>
+              <p class="ledger-analysis-explain">主看全部联赛口径，将基础玩法按赛前历史占比分档；两条越接近，概率越可信。</p>
+              <div id="ledger-calibration" class="ledger-calibration"></div>
+            </section>
+          </div>
+          <section class="ledger-fairness">
+            <div class="ledger-section-head">
+              <div><p class="eyebrow">FAIR MATCHUP / 同场公平对比</p><h2>只比较同一批已经结算的预测</h2></div>
+              <p>“净胜”只计算方向不同时谁多命中几场；正数支持左侧方法，负数支持右侧方法。</p>
+            </div>
+            <div class="ledger-fairness-grid">
+              <article class="ledger-fair-card">
+                <header><span>MODEL vs ODDS</span><h3>历史模型 vs 终赔最低赔率方向</h3><p>每条预测使用留档时同一场、同一玩法的终赔作为基准。</p></header>
+                <div id="ledger-odds-benchmark" class="ledger-fair-table-wrap"></div>
+              </article>
+              <article class="ledger-fair-card">
+                <header><span>SCOPE vs SCOPE</span><h3>全部联赛 vs 同联赛</h3><p>仅保留同一场、同一玩法、同一盘口和同一模型版本的配对记录。</p></header>
+                <div id="ledger-scope-pairs" class="ledger-fair-table-wrap"></div>
+              </article>
+            </div>
+          </section>
+          <section class="ledger-diagnosis">
+            <div class="ledger-section-head">
+              <div><p class="eyebrow">ERROR DIAGNOSIS / 失误诊断</p><h2>先找到容易预测错的场景</h2></div>
+              <p>只统计已结算的基础玩法。少于20条只用于定位问题，不据此自动改变预测规则。</p>
+            </div>
+            <div id="ledger-diagnosis-summary" class="ledger-diagnosis-summary"></div>
+            <div class="ledger-diagnosis-grid">
+              <article class="ledger-diagnosis-card">
+                <header><span>DISAGREEMENT</span><h3>方向发生分歧时</h3><p>分别检查模型与终赔、初赔与终赔最低赔率方向。</p></header>
+                <div id="ledger-diagnosis-signals" class="ledger-diagnosis-signals"></div>
+              </article>
+              <article class="ledger-diagnosis-card">
+                <header><span>ODDS BAND</span><h3>所选赔率区间</h3><p>赔率区间同时展示失误数与失误率，避免只看错误场次。</p></header>
+                <div id="ledger-diagnosis-odds" class="ledger-diagnosis-table-wrap"></div>
+              </article>
+              <article class="ledger-diagnosis-card league-card">
+                <header><span>LEAGUE</span><h3>错误集中的联赛</h3><p>最多展示8个联赛，并保留样本判断；排序优先看失误场次。</p></header>
+                <div id="ledger-diagnosis-leagues" class="ledger-diagnosis-table-wrap"></div>
+              </article>
+            </div>
+            <section class="ledger-confusion-section">
+              <div class="ledger-section-head compact">
+                <div><p class="eyebrow">PREDICTED → ACTUAL / 预测偏差矩阵</p><h2>预测结果最终错向哪里</h2></div>
+                <span class="confusion-hint-badge">💡 点击有数字的格子可下钻筛选单场明细</span>
+              </div>
+              <p>纵向是赛前预测，横向是实际结果；格子中的数字是真实场次。点击有数据的格子可查看对应比赛。</p>
+              <div id="ledger-confusion" class="ledger-confusion-grid"></div>
+            </section>
+          </section>
+          <section class="ledger-secondary">
+            <div class="ledger-section-head">
+              <div><p class="eyebrow">SECONDARY / 次要指标</p><h2>串关与模拟盈亏</h2></div>
               <p id="ledger-settlement-note">只用快照之后新增的历史行结算。</p>
             </div>
-            <div id="ledger-market-grid" class="ledger-market-grid"></div>
+            <div id="ledger-secondary-grid" class="ledger-secondary-grid"></div>
           </section>
+            </div>
+          </details>
         </section>
 
         <section class="ledger-panel" data-ledger-panel="single" role="tabpanel" hidden>
           <div class="ledger-panel-heading">
-            <div><p class="eyebrow">SINGLE REGISTER / 单场流水</p><h2>一场一行，展开核对三个玩法</h2></div>
+            <div><p class="eyebrow">SINGLE REGISTER / 单场流水</p><h2>一场一行，展开核对各项预测</h2></div>
             <div id="ledger-single-summary" class="ledger-filter-summary"></div>
           </div>
           <div class="ledger-filter-bar" aria-label="单场记录筛选">
+            <label><span>模型版本</span><select id="ledger-single-policy"><option value="current" selected>当前历史模型</option><option value="legacy">旧模型</option><option value="all">全部模型</option></select></label>
             <label><span>状态</span><select id="ledger-single-status"><option value="pending">待结算</option><option value="all">全部</option><option value="settled">已结算</option><option value="hit">命中</option><option value="miss">未中</option></select></label>
-            <label><span>玩法</span><select id="ledger-single-market"><option value="all">全部玩法</option><option value="spf">胜平负</option><option value="hhad">让球胜平负</option><option value="goals">总进球</option></select></label>
+            <label><span>玩法</span><select id="ledger-single-market"><option value="all">全部玩法</option><option value="spf">胜平负</option><option value="hhad">让球胜平负</option><option value="goals">总进球</option><option value="goalMultiple">0球倍数双选</option></select></label>
             <label><span>样本口径</span><select id="ledger-single-scope"><option value="global" selected>全部联赛</option><option value="same">同联赛</option><option value="all">两种口径全部</option></select></label>
             <label><span>联赛</span><select id="ledger-single-league"><option value="all">全部联赛</option></select></label>
             <label class="ledger-search-field"><span>球队搜索</span><input id="ledger-single-query" type="search" placeholder="输入球队或联赛" /></label>
@@ -641,6 +972,7 @@
             <div id="ledger-parlay-filter-summary" class="ledger-filter-summary"></div>
           </div>
           <div class="ledger-filter-bar ledger-parlay-filters" aria-label="串关记录筛选">
+            <label><span>模型版本</span><select id="ledger-parlay-policy"><option value="current" selected>当前历史模型</option><option value="legacy">旧模型</option><option value="all">全部模型</option></select></label>
             <label><span>状态</span><select id="ledger-parlay-status"><option value="pending">待结算</option><option value="all">全部</option><option value="settled">已结算</option><option value="hit">整组命中</option><option value="miss">整组未中</option></select></label>
             <label><span>玩法</span><select id="ledger-parlay-mode"><option value="all">全部串关</option><option value="standard">常规串关</option><option value="goalsPair">进球双选串</option></select></label>
             <label><span>来源</span><select id="ledger-parlay-source"><option value="all">全部来源</option><option value="system_default">系统默认</option><option value="user_saved">自选规则</option></select></label>
@@ -655,6 +987,9 @@
         </section>
       </section>
     </main>
+
+    <div id="chart-tooltip" class="chart-tooltip" hidden></div>
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
     <script type="module" src="/app.js"></script>
   </body>

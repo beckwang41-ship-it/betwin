@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -10,17 +11,38 @@ import {
   classifyThreeWayOdds,
 } from "./lib/odds-segments.mjs";
 import {
-  findSimilarByGoalBand,
+  GOAL_ZERO_BANDS,
+  GOAL_MATCHING_VERSION,
+  GOAL_ZERO_ODDS_TOLERANCE,
+  SAME_LEAGUE_GOAL_ZERO_ODDS_TOLERANCE,
   findZeroOddsInterval,
 } from "./lib/goal-zero-odds.mjs";
+import {
+  PRODUCTION_GOAL_POOL_FRACTIONS,
+  predictProductionGoals,
+  selectProductionGoalSimilarity,
+} from "./lib/goal-production.mjs";
 import { createChallenger } from "./lib/challenger.mjs";
 import {
   normalizeFixtureText,
   normalizeTeamName,
 } from "./lib/fixture-name.mjs";
-import { createParlayLedger } from "./lib/parlay-ledger.mjs";
+import {
+  createParlayLedger,
+  parlaySettlementDecision,
+  settlementRowEligible,
+} from "./lib/parlay-ledger.mjs";
 import { createPredictionLedger } from "./lib/prediction-ledger.mjs";
-import { evaluateReliability } from "./lib/reliability.mjs";
+import {
+  buildGoalEqualityDistribution,
+  buildGoalMultipleDistribution,
+  selectGoalEqualityPrediction,
+  selectGoalMultiplePrediction,
+} from "./public/goal-multiples.js";
+import {
+  evaluateReliability,
+  summarizeHistoricalSupport,
+} from "./lib/reliability.mjs";
 import {
   generateGoalPairParlays,
   generateParlayCombinations,
@@ -29,26 +51,39 @@ import {
   GOAL_LABELS,
   confidenceLabel,
   distanceWeight,
-  findSimilarGoalMovements,
   findSimilarGoals,
   findSimilarSpfMovements,
   findSimilarSpf,
   goalDistance,
   normalizeOdds,
   paginate,
-  predictGoals,
-  predictGoalsWithMovement,
   predictSpf,
   predictSpfWithMovement,
   selectTopGoalPair,
   spfDistance,
-  summarizeStability,
 } from "./lib/predictor.mjs";
-import { selectHistoricalPrior } from "./lib/smoothing.mjs";
+import {
+  DEFAULT_ZERO_CELL_PRIOR_MASS,
+  ZERO_CELL_FLOOR_VERSION,
+  adjustedThreeWayMarketPrior,
+  selectHistoricalPrior,
+} from "./lib/smoothing.mjs";
+import { resolveSmoothingProduction } from "./lib/smoothing-production.mjs";
 import {
   THREE_WAY_MATCHING_VERSION,
   selectThreeWaySimilarity,
 } from "./lib/three-way-matching.mjs";
+import { modelConfigIsCurrent } from "./lib/production-thresholds.mjs";
+import { resolveProductionApproval } from "./lib/production-approval.mjs";
+import {
+  FORMAL_PRODUCTION_PROBABILITY_POLICY,
+  reliabilityValidationIsCurrent,
+} from "./lib/reliability-validation.mjs";
+import {
+  blendThreeWayProbabilities,
+  impliedThreeWayProbabilities,
+  weightedThreeWayProbabilities,
+} from "./lib/three-way-probability.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, "public");
@@ -67,11 +102,6 @@ const SEGMENT_CONFIG_PATH = path.join(
   "data",
   "segment-config.json",
 );
-const GOAL_ZERO_CONFIG_PATH = path.join(
-  ROOT,
-  "data",
-  "goal-zero-odds-config.json",
-);
 const WEIGHTING_CONFIG_PATH = path.join(
   ROOT,
   "data",
@@ -87,11 +117,31 @@ const SMOOTHING_CONFIG_PATH = path.join(
   "data",
   "smoothing-config.json",
 );
+const SMOOTHING_PRODUCTION_PATH =
+  process.env.BETWIN_SMOOTHING_PRODUCTION_PATH ||
+  path.join(ROOT, "data", "smoothing-production.json");
+const ADAPTIVE_PRODUCTION_PATH =
+  process.env.BETWIN_ADAPTIVE_PRODUCTION_PATH ||
+  path.join(ROOT, "data", "adaptive-production.json");
+const WEIGHTING_PRODUCTION_PATH =
+  process.env.BETWIN_WEIGHTING_PRODUCTION_PATH ||
+  path.join(ROOT, "data", "weighting-production.json");
+const MOVEMENT_PRODUCTION_PATH =
+  process.env.BETWIN_MOVEMENT_PRODUCTION_PATH ||
+  path.join(ROOT, "data", "movement-production.json");
+const THREE_WAY_PROBABILITY_CONFIG_PATH = path.join(
+  ROOT,
+  "data",
+  "three-way-probability-config.json",
+);
 const CHALLENGER_CONFIG_PATH = path.join(
   ROOT,
   "data",
   "challenger-config.json",
 );
+const RELIABILITY_CONFIG_PATH =
+  process.env.BETWIN_RELIABILITY_CONFIG_PATH ||
+  path.join(ROOT, "data", "reliability-config.json");
 const CHALLENGER_MODEL_PATH = path.join(
   ROOT,
   "data",
@@ -105,13 +155,34 @@ const GOAL_PAIR_SELECTION_PATH = path.join(
 const dataStore = createDataStore(DATABASE_PATH);
 const predictionLedger = createPredictionLedger(DATABASE_PATH);
 const parlayLedger = createParlayLedger(DATABASE_PATH);
+const goalMultipleDistribution = buildGoalMultipleDistribution(
+  dataStore.getVerifiedHistory(),
+  { sourceFile: "历史进球数.xlsx" },
+);
+const goalEqualityDistribution = buildGoalEqualityDistribution(
+  dataStore.getGoalHistory(),
+);
 const DEFAULT_THRESHOLDS = {
   spf: 0.07,
   hhad: 0.07,
   goals: 0.015,
 };
+const LOCKED_PRODUCTION_PROBABILITY_POLICY =
+  FORMAL_PRODUCTION_PROBABILITY_POLICY;
 const productionPolicy = {
+  probabilityPolicy: LOCKED_PRODUCTION_PROBABILITY_POLICY,
   empiricalOnly: true,
+  zeroCellFloor: {
+    enabled: true,
+    priorMass: DEFAULT_ZERO_CELL_PRIOR_MASS,
+    version: ZERO_CELL_FLOOR_VERSION,
+  },
+  historicalCalibration: {
+    enabled: false,
+    maxWeight: 0,
+    scale: 800,
+    requireSamples: true,
+  },
   minimumSamples: 1,
   thresholds: { ...DEFAULT_THRESHOLDS },
   adaptive: {
@@ -125,10 +196,10 @@ const productionPolicy = {
     goals: { enabled: false, policies: {} },
   },
   zeroGoals: {
-    enabled: false,
-    intervals: [],
+    enabled: true,
+    intervals: GOAL_ZERO_BANDS,
     policies: {},
-    reason: "0球赔率区间模型尚未验证",
+    reason: "0球赔率近邻与综合距离模型已启用",
   },
   weighting: {
     spf: { enabled: false, floor: 1, power: 1, coreRatio: 0.5 },
@@ -168,6 +239,13 @@ const productionPolicy = {
     hhad: { enabled: false, policy: "historical-similarity" },
     goals: { enabled: false, policy: "historical-similarity" },
   },
+  threeWayProbability: {
+    stale: true,
+    scopes: {
+      all: { spf: { enabled: false }, hhad: { enabled: false } },
+      sameLeague: { spf: { enabled: false }, hhad: { enabled: false } },
+    },
+  },
 };
 const STABILITY_THRESHOLDS = {
   spf: [0.03, 0.05, 0.07, 0.1],
@@ -175,20 +253,95 @@ const STABILITY_THRESHOLDS = {
   goals: [0.005, 0.01, 0.015, 0.02],
 };
 
+function maximumThreeWayTolerance(market, requestedTolerance) {
+  const adaptiveThresholds = productionPolicy.adaptive[market]?.thresholds || [];
+  const segmentThresholds = Object.values(
+    productionPolicy.segments[market]?.policies || {},
+  ).map((policy) => policy?.threshold);
+  return Math.max(
+    Number(requestedTolerance) || 0,
+    Number(productionPolicy.thresholds[market]) || 0,
+    ...STABILITY_THRESHOLDS[market],
+    ...adaptiveThresholds.map(Number),
+    ...segmentThresholds.map(Number).filter(Number.isFinite),
+  );
+}
+
+function predictionMarketHistories(
+  match,
+  { spfTolerance, hhadTolerance, sameLeague = false },
+) {
+  const historyOptions = { league: match.league, sameLeague };
+  const hadOdds = match.had
+    ? [match.had.h, match.had.d, match.had.a]
+    : null;
+  const hhadOdds = match.hhad
+    ? [match.hhad.h, match.hhad.d, match.hhad.a]
+    : null;
+  const handicap = match.hhad ? handicapNumber(match.hhad) : null;
+  const spfRange = maximumThreeWayTolerance("spf", spfTolerance);
+  const hhadRange = maximumThreeWayTolerance("hhad", hhadTolerance);
+  const spfNeedsFullHistory = Boolean(productionPolicy.smoothing.spf?.enabled);
+  const hhadNeedsFullHistory = Boolean(productionPolicy.smoothing.hhad?.enabled);
+  const pairedNeedsFullHistory = spfNeedsFullHistory || hhadNeedsFullHistory;
+  const goalZeroTolerance = sameLeague
+    ? SAME_LEAGUE_GOAL_ZERO_ODDS_TOLERANCE
+    : GOAL_ZERO_ODDS_TOLERANCE;
+
+  return {
+    spfHistory: hadOdds
+      ? spfNeedsFullHistory
+        ? dataStore.getSpfHistory(historyOptions)
+        : dataStore.getHistoricalSpf(hadOdds, {
+            ...historyOptions,
+            tolerance: spfRange,
+          })
+      : [],
+    hhadHistory: hhadOdds && handicap !== null
+      ? hhadNeedsFullHistory
+        ? dataStore.getHhadHistory(historyOptions)
+        : dataStore.getHistoricalHhad(hhadOdds, {
+            ...historyOptions,
+            tolerance: hhadRange,
+            handicap,
+          })
+      : [],
+    pairedHistory: hadOdds && hhadOdds && handicap !== null
+      ? pairedNeedsFullHistory
+        ? dataStore.getPairedSpfHhadHistory(historyOptions)
+        : dataStore.getPairedSpfHhadHistoryNear(hadOdds, hhadOdds, {
+            ...historyOptions,
+            spfTolerance: spfRange,
+            hhadTolerance: hhadRange,
+            handicap,
+          })
+      : [],
+    goalHistory: match.goals
+      ? dataStore.getGoalHistoryNearZeroOdds(match.goals.g0, {
+          ...historyOptions,
+          tolerance: goalZeroTolerance,
+        })
+      : [],
+  };
+}
+
 function loadModelConfig() {
   try {
     const config = JSON.parse(readFileSync(MODEL_CONFIG_PATH, "utf8"));
     const counts = dataStore.getCounts();
-    const sourceUpdatedAt = dataStore.getSourceUpdatedAt();
-    const stale =
-      config.data?.verifiedMatches !== counts.verifiedHistory ||
-      !config.data?.sourceUpdatedAt ||
-      config.data.sourceUpdatedAt !== sourceUpdatedAt ||
-      config.methodology?.matchingVersion !== THREE_WAY_MATCHING_VERSION;
-    if (!stale) return { ...config, stale: false };
+    const sourceUpdatedAt = dataStore.getHistoricalSourceUpdatedAt();
+    const stale = !modelConfigIsCurrent(config, {
+      verifiedMatches: counts.verifiedHistory,
+      sourceUpdatedAt,
+      matchingVersion: THREE_WAY_MATCHING_VERSION,
+    });
     return {
       ...config,
-      stale: true,
+      stale,
+      candidateOnly: true,
+      runtimeEnabled: false,
+      productionLocked: true,
+      productionThresholds: { ...DEFAULT_THRESHOLDS },
       markets: Object.fromEntries(
         ["spf", "hhad", "goals"].map((market) => {
           const value = config.markets?.[market] || {};
@@ -197,14 +350,22 @@ function loadModelConfig() {
             {
               ...value,
               currentThreshold: DEFAULT_THRESHOLDS[market],
-              candidateThreshold: DEFAULT_THRESHOLDS[market],
+              candidateThreshold: Number(
+                value.candidateThreshold ?? value.threshold ??
+                  DEFAULT_THRESHOLDS[market],
+              ),
               threshold: DEFAULT_THRESHOLDS[market],
               changed: false,
+              candidateGate: value.gate || null,
               gate: {
                 ...(value.gate || {}),
                 passed: false,
+                validationPassed: false,
+                significancePassed: false,
                 reason:
-                  "历史数据已更新，旧阈值验证失效，暂时保留原默认阈值",
+                  stale
+                    ? "历史数据已更新，离线候选阈值报告已过期；正式阈值仍按固定规则执行"
+                    : "离线候选阈值仅供研究；正式阈值按固定规则执行",
               },
             },
           ];
@@ -216,6 +377,10 @@ function loadModelConfig() {
       version: 0,
       generatedAt: null,
       stale: true,
+      candidateOnly: true,
+      runtimeEnabled: false,
+      productionLocked: true,
+      productionThresholds: { ...DEFAULT_THRESHOLDS },
       markets: Object.fromEntries(
         ["spf", "hhad", "goals"].map((market) => [
           market,
@@ -226,7 +391,7 @@ function loadModelConfig() {
             changed: false,
             gate: {
               passed: false,
-              reason: "尚未运行严格阈值验证，暂时保留原默认阈值",
+              reason: "尚无离线候选阈值报告；正式阈值按固定规则执行",
             },
           },
         ]),
@@ -236,24 +401,70 @@ function loadModelConfig() {
 }
 
 const modelConfig = loadModelConfig();
-if (!modelConfig.stale) {
-  for (const market of ["spf", "hhad", "goals"]) {
-    const threshold = Number(modelConfig.markets?.[market]?.threshold);
-    if (Number.isFinite(threshold) && threshold > 0) {
-      productionPolicy.thresholds[market] = threshold;
-    }
+
+function loadThreeWayProbabilityConfig() {
+  try {
+    const config = JSON.parse(
+      readFileSync(THREE_WAY_PROBABILITY_CONFIG_PATH, "utf8"),
+    );
+    const counts = dataStore.getCounts();
+    const sourceUpdatedAt = dataStore.getHistoricalSourceUpdatedAt();
+    const stale =
+      config.data?.verifiedMatches !== counts.verifiedHistory ||
+      config.data?.sourceUpdatedAt !== sourceUpdatedAt ||
+      config.data?.matchingVersion !== THREE_WAY_MATCHING_VERSION;
+    if (!stale) return { ...config, stale: false };
+    return {
+      ...config,
+      stale: true,
+      scopes: Object.fromEntries(
+        ["all", "sameLeague"].map((scope) => [
+          scope,
+          Object.fromEntries(
+            ["spf", "hhad"].map((market) => [
+              market,
+              {
+                ...(config.scopes?.[scope]?.[market] || {}),
+                enabled: false,
+                stale: true,
+              },
+            ]),
+          ),
+        ]),
+      ),
+    };
+  } catch {
+    return {
+      version: 0,
+      generatedAt: null,
+      stale: true,
+      scopes: {
+        all: { spf: { enabled: false }, hhad: { enabled: false } },
+        sameLeague: { spf: { enabled: false }, hhad: { enabled: false } },
+      },
+    };
   }
 }
+
+const threeWayProbabilityConfig = loadThreeWayProbabilityConfig();
+productionPolicy.threeWayProbability = {
+  ...threeWayProbabilityConfig,
+  candidateOnly: true,
+  runtimeEnabled: false,
+  productionLock: LOCKED_PRODUCTION_PROBABILITY_POLICY,
+};
 
 function loadAdaptiveConfig() {
   try {
     const config = JSON.parse(readFileSync(ADAPTIVE_CONFIG_PATH, "utf8"));
     const counts = dataStore.getCounts();
-    const sourceUpdatedAt = dataStore.getSourceUpdatedAt();
+    const sourceUpdatedAt = dataStore.getHistoricalSourceUpdatedAt();
     const stale =
       config.data?.verifiedMatches !== counts.verifiedHistory ||
       !config.data?.sourceUpdatedAt ||
-      config.data.sourceUpdatedAt !== sourceUpdatedAt;
+      config.data.sourceUpdatedAt !== sourceUpdatedAt ||
+      config.methodology?.matchingVersion !== THREE_WAY_MATCHING_VERSION ||
+      config.methodology?.goalMatchingVersion !== GOAL_MATCHING_VERSION;
     return { ...config, stale };
   } catch {
     return {
@@ -265,30 +476,85 @@ function loadAdaptiveConfig() {
   }
 }
 
-const adaptiveConfig = loadAdaptiveConfig();
-if (!adaptiveConfig.stale) {
-  for (const market of ["spf", "hhad", "goals"]) {
-    const config = adaptiveConfig.markets?.[market];
-    productionPolicy.adaptive[market] = {
-      enabled: Boolean(config?.enabled),
-      minSamples: Number(config?.minSamples) || null,
-      thresholds: Array.isArray(config?.thresholds)
-        ? config.thresholds.map(Number)
-        : [],
-      reason: config?.gate?.reason || "尚未验证动态范围",
+function loadApprovalFile(approvalPath) {
+  try {
+    return JSON.parse(readFileSync(approvalPath, "utf8"));
+  } catch {
+    return {
+      version: 0,
+      runtimeEnabled: false,
+      approvedAt: null,
+      approvedArtifact: null,
+      markets: {},
     };
   }
 }
+
+function adaptiveThresholdList(marketNode) {
+  return Array.isArray(marketNode?.thresholds)
+    ? marketNode.thresholds.map(Number)
+    : [];
+}
+
+const adaptiveConfig = loadAdaptiveConfig();
+// 候选配置的 runtimeEnabled 一律忽略：即使被手工改成 true，
+// 生产是否启用只由 data/adaptive-production.json 的独立批准决定。
+const adaptiveApproval = resolveProductionApproval(
+  adaptiveConfig,
+  loadApprovalFile(ADAPTIVE_PRODUCTION_PATH),
+  {
+    candidateStale: adaptiveConfig.stale,
+    moduleLabel: "动态范围",
+    paramsOf: (marketNode) => ({
+      minSamples: Number(marketNode?.minSamples) || null,
+      thresholds: adaptiveThresholdList(marketNode),
+    }),
+    approvedParamsOf: (marketApproval) => ({
+      minSamples: Number(marketApproval?.minSamples) || null,
+      thresholds: adaptiveThresholdList(marketApproval),
+    }),
+  },
+);
+for (const market of ["spf", "hhad", "goals"]) {
+  const decision = adaptiveApproval.markets[market];
+  if (!decision.enabled) {
+    productionPolicy.adaptive[market] = {
+      ...(productionPolicy.adaptive[market] || {}),
+      enabled: false,
+      reason: decision.reason,
+    };
+    continue;
+  }
+  const config = adaptiveConfig.markets?.[market];
+  productionPolicy.adaptive[market] = {
+    enabled: true,
+    minSamples: Number(config?.minSamples) || null,
+    thresholds: adaptiveThresholdList(config),
+    reason: decision.reason,
+  };
+}
+productionPolicy.adaptiveApproval = {
+  runtimeEnabled: adaptiveApproval.runtimeEnabled,
+  status: adaptiveApproval.status,
+  reason: adaptiveApproval.reason,
+  approvalRequested: adaptiveApproval.approvalRequested,
+  approvalCurrent: adaptiveApproval.approvalCurrent,
+  approvedAt: adaptiveApproval.approvedAt,
+  enabledMarkets: adaptiveApproval.enabledMarkets,
+  markets: adaptiveApproval.markets,
+};
 
 function loadSegmentConfig() {
   try {
     const config = JSON.parse(readFileSync(SEGMENT_CONFIG_PATH, "utf8"));
     const counts = dataStore.getCounts();
-    const sourceUpdatedAt = dataStore.getSourceUpdatedAt();
+    const sourceUpdatedAt = dataStore.getHistoricalSourceUpdatedAt();
     const stale =
       config.data?.verifiedMatches !== counts.verifiedHistory ||
       !config.data?.sourceUpdatedAt ||
-      config.data.sourceUpdatedAt !== sourceUpdatedAt;
+      config.data.sourceUpdatedAt !== sourceUpdatedAt ||
+      config.methodology?.matchingVersion !== THREE_WAY_MATCHING_VERSION ||
+      config.methodology?.goalMatchingVersion !== GOAL_MATCHING_VERSION;
     return { ...config, stale };
   } catch {
     return {
@@ -301,7 +567,7 @@ function loadSegmentConfig() {
 }
 
 const segmentConfig = loadSegmentConfig();
-if (!segmentConfig.stale) {
+if (!segmentConfig.stale && segmentConfig.runtimeEnabled === true) {
   for (const market of ["spf", "hhad", "goals"]) {
     const config = segmentConfig.markets?.[market];
     const policies = Object.fromEntries(
@@ -339,45 +605,29 @@ function segmentConfigView() {
   };
 }
 
-function loadGoalZeroConfig() {
-  try {
-    const config = JSON.parse(readFileSync(GOAL_ZERO_CONFIG_PATH, "utf8"));
-    const counts = dataStore.getCounts();
-    const sourceUpdatedAt = dataStore.getSourceUpdatedAt();
-    const stale =
-      config.data?.verifiedMatches !== counts.verifiedHistory ||
-      !config.data?.sourceUpdatedAt ||
-      config.data.sourceUpdatedAt !== sourceUpdatedAt;
-    return { ...config, stale };
-  } catch {
-    return {
-      version: 0,
-      generatedAt: null,
-      stale: true,
-      model: null,
-    };
-  }
-}
-
-const goalZeroConfig = loadGoalZeroConfig();
-if (!goalZeroConfig.stale && goalZeroConfig.model?.enabled) {
-  productionPolicy.zeroGoals = {
-    enabled: true,
-    intervals:
-      goalZeroConfig.model.intervals ||
-      goalZeroConfig.model.learned?.intervals ||
-      [],
-    policies: goalZeroConfig.model.policies || {},
-    reason: goalZeroConfig.model.gate?.reason || "0球赔率区间模型已通过验证",
-  };
-}
+productionPolicy.zeroGoals = {
+  enabled: true,
+  intervals: GOAL_ZERO_BANDS,
+  policies: {},
+  reason: "0球赔率近邻与综合距离模型已启用",
+};
 
 function goalZeroConfigView() {
   return {
-    version: goalZeroConfig.version,
-    generatedAt: goalZeroConfig.generatedAt,
-    stale: goalZeroConfig.stale,
-    enabled: Boolean(productionPolicy.zeroGoals.enabled),
+    version: GOAL_MATCHING_VERSION,
+    generatedAt: null,
+    stale: false,
+    enabled: true,
+    source: "内置生产规则",
+    researchReportOnly: true,
+    matching: {
+      allLeaguesTolerance: GOAL_ZERO_ODDS_TOLERANCE,
+      sameLeagueTolerance: SAME_LEAGUE_GOAL_ZERO_ODDS_TOLERANCE,
+      sampleLimit: null,
+      usesAllSamples: true,
+      distance: "终赔60% + 初赔15% + 走势15% + 隐含进球10%",
+      weighting: "按综合距离指数衰减",
+    },
     intervals: productionPolicy.zeroGoals.intervals.map((interval) => ({
       id: interval.id,
       lower: interval.lower,
@@ -414,7 +664,7 @@ function loadWeightingConfig() {
       readFileSync(WEIGHTING_CONFIG_PATH, "utf8"),
     );
     const counts = dataStore.getCounts();
-    const sourceUpdatedAt = dataStore.getSourceUpdatedAt();
+    const sourceUpdatedAt = dataStore.getHistoricalSourceUpdatedAt();
     const configuredThresholds = config.searchSpace?.thresholds || {};
     const thresholdChanged = ["spf", "hhad", "goals"].some(
       (market) =>
@@ -427,7 +677,9 @@ function loadWeightingConfig() {
       config.data?.verifiedMatches !== counts.verifiedHistory ||
       !config.data?.sourceUpdatedAt ||
       config.data.sourceUpdatedAt !== sourceUpdatedAt ||
-      thresholdChanged;
+      thresholdChanged ||
+      config.methodology?.matchingVersion !== THREE_WAY_MATCHING_VERSION ||
+      config.methodology?.goalMatchingVersion !== GOAL_MATCHING_VERSION;
     if (!stale) return { ...config, stale: false };
     return {
       ...config,
@@ -474,21 +726,56 @@ function loadWeightingConfig() {
 }
 
 const weightingConfig = loadWeightingConfig();
+// 距离权重与 adaptive/movement 一样只保存候选；即使调参门禁通过，
+// 也必须由独立批准文件同时确认概率门禁、ROI 门禁和候选参数。
+const weightingApproval = resolveProductionApproval(
+  weightingConfig,
+  loadApprovalFile(WEIGHTING_PRODUCTION_PATH),
+  {
+    candidateStale: weightingConfig.stale,
+    moduleLabel: "距离权重",
+    paramsOf: (marketNode) => ({
+      floor: Number(marketNode?.selected?.floor) || 1,
+      power: Number(marketNode?.selected?.power) || 1,
+      coreRatio: 0.5,
+    }),
+    approvedParamsOf: (marketApproval) => ({
+      floor: Number(marketApproval?.floor) || 1,
+      power: Number(marketApproval?.power) || 1,
+      coreRatio: Number(marketApproval?.coreRatio) || 0.5,
+    }),
+  },
+);
 productionPolicy.weighting = Object.fromEntries(
   ["spf", "hhad", "goals"].map((market) => {
     const config = weightingConfig.markets[market];
+    const decision = weightingApproval.markets[market];
+    const production = decision.enabled
+      ? config.production
+      : uniformWeighting(decision.reason);
     return [
       market,
       {
-        ...config.production,
-        validated: Boolean(config.gate?.passed),
+        ...production,
+        validated: decision.enabled,
         significanceStatus:
           config.selected?.significance?.status || "not-run",
-        reason: config.gate?.reason,
+        strategyStatus: decision.strategyStatus,
+        reason: decision.reason,
       },
     ];
   }),
 );
+productionPolicy.weightingApproval = {
+  runtimeEnabled: weightingApproval.runtimeEnabled,
+  status: weightingApproval.status,
+  reason: weightingApproval.reason,
+  approvalRequested: weightingApproval.approvalRequested,
+  approvalCurrent: weightingApproval.approvalCurrent,
+  approvedAt: weightingApproval.approvedAt,
+  enabledMarkets: weightingApproval.enabledMarkets,
+  markets: weightingApproval.markets,
+};
 
 function referenceMovement(reason) {
   return {
@@ -506,7 +793,7 @@ function loadMovementConfig() {
       readFileSync(MOVEMENT_CONFIG_PATH, "utf8"),
     );
     const counts = dataStore.getCounts();
-    const sourceUpdatedAt = dataStore.getSourceUpdatedAt();
+    const sourceUpdatedAt = dataStore.getHistoricalSourceUpdatedAt();
     const configuredThresholds = config.searchSpace?.thresholds || {};
     const thresholdChanged = ["spf", "hhad", "goals"].some(
       (market) =>
@@ -519,7 +806,8 @@ function loadMovementConfig() {
       config.data?.verifiedMatches !== counts.verifiedHistory ||
       !config.data?.sourceUpdatedAt ||
       config.data.sourceUpdatedAt !== sourceUpdatedAt ||
-      thresholdChanged;
+      thresholdChanged ||
+      config.methodology?.matchingVersion !== THREE_WAY_MATCHING_VERSION;
     if (!stale) return { ...config, stale: false };
     return {
       ...config,
@@ -566,21 +854,51 @@ function loadMovementConfig() {
 }
 
 const movementConfig = loadMovementConfig();
+// 同 adaptive：候选文件的 runtimeEnabled 不再参与生产判定。
+const movementApproval = resolveProductionApproval(
+  movementConfig,
+  loadApprovalFile(MOVEMENT_PRODUCTION_PATH),
+  {
+    candidateStale: movementConfig.stale,
+    moduleLabel: "走势修正",
+    paramsOf: (marketNode) => ({
+      weight: Number(marketNode?.selected?.weight) || 0,
+    }),
+    approvedParamsOf: (marketApproval) => ({
+      weight: Number(marketApproval?.weight) || 0,
+    }),
+  },
+);
 productionPolicy.movement = Object.fromEntries(
   ["spf", "hhad", "goals"].map((market) => {
     const config = movementConfig.markets[market];
+    const decision = movementApproval.markets[market];
+    const production = decision.enabled
+      ? config.production
+      : referenceMovement(decision.reason);
     return [
       market,
       {
-        ...config.production,
-        validated: Boolean(config.gate?.passed),
+        ...production,
+        validated: decision.enabled,
         significanceStatus:
           config.selected?.significance?.status || "not-run",
-        reason: config.gate?.reason,
+        strategyStatus: decision.strategyStatus,
+        reason: decision.reason,
       },
     ];
   }),
 );
+productionPolicy.movementApproval = {
+  runtimeEnabled: movementApproval.runtimeEnabled,
+  status: movementApproval.status,
+  reason: movementApproval.reason,
+  approvalRequested: movementApproval.approvalRequested,
+  approvalCurrent: movementApproval.approvalCurrent,
+  approvedAt: movementApproval.approvedAt,
+  enabledMarkets: movementApproval.enabledMarkets,
+  markets: movementApproval.markets,
+};
 
 function referenceSmoothing(reason, referenceStrength = 0) {
   return {
@@ -601,7 +919,7 @@ function loadSmoothingConfig() {
       readFileSync(SMOOTHING_CONFIG_PATH, "utf8"),
     );
     const counts = dataStore.getCounts();
-    const sourceUpdatedAt = dataStore.getSourceUpdatedAt();
+    const sourceUpdatedAt = dataStore.getHistoricalSourceUpdatedAt();
     const configuredThresholds = config.searchSpace?.thresholds || {};
     const thresholdChanged = ["spf", "hhad", "goals"].some(
       (market) =>
@@ -614,7 +932,9 @@ function loadSmoothingConfig() {
       config.data?.verifiedMatches !== counts.verifiedHistory ||
       !config.data?.sourceUpdatedAt ||
       config.data.sourceUpdatedAt !== sourceUpdatedAt ||
-      thresholdChanged;
+      thresholdChanged ||
+      config.methodology?.matchingVersion !== THREE_WAY_MATCHING_VERSION ||
+      config.methodology?.goalMatchingVersion !== GOAL_MATCHING_VERSION;
     if (!stale) return { ...config, stale: false };
     return {
       ...config,
@@ -651,7 +971,7 @@ function loadSmoothingConfig() {
           market,
           {
             production: referenceSmoothing(
-              "尚未运行严格小样本平滑验证，最终预测使用原始历史占比",
+              "尚未运行严格小样本平滑验证，历史平滑仅供参考",
             ),
             gate: {
               passed: false,
@@ -664,21 +984,62 @@ function loadSmoothingConfig() {
   }
 }
 
-const smoothingConfig = loadSmoothingConfig();
-productionPolicy.smoothing = Object.fromEntries(
-  ["spf", "hhad", "goals"].map((market) => {
-    const config = smoothingConfig.markets[market];
-    return [
+function loadSmoothingProductionApproval() {
+  try {
+    return JSON.parse(readFileSync(SMOOTHING_PRODUCTION_PATH, "utf8"));
+  } catch {
+    return {
+      version: 0,
+      runtimeEnabled: false,
+      approvedAt: null,
+      approvedArtifact: null,
+      markets: {},
+    };
+  }
+}
+
+const smoothingCandidateConfig = loadSmoothingConfig();
+const smoothingProduction = resolveSmoothingProduction(
+  smoothingCandidateConfig,
+  loadSmoothingProductionApproval(),
+  { candidateStale: smoothingCandidateConfig.stale },
+);
+const smoothingConfig = {
+  ...smoothingCandidateConfig,
+  candidateOnly: true,
+  runtimeEnabled: smoothingProduction.runtimeEnabled,
+  approval: {
+    status: smoothingProduction.status,
+    reason: smoothingProduction.reason,
+    approvalRequested: smoothingProduction.approvalRequested,
+    approvalCurrent: smoothingProduction.approvalCurrent,
+    approvedAt: smoothingProduction.approvedAt,
+    approvedArtifact: smoothingProduction.approvedArtifact,
+    enabledMarkets: smoothingProduction.enabledMarkets,
+  },
+  markets: Object.fromEntries(
+    ["spf", "hhad", "goals"].map((market) => [
       market,
       {
-        ...config.production,
-        validated: Boolean(config.gate?.passed),
-        significanceStatus:
-          config.selected?.significance?.status || "not-run",
-        reason: config.gate?.reason,
+        ...(smoothingCandidateConfig.markets?.[market] || {}),
+        productionStrength: Number(
+          smoothingProduction.markets[market]?.strength || 0,
+        ),
+        production: {
+          ...smoothingProduction.markets[market],
+          significanceStatus:
+            smoothingCandidateConfig.markets?.[market]?.selected?.significance
+              ?.status || "not-run",
+        },
       },
-    ];
-  }),
+    ]),
+  ),
+};
+productionPolicy.smoothing = Object.fromEntries(
+  ["spf", "hhad", "goals"].map((market) => [
+    market,
+    smoothingConfig.markets[market].production,
+  ]),
 );
 
 function unavailableChallenger(reason) {
@@ -699,7 +1060,7 @@ function loadChallengerArtifacts() {
       readFileSync(CHALLENGER_MODEL_PATH, "utf8"),
     );
     const counts = dataStore.getCounts();
-    const sourceUpdatedAt = dataStore.getSourceUpdatedAt();
+    const sourceUpdatedAt = dataStore.getHistoricalSourceUpdatedAt();
     const stale =
       config.data?.verifiedMatches !== counts.verifiedHistory ||
       !config.data?.sourceUpdatedAt ||
@@ -783,7 +1144,69 @@ function loadChallengerArtifacts() {
 }
 
 const challengerArtifacts = loadChallengerArtifacts();
-const challengerConfig = challengerArtifacts.config;
+function unavailableReliability(reason) {
+  return {
+    enabled: false,
+    rule: null,
+    test: null,
+    gate: { passed: false, reason },
+  };
+}
+
+function loadReliabilityConfig() {
+  try {
+    const config = JSON.parse(
+      readFileSync(RELIABILITY_CONFIG_PATH, "utf8"),
+    );
+    const counts = dataStore.getCounts();
+    const sourceUpdatedAt = dataStore.getHistoricalSourceUpdatedAt();
+    const stale = !reliabilityValidationIsCurrent(config, {
+      verifiedMatches: counts.verifiedHistory,
+      sourceUpdatedAt,
+      matchingVersion: THREE_WAY_MATCHING_VERSION,
+      goalMatchingVersion: GOAL_MATCHING_VERSION,
+      probabilityPolicy: productionPolicy.probabilityPolicy,
+      thresholds: productionPolicy.thresholds,
+    });
+    if (!stale) return { ...config, stale: false };
+    const reason =
+      "历史数据、生产阈值或匹配器已经更新，可靠性等级需要重新验证";
+    return {
+      ...config,
+      stale: true,
+      markets: Object.fromEntries(
+        ["spf", "hhad", "goals"].map((market) => [
+          market,
+          {
+            ...(config.markets?.[market] || {}),
+            ...unavailableReliability(reason),
+          },
+        ]),
+      ),
+    };
+  } catch {
+    const reason = "尚未按当前生产匹配口径训练可靠性等级";
+    return {
+      version: 0,
+      generatedAt: null,
+      stale: true,
+      data: null,
+      markets: Object.fromEntries(
+        ["spf", "hhad", "goals"].map((market) => [
+          market,
+          unavailableReliability(reason),
+        ]),
+      ),
+    };
+  }
+}
+
+const reliabilityConfig = loadReliabilityConfig();
+const challengerConfig = {
+  ...challengerArtifacts.config,
+  selectionStale: reliabilityConfig.stale,
+  selection: reliabilityConfig,
+};
 const challengerEngine = challengerArtifacts.model
   ? createChallenger(challengerArtifacts.model)
   : null;
@@ -793,9 +1216,12 @@ function loadGoalPairSelectionConfig() {
     const config = JSON.parse(
       readFileSync(GOAL_PAIR_SELECTION_PATH, "utf8"),
     );
+    const counts = dataStore.getCounts();
     const stale =
       !config.data?.sourceUpdatedAt ||
-      config.data.sourceUpdatedAt !== dataStore.getSourceUpdatedAt();
+      config.data.sourceUpdatedAt !== dataStore.getHistoricalSourceUpdatedAt() ||
+      Number(config.data?.goalHistory || 0) !== Number(counts.goalHistory) ||
+      config.data?.goalMatchingVersion !== GOAL_MATCHING_VERSION;
     const currentStrategy = Number(config.version || 0) >= 2;
     const validated = Boolean(
       currentStrategy && config.gate?.passed && !stale,
@@ -842,29 +1268,47 @@ const goalPairSelectionConfig = loadGoalPairSelectionConfig();
 productionPolicy.challenger = Object.fromEntries(
   ["spf", "hhad", "goals"].map((market) => {
     const config = challengerConfig.markets[market];
+    const production =
+      config.production || unavailableChallenger(config.gate?.reason);
     return [
       market,
       {
-        ...(config.production || unavailableChallenger(config.gate?.reason)),
-        validated: Boolean(config.gate?.passed),
-        reason: config.gate?.reason,
+        ...production,
+        enabled: productionPolicy.empiricalOnly
+          ? false
+          : Boolean(production.enabled),
+        validated: Boolean(
+          !productionPolicy.empiricalOnly && config.gate?.passed,
+        ),
+        reason: productionPolicy.empiricalOnly
+          ? "当前采用相似历史概率主模型，多市场挑战模型仅保留研究结果"
+          : config.gate?.reason,
         selectedCandidate: config.selectedCandidate || null,
       },
     ];
   }),
 );
 
-function movementOptions(market) {
+function movementOptions(market, usesRecommendedThreshold = true) {
   const policy = productionPolicy.movement[market];
+  const enabled = Boolean(
+    !productionPolicy.empiricalOnly &&
+      policy.enabled &&
+      usesRecommendedThreshold,
+  );
   return {
-    applyCorrection: policy.enabled,
+    applyCorrection: enabled,
     fixedWeight: policy.fixedWeight,
     minSamples: policy.minSamples,
     validation: {
-      validated: policy.validated,
-      enabled: policy.enabled,
+      validated: Boolean(enabled && policy.validated),
+      enabled,
       significanceStatus: policy.significanceStatus,
-      reason: policy.reason,
+      reason: productionPolicy.empiricalOnly && policy.enabled
+        ? "当前采用相似历史概率主模型，初终赔走势仅作参考"
+        : !usesRecommendedThreshold && policy.enabled
+          ? "当前手动阈值未经过走势验证，仅展示走势参考"
+          : policy.reason,
     },
   };
 }
@@ -879,6 +1323,10 @@ function smoothingOptions(market, prior, usesRecommendedThreshold = true) {
     enabled,
     validated: Boolean(policy.validated && usesRecommendedThreshold),
     strength,
+    strengthMode: enabled ? policy.strengthMode || "fixed" : "fixed",
+    dynamicNumerator: Number(policy.dynamicNumerator || 20),
+    minStrength: Number(policy.minStrength || 1),
+    maxStrength: Number(policy.maxStrength || 20),
     prior,
     reason: !usesRecommendedThreshold && policy.enabled
       ? "当前手动阈值未经过平滑验证，稳定概率仅供参考"
@@ -904,8 +1352,14 @@ function modelDecision(
     segmented ||
     zeroOdds ||
     Math.abs(Number(threshold) - Number(productionThreshold)) < 1e-9;
+  const weightingEnabled = Boolean(
+    !productionPolicy.empiricalOnly &&
+      weighting.enabled &&
+      usesRecommendedThreshold,
+  );
+  const calibration = productionPolicy.historicalCalibration;
   return {
-    policy: "historical-similarity",
+    policy: productionPolicy.probabilityPolicy,
     recommendedThreshold: productionThreshold,
     usesRecommendedThreshold,
     gatePassed: Boolean(recommendation.gate.passed),
@@ -918,19 +1372,24 @@ function modelDecision(
       reason: recommendation.gate.reason,
     },
     userOverride: true,
-    enabled: true,
-    empiricalOnly: true,
-    fixedWeight: 1,
+    enabled: calibration.enabled,
+    empiricalOnly: productionPolicy.empiricalOnly,
+    fixedWeight: null,
+    maxWeight: calibration.maxWeight,
+    scale: calibration.scale,
+    requireSamples: calibration.requireSamples,
     minSamples: productionPolicy.minimumSamples,
     sameLeague,
     weighting: {
       tolerance: Number(threshold),
       ...weighting,
+      enabled: weightingEnabled,
+      validated: Boolean(
+        weighting.validated && usesRecommendedThreshold,
+      ),
     },
     reason:
-      weighting.enabled
-        ? "距离权重已通过较早80%调参与最新20%验证；阈值内全部保留，零样本时不预测"
-        : "距离权重未通过严格验证；最终概率采用等权历史结果占比，零样本时不预测",
+      "最终预测采用当前所选联赛范围内的相似历史赛果占比；终赔去水概率单独展示，仅作赔率参考",
   };
 }
 
@@ -954,23 +1413,19 @@ function resolveSimilarity(
       ? classifyGoalOdds(targetOdds)
       : classifyThreeWayOdds(targetOdds);
   const selectedSegment = segmentPolicy?.policies?.[segment];
-  const zeroOddsEnabled =
-    market === "goals" &&
-    Boolean(productionPolicy.zeroGoals.enabled) &&
-    !goalZeroConfig.stale &&
-    usesProductionMaximum;
-  if (zeroOddsEnabled) {
-    const interval = findZeroOddsInterval(
-      productionPolicy.zeroGoals.intervals,
-      targetOdds?.[0],
-    );
-    const policy = interval
-      ? productionPolicy.zeroGoals.policies?.[interval.id] || null
-      : null;
-    const resolved = findSimilarByGoalBand(history, targetOdds, {
+  if (market === "goals") {
+    const zeroOddsTolerance = sameLeague
+      ? SAME_LEAGUE_GOAL_ZERO_ODDS_TOLERANCE
+      : GOAL_ZERO_ODDS_TOLERANCE;
+    const resolved = selectProductionGoalSimilarity(history, {
+      odds: targetOdds,
+      initialOdds: finderOptions.targetInitialOdds,
+      league: finderOptions.league,
+    }, {
       intervals: productionPolicy.zeroGoals.intervals,
       policies: productionPolicy.zeroGoals.policies,
-      ...finderOptions,
+      zeroOddsTolerance,
+      sameLeague,
     });
     return {
       threshold: requestedTolerance,
@@ -982,10 +1437,16 @@ function resolveSimilarity(
       adaptive: false,
       segmented: false,
       zeroOdds: true,
+      zeroOddsBlocked: false,
       zeroOddsInterval: resolved.interval,
-      zeroOddsPolicy: policy,
+      zeroOddsWindow: resolved.zeroOddsWindow,
+      zeroOddsPolicy: resolved.policy,
+      goalWeighting: resolved.weighting,
+      sameLeague,
       segment,
-      reason: productionPolicy.zeroGoals.reason,
+      reason:
+        `${sameLeague ? "同联赛" : "全部联赛"}统一使用0球赔率±${zeroOddsTolerance.toFixed(2)}，` +
+        "全部合格样本按终赔、初赔、走势和隐含进球综合距离加权",
     };
   }
   const segmented =
@@ -1093,13 +1554,17 @@ function segmentScopeView(scope) {
 function zeroOddsScopeView(scope) {
   if (!scope) return null;
   const interval = scope.zeroOddsInterval;
+  const window = scope.zeroOddsWindow;
   const policy = scope.zeroOddsPolicy;
   return {
     enabled: Boolean(scope.zeroOdds),
+    blocked: Boolean(scope.zeroOddsBlocked),
     intervalId: interval?.id || null,
-    intervalLabel: interval?.label || null,
-    lower: interval?.lower ?? null,
-    upper: interval?.upper ?? null,
+    intervalLabel: window?.label || null,
+    target: window?.target ?? null,
+    tolerance: window?.tolerance ?? null,
+    lower: window?.lower ?? null,
+    upper: window?.upper ?? null,
     observedMin: interval?.observedMin ?? null,
     observedMax: interval?.observedMax ?? null,
     distanceEnabled: Boolean(policy?.enabled),
@@ -1108,18 +1573,40 @@ function zeroOddsScopeView(scope) {
         ? null
         : Number(policy.threshold),
     samples: Number(scope.samples || 0),
+    sameLeague: Boolean(scope.sameLeague),
+    usesAllSamples: Boolean(scope.goalWeighting?.usesAllSamples),
+    sampleLimit: scope.goalWeighting?.sampleLimit ?? null,
+    distanceMethod: scope.goalWeighting?.method || null,
+    bandwidth: scope.goalWeighting?.bandwidth ?? null,
     reason: policy?.gate?.reason || scope.reason,
   };
 }
 
 function blendOptions(decision, smoothing = null) {
+  const effectiveSmoothing = decision.enabled
+    ? smoothing
+    : smoothing
+      ? {
+          ...smoothing,
+          enabled: false,
+          reason: productionPolicy.empiricalOnly
+            ? "相似历史概率主模型直接使用当前样本的原始赛果占比"
+            : "终赔赔率主模型不使用历史平滑改变最终概率",
+        }
+      : smoothing;
   return {
     enabled: decision.enabled,
     fixedWeight: decision.fixedWeight,
     minSamples: decision.minSamples,
+    maxWeight: decision.maxWeight,
+    scale: decision.scale,
     empiricalOnly: decision.empiricalOnly,
+    requireSamples: decision.requireSamples,
     weighting: decision.weighting,
-    smoothing,
+    smoothing: effectiveSmoothing,
+    zeroCellFloor: productionPolicy.zeroCellFloor.enabled
+      ? { priorMass: productionPolicy.zeroCellFloor.priorMass }
+      : { priorMass: 0 },
   };
 }
 
@@ -1132,7 +1619,12 @@ function numberParam(searchParams, name, fallback, min, max) {
 }
 
 function weightDetail(row, prediction) {
-  const weight = distanceWeight(row.distance, prediction.weighting);
+  const precomputedWeight = prediction.weighting.weightField
+    ? Number(row[prediction.weighting.weightField])
+    : Number.NaN;
+  const weight = Number.isFinite(precomputedWeight) && precomputedWeight > 0
+    ? precomputedWeight
+    : distanceWeight(row.distance, prediction.weighting);
   return {
     distance: row.distance,
     weight,
@@ -1153,6 +1645,8 @@ function compactSpfRow(row, prediction) {
     handicap: row.handicap,
     odds: row.odds,
     initialOdds: row.initialOdds,
+    zeroOddsDistance: row.zeroOddsDistance,
+    distanceComponents: row.distanceComponents,
     totalGoals: row.totalGoals,
     similarity: 1 - row.distance,
     ...weightDetail(row, prediction),
@@ -1170,14 +1664,58 @@ function compactGoalRow(row, prediction) {
     result: row.result,
     odds: row.odds,
     initialOdds: row.initialOdds,
-    similarity: 1 - Math.min(1, row.distance / 0.05),
+    zeroOddsDistance: row.zeroOddsDistance,
+    distanceComponents: row.distanceComponents,
+    similarity: Number(row.similarityWeight || 0),
     ...weightDetail(row, prediction),
   };
 }
 
+function computeScoreDistribution(rows, maxItems = 4) {
+  const counts = new Map();
+  let totalWeight = 0;
+  for (const row of rows) {
+    if (!row.score) continue;
+    const normalized = String(row.score).replace(":", "-").trim();
+    if (!/^\d+-\d+$/.test(normalized)) continue;
+    const weight = Number(row.weight ?? 1);
+    counts.set(normalized, (counts.get(normalized) || 0) + weight);
+    totalWeight += weight;
+  }
+  if (!totalWeight) return [];
+  const list = [];
+  for (const [score, weight] of counts.entries()) {
+    list.push({
+      score,
+      count: Math.round(weight),
+      probability: weight / totalWeight,
+    });
+  }
+  list.sort((a, b) => b.probability - a.probability);
+  return list.slice(0, maxItems);
+}
+
 function stabilityPoint(threshold, prediction) {
+  const historicalProbabilities = prediction.weightedEmpirical?.length
+    ? prediction.weightedEmpirical
+    : prediction.empirical || [];
+  const historicalTopProbability = prediction.available
+    ? Math.max(...historicalProbabilities)
+    : null;
+  const historicalTopLabels = prediction.available
+    ? prediction.labels.filter(
+        (_, index) =>
+          Math.abs(historicalProbabilities[index] - historicalTopProbability) <
+          1e-12,
+      )
+    : [];
+  const historicalIsTie = historicalTopLabels.length > 1;
+  const historicalPredicted =
+    historicalTopLabels.length === 1 ? historicalTopLabels[0] : null;
+  const predictedIndex = prediction.labels.indexOf(prediction.predicted);
   return {
     threshold,
+    labels: prediction.labels,
     available: prediction.available,
     predicted: prediction.predicted,
     topLabels: prediction.topLabels,
@@ -1186,6 +1724,19 @@ function stabilityPoint(threshold, prediction) {
     topProbability: prediction.available
       ? Math.max(...prediction.final)
       : null,
+    historicalProbabilities,
+    historicalTopLabels,
+    historicalPredicted,
+    historicalIsTie,
+    historicalTopProbability,
+    supportsFinal:
+      prediction.available &&
+      !historicalIsTie &&
+      historicalPredicted === prediction.predicted,
+    supportProbability:
+      prediction.available && predictedIndex >= 0
+        ? historicalProbabilities[predictedIndex]
+        : null,
     samples: prediction.stats.total,
     coreSamples: prediction.weighting.coreSamples,
     effectiveSamples: prediction.weighting.effectiveSamples,
@@ -1194,10 +1745,27 @@ function stabilityPoint(threshold, prediction) {
 
 function historicalMethodText(prediction, weightedDescription) {
   if (!prediction.available) return "没有相似历史比赛，本场不生成预测";
-  if (!prediction.weighting.enabled) {
-    return `严格权重验证未通过，使用 ${prediction.stats.total.toLocaleString()} 场相似比赛等权统计`;
+  const historyWeight = Number(prediction.empiricalWeight || 0);
+  if (historyWeight >= 1 - 1e-12) {
+    const sampleText =
+      `最终概率采用当前范围内 ${prediction.stats.total.toLocaleString()} 场相似比赛`;
+    return prediction.weighting.enabled
+      ? `${sampleText}按综合距离加权的赛果占比（加权等效 ${prediction.weighting.effectiveSamples.toFixed(1)} 场）；终赔去水概率单独展示，仅作赔率参考`
+      : `${sampleText}等权赛果占比；终赔去水概率单独展示，仅作赔率参考`;
   }
-  return `保留 ${prediction.stats.total.toLocaleString()} 场并${weightedDescription}，核心 ${prediction.weighting.coreSamples.toLocaleString()} 场、加权等效 ${prediction.weighting.effectiveSamples.toFixed(1)} 场`;
+  if (historyWeight <= 1e-12) {
+    return (
+      "最终概率100%采用终赔去水概率；" +
+      `${prediction.stats.total.toLocaleString()} 场相似历史仅用于样本门槛、可靠性和结果核对`
+    );
+  }
+  const blendText =
+    `终赔去水概率占 ${((1 - historyWeight) * 100).toFixed(1)}%，` +
+    `${prediction.stats.total.toLocaleString()} 场相似历史校准占 ${(historyWeight * 100).toFixed(1)}%`;
+  if (!prediction.weighting.enabled) {
+    return `${blendText}；历史样本使用等权统计`;
+  }
+  return `${blendText}；历史池${weightedDescription}，核心 ${prediction.weighting.coreSamples.toLocaleString()} 场、加权等效 ${prediction.weighting.effectiveSamples.toFixed(1)} 场`;
 }
 
 function movementMethodText(prediction) {
@@ -1214,6 +1782,9 @@ function movementMethodText(prediction) {
   if (movement?.reason === "no-change") {
     return "本场初赔与终赔没有有效变化，不做走势修正";
   }
+  if (movement?.reason === "included-in-composite-distance") {
+    return "初赔及其到终赔的走势已计入综合相似距离，不再重复修正概率";
+  }
   return "没有匹配到走势样本，不做走势修正";
 }
 
@@ -1225,23 +1796,32 @@ function smoothingMethodText(prediction) {
   const source = smoothing.prior.sourceLabel;
   const detail =
     `${source} ${smoothing.prior.sampleSize.toLocaleString()} 场、先验强度 ${smoothing.strength}`;
+  if (
+    !smoothing.applied &&
+    smoothing.reason === "相似历史概率主模型直接使用当前样本的原始赛果占比"
+  ) {
+    return "主预测直接使用当前样本的原始赛果占比，不应用历史先验平滑";
+  }
+  if (
+    !smoothing.applied &&
+    smoothing.reason === "终赔赔率主模型不使用历史平滑改变最终概率"
+  ) {
+    return "历史平滑仅保留参考，终赔赔率主模型不使用它改变最终概率";
+  }
   return smoothing.applied
     ? `小样本平滑通过严格验证，已使用${detail}`
     : `小样本平滑未通过严格验证，${detail}，仅供参考`;
 }
 
 function zeroOddsMethodText(scope, prediction) {
-  const interval = scope?.zeroOddsInterval;
-  if (!scope?.zeroOdds || !interval) return "";
-  const label = interval.label ||
-    `${interval.lower === null ? "最低" : Number(interval.lower).toFixed(2)}～${interval.upper === null ? "最高" : Number(interval.upper).toFixed(2)}`;
-  const policy = scope.zeroOddsPolicy;
-  const distanceText = policy?.enabled
-    ? `段内1球至7+球去水概率每项差不超过 ${(Number(policy.threshold) * 100).toFixed(2)}pp`
-    : "该段七项赔率距离未重复通过验证，使用整段历史";
+  const window = scope?.zeroOddsWindow;
+  if (!scope?.zeroOdds || !window) return "";
+  const label = window.label ||
+    `${Number(window.lower).toFixed(2)}～${Number(window.upper).toFixed(2)}`;
   return (
-    `0球赔率先进入 ${label} 档，${distanceText}；` +
-    `${historicalMethodText(prediction, "按其余七项赔率距离加权")}`
+    `0球赔率先按与当前值相差不超过 ${Number(window.tolerance).toFixed(2)} 筛选（${label}），` +
+    "再比较终赔60%、初赔15%、走势15%和隐含进球10%的综合距离；" +
+    `${historicalMethodText(prediction, "全部合格样本按综合距离加权")}`
   );
 }
 
@@ -1258,6 +1838,10 @@ function historicalPriorFor(
   },
 ) {
   const policy = productionPolicy.smoothing[market];
+  if (policy.priorMode === "adjusted-market") {
+    const marketPrior = adjustedThreeWayMarketPrior(target.odds, market);
+    if (marketPrior) return marketPrior;
+  }
   return selectHistoricalPrior(history, target, {
     labels,
     outcomeField,
@@ -1275,11 +1859,17 @@ function buildSpfStability(
   market,
   league,
   similarAtThreshold = null,
+  sameLeague = false,
+  selectedThreshold = null,
 ) {
   const points = STABILITY_THRESHOLDS[market].map((threshold) => {
     const similar = similarAtThreshold
       ? similarAtThreshold(threshold)
-      : findSimilarSpf(history, odds, { tolerance: threshold });
+      : findSimilarSpf(history, odds, {
+          tolerance: threshold,
+          league,
+          sameLeague,
+        });
     const decision = modelDecision(market, threshold);
     const prior = historicalPriorFor(
       history,
@@ -1300,12 +1890,19 @@ function buildSpfStability(
     });
     return stabilityPoint(threshold, prediction);
   });
-  return summarizeStability(points);
+  return summarizeHistoricalSupport(points, selectedThreshold);
 }
 
 function buildThreeWayStability(
   match,
-  { spfHistory, hhadHistory, pairedHistory, spfResult, hhadResult },
+  {
+    spfHistory,
+    hhadHistory,
+    pairedHistory,
+    spfResult,
+    hhadResult,
+    sameLeague = false,
+  },
 ) {
   const hadOdds = match.had
     ? [match.had.h, match.had.d, match.had.a]
@@ -1322,7 +1919,15 @@ function buildThreeWayStability(
   if (!usesJoint) {
     return {
       spf: hadOdds
-        ? buildSpfStability(spfHistory, hadOdds, "spf", match.league)
+        ? buildSpfStability(
+            spfHistory,
+            hadOdds,
+            "spf",
+            match.league,
+            null,
+            sameLeague,
+            spfResult?.tolerance,
+          )
         : null,
       hhad: hhadResult
         ? buildSpfStability(
@@ -1332,6 +1937,9 @@ function buildThreeWayStability(
             hhadOdds,
             "hhad",
             match.league,
+            null,
+            sameLeague,
+            hhadResult?.tolerance,
           )
         : null,
     };
@@ -1342,6 +1950,7 @@ function buildThreeWayStability(
     pairedHistory
       .filter(
         (row) =>
+          (!sameLeague || row.spf.league === match.league) &&
           row.hhad.handicap === handicap &&
           spfDistance(row.spf.odds, hadOdds) <=
             (market === "spf" ? threshold : spfResult.tolerance) &&
@@ -1367,6 +1976,8 @@ function buildThreeWayStability(
       "spf",
       match.league,
       (threshold) => jointSimilar("spf", threshold),
+      sameLeague,
+      spfResult?.tolerance,
     ),
     hhad: buildSpfStability(
       pairedHhadHistory,
@@ -1374,60 +1985,87 @@ function buildThreeWayStability(
       "hhad",
       match.league,
       (threshold) => jointSimilar("hhad", threshold),
+      sameLeague,
+      hhadResult?.tolerance,
     ),
   };
 }
 
-function buildGoalStability(history, odds, league) {
-  const points = STABILITY_THRESHOLDS.goals.map((threshold) => {
-    const similar = findSimilarGoals(history, odds, { tolerance: threshold });
-    const decision = modelDecision("goals", threshold);
-    const prior = historicalPriorFor(
-      history,
-      { odds, league },
-      "goals",
-      {
-        labels: GOAL_LABELS,
-        outcomeField: "goals",
-        distance: (left, right) => goalDistance(left.odds, right.odds),
-        threshold,
-      },
-    );
-    const prediction = predictGoals(odds, similar, {
-      ...blendOptions(
+function buildGoalStability(
+  history,
+  odds,
+  initialOdds,
+  league,
+  sameLeague = false,
+) {
+  const resolved = selectProductionGoalSimilarity(history, {
+    odds,
+    initialOdds,
+    league,
+  }, {
+    intervals: productionPolicy.zeroGoals.intervals,
+    policies: productionPolicy.zeroGoals.policies,
+    sameLeague,
+  });
+  const decision = modelDecision("goals", productionPolicy.thresholds.goals, {
+    sameLeague,
+    zeroOdds: true,
+  });
+  const points = PRODUCTION_GOAL_POOL_FRACTIONS.map((fraction) => {
+    const sampleSize = resolved.similar.length
+      ? Math.max(1, Math.ceil(resolved.similar.length * fraction))
+      : 0;
+    const similar = resolved.similar.slice(0, sampleSize);
+    const prediction = predictProductionGoals(odds, resolved, {
+      samples: similar,
+      blendOptions: blendOptions(
         decision,
-        smoothingOptions("goals", prior, decision.usesRecommendedThreshold),
+        smoothingOptions("goals", null, decision.usesRecommendedThreshold),
       ),
     });
-    return stabilityPoint(threshold, prediction);
+    return stabilityPoint(fraction, prediction);
   });
-  return summarizeStability(points);
+  return {
+    ...summarizeHistoricalSupport(points, 1),
+    mode: "composite-distance-pool",
+  };
 }
 
-function buildGoalPairStability(history, odds, league) {
-  const points = STABILITY_THRESHOLDS.goals.map((threshold) => {
-    const similar = findSimilarGoals(history, odds, { tolerance: threshold });
-    const decision = modelDecision("goals", threshold);
-    const prior = historicalPriorFor(
-      history,
-      { odds, league },
-      "goals",
-      {
-        labels: GOAL_LABELS,
-        outcomeField: "goals",
-        distance: (left, right) => goalDistance(left.odds, right.odds),
-        threshold,
-      },
-    );
-    const prediction = predictGoals(odds, similar, {
-      ...blendOptions(
+function buildGoalPairStability(
+  history,
+  odds,
+  initialOdds,
+  league,
+  sameLeague = false,
+) {
+  const resolved = selectProductionGoalSimilarity(history, {
+    odds,
+    initialOdds,
+    league,
+  }, {
+    intervals: productionPolicy.zeroGoals.intervals,
+    policies: productionPolicy.zeroGoals.policies,
+    sameLeague,
+  });
+  const decision = modelDecision("goals", productionPolicy.thresholds.goals, {
+    sameLeague,
+    zeroOdds: true,
+  });
+  const points = PRODUCTION_GOAL_POOL_FRACTIONS.map((fraction) => {
+    const sampleSize = resolved.similar.length
+      ? Math.max(1, Math.ceil(resolved.similar.length * fraction))
+      : 0;
+    const similar = resolved.similar.slice(0, sampleSize);
+    const prediction = predictProductionGoals(odds, resolved, {
+      samples: similar,
+      blendOptions: blendOptions(
         decision,
-        smoothingOptions("goals", prior, decision.usesRecommendedThreshold),
+        smoothingOptions("goals", null, decision.usesRecommendedThreshold),
       ),
     });
     const pair = selectTopGoalPair(prediction.final, odds);
     return {
-      threshold,
+      threshold: fraction,
       available: pair.available,
       labels: pair.labels,
       probability: pair.probability,
@@ -1563,7 +2201,8 @@ function attachChallenger(prediction, market, result) {
   if (!challenger.available || !challenger.enabled) {
     return {
       ...prediction,
-      productionModel: "historical-similarity",
+      productionModel:
+        prediction.productionModel || "historical-similarity",
       challenger,
     };
   }
@@ -1617,9 +2256,121 @@ function reliabilityView(
 }
 
 function ledgerPolicyVersion({ sameLeague = false } = {}) {
-  const validation = challengerConfig.stale ? ":pending-validation" : "";
+  const validation = challengerConfig.selectionStale ? ":pending-validation" : "";
   const scope = sameLeague ? ":same-league" : ":all-leagues";
-  return `selection-v${challengerConfig.version || 0}@${challengerConfig.generatedAt || "untrained"}${validation}${scope}`;
+  return `${productionPolicy.probabilityPolicy}:selection-v${reliabilityConfig.version || 0}@${reliabilityConfig.generatedAt || "untrained"}${validation}${scope}`;
+}
+
+function ledgerPolicyPrefix() {
+  return `${productionPolicy.probabilityPolicy}:`;
+}
+
+function ledgerCurrentSnapshotPolicyVersions() {
+  return [
+    ledgerPolicyVersion({ sameLeague: false }),
+    ledgerPolicyVersion({ sameLeague: true }),
+    `${productionPolicy.probabilityPolicy}:goal-multiple-v1:all-leagues`,
+  ];
+}
+
+function ledgerAlgorithmVersion(market, { sameLeague = false } = {}) {
+  const scope = sameLeague ? "same-league" : "all-leagues";
+  if (market === "goalMultiple") {
+    return `${productionPolicy.probabilityPolicy}:goal-multiple-v1:${scope}`;
+  }
+  if (market === "goals") {
+    const tolerance = sameLeague
+      ? SAME_LEAGUE_GOAL_ZERO_ODDS_TOLERANCE
+      : GOAL_ZERO_ODDS_TOLERANCE;
+    return `${productionPolicy.probabilityPolicy}:goals:${GOAL_MATCHING_VERSION}:zero-${tolerance.toFixed(2)}:${scope}`;
+  }
+  const threshold = Number(productionPolicy.thresholds[market] || 0);
+  return `${productionPolicy.probabilityPolicy}:${market}:${THREE_WAY_MATCHING_VERSION}:tolerance-${(threshold * 100).toFixed(2)}pct:${scope}`;
+}
+
+function ledgerCurrentAlgorithmSpec() {
+  return {
+    probabilityPolicy: productionPolicy.probabilityPolicy,
+    thresholds: { ...productionPolicy.thresholds },
+    goalZeroToleranceAll: GOAL_ZERO_ODDS_TOLERANCE,
+    goalZeroToleranceSameLeague: SAME_LEAGUE_GOAL_ZERO_ODDS_TOLERANCE,
+    versions: Object.fromEntries(
+      ["spf", "hhad", "goals", "goalMultiple"].map((market) => [
+        market,
+        {
+          all: ledgerAlgorithmVersion(market, { sameLeague: false }),
+          sameLeague:
+            market === "goalMultiple"
+              ? null
+              : ledgerAlgorithmVersion(market, { sameLeague: true }),
+        },
+      ]),
+    ),
+  };
+}
+
+function ledgerCurrentAlgorithmVersions() {
+  const versions = ledgerCurrentAlgorithmSpec().versions;
+  return [...new Set(
+    Object.values(versions)
+      .flatMap((scopes) => Object.values(scopes))
+      .filter(Boolean),
+  )];
+}
+
+function ledgerEvidenceLayer(summary) {
+  const totals = summary?.totals || {};
+  return {
+    settledFixtures: Number(totals.coreSettledFixtures || 0),
+    pendingFixtures: Number(totals.corePendingFixtures || 0),
+    settledPredictions: Number(totals.coreSettled || 0),
+    allLeaguePredictions: Number(summary?.coreByScope?.all?.settled || 0),
+    sameLeaguePredictions: Number(
+      summary?.coreByScope?.sameLeague?.settled || 0,
+    ),
+    sampleLevel: totals.fixtureSampleLevel || "empty",
+  };
+}
+
+function historicalValidationEvidence() {
+  const counts = dataStore.getCounts();
+  return {
+    unifiedHistory: Number(counts.unifiedHistory || 0),
+    verifiedHistory: Number(counts.verifiedHistory || 0),
+    spfHistory: Number(counts.spfHistory || 0),
+    hhadHistory: Number(counts.hhadHistory || 0),
+    goalHistory: Number(counts.goalHistory || 0),
+    sourceUpdatedAt: dataStore.getHistoricalSourceUpdatedAt(),
+    generatedAt: reliabilityConfig.generatedAt || null,
+    stale: Boolean(reliabilityConfig.stale),
+    discipline:
+      "较早数据参与匹配，最新独立验证段只使用同来源中更早的历史行",
+    markets: Object.fromEntries(
+      ["spf", "hhad", "goals"].map((market) => {
+        const validation = reliabilityConfig.markets?.[market]?.test;
+        return [
+          market,
+          validation
+            ? {
+                evaluated: Number(validation.available || 0),
+                accuracy:
+                  validation.baselineAccuracy === null ||
+                  validation.baselineAccuracy === undefined
+                    ? null
+                    : Number(validation.baselineAccuracy),
+                coverage:
+                  validation.modelCoverage === null ||
+                  validation.modelCoverage === undefined
+                    ? null
+                    : Number(validation.modelCoverage),
+                threshold: Number(productionPolicy.thresholds[market]),
+                ordering: "latest-20-percent",
+              }
+            : null,
+        ];
+      }),
+    ),
+  };
 }
 
 function ledgerHistoryContext() {
@@ -1651,7 +2402,11 @@ function ledgerHistoryContext() {
             )[0]?.[0] || "";
       return [
         market,
-        { source, watermark: sourceCounts.get(source)?.maxRow || 0 },
+        {
+          source,
+          watermark: sourceCounts.get(source)?.maxRow || 0,
+          updatedAt: dataStore.getSourceFileUpdatedAt(source),
+        },
       ];
     }),
   );
@@ -1729,6 +2484,14 @@ function findLedgerResult(history, snapshot, selection) {
   const watermark = Number(
     selection.historyRowWatermark ?? snapshot.history_row_watermark,
   );
+  const capturedSourceUpdatedAt =
+    selection.historySourceUpdatedAt || snapshot.source_updated_at || null;
+  const currentSourceUpdatedAt = dataStore.getSourceFileUpdatedAt(source);
+  const sourceChanged = Boolean(
+    capturedSourceUpdatedAt &&
+      currentSourceUpdatedAt &&
+      capturedSourceUpdatedAt !== currentSourceUpdatedAt,
+  );
   const matching = history
     .filter((row) => {
       const reference = ledgerResultReference(row, market);
@@ -1744,7 +2507,13 @@ function findLedgerResult(history, snapshot, selection) {
       );
     });
   const afterWatermark = matching
-    .filter((row) => ledgerResultReference(row, market).row > watermark)
+    .filter((row) =>
+      settlementRowEligible(
+        ledgerResultReference(row, market).row,
+        watermark,
+        sourceChanged,
+      ),
+    )
     .sort(
       (left, right) =>
         ledgerResultReference(left, market).row -
@@ -1787,6 +2556,23 @@ function ledgerMarketOdds(match, market) {
   ].map(Number);
 }
 
+function ledgerInitialMarketOdds(match, market) {
+  const initial =
+    market === "spf"
+      ? match.had?.history?.initial
+      : market === "hhad"
+        ? match.hhad?.history?.initial
+        : match.goals?.history?.initial;
+  if (!initial) return null;
+  const odds =
+    market === "goals"
+      ? goalOdds(initial, initial)
+      : threeWayOdds(initial, initial);
+  return odds.every((value) => Number.isFinite(Number(value)) && Number(value) > 0)
+    ? odds.map(Number)
+    : null;
+}
+
 function recordPredictionPayload(payload) {
   if (
     Math.abs(payload.settings.spfTolerance - productionPolicy.thresholds.spf) >
@@ -1817,6 +2603,7 @@ function recordPredictionPayload(payload) {
     const topLabels = prediction.topLabels?.length
       ? prediction.topLabels
       : [prediction.predicted].filter(Boolean);
+    if (labels.length > 0 && topLabels.length >= labels.length) continue;
     const selectedIndex = labels.indexOf(topLabels[0]);
     if (
       selectedIndex < 0 ||
@@ -1830,10 +2617,17 @@ function recordPredictionPayload(payload) {
       policyVersion: ledgerPolicyVersion({
         sameLeague: Boolean(payload.settings.sameLeague),
       }),
+      algorithmVersion: ledgerAlgorithmVersion(market, {
+        sameLeague: Boolean(payload.settings.sameLeague),
+      }),
+      dataVersion: marketContext.updatedAt,
+      validationStatus: challengerConfig.selectionStale
+        ? "pending_revalidation"
+        : "validated",
       market,
       handicap: market === "hhad" ? prediction.handicap : null,
       capturedAt,
-      sourceUpdatedAt: dataStore.getSourceUpdatedAt(),
+      sourceUpdatedAt: marketContext.updatedAt,
       historySourceFile: marketContext.source,
       historyRowWatermark: marketContext.watermark,
       league: payload.match.league,
@@ -1846,13 +2640,13 @@ function recordPredictionPayload(payload) {
       selectedOdds: odds[selectedIndex],
       probabilities: prediction.final,
       odds,
-      reliabilityLevel: challengerConfig.stale
+      reliabilityLevel: challengerConfig.selectionStale
         ? "cautious"
         : prediction.reliability.level,
-      reliabilityLabel: challengerConfig.stale
+      reliabilityLabel: challengerConfig.selectionStale
         ? "规则待验证"
         : prediction.reliability.label,
-      reliabilityReason: challengerConfig.stale
+      reliabilityReason: challengerConfig.selectionStale
         ? `历史数据更新后尚未重新验证；${prediction.reliability.reason}`
         : prediction.reliability.reason,
       threshold:
@@ -1867,11 +2661,71 @@ function recordPredictionPayload(payload) {
       samples: prediction.stats.total,
       settings: {
         ...payload.settings,
-        ledgerValidationPending: Boolean(challengerConfig.stale),
+        diagnostics: {
+          initialOdds: ledgerInitialMarketOdds(payload.match, market),
+          movementApplied: Boolean(prediction.movement?.applied),
+          movementReferenceOnly: Boolean(prediction.movement?.referenceOnly),
+          movementReason: prediction.movement?.reason || null,
+        },
+        ledgerValidationPending: Boolean(challengerConfig.selectionStale),
       },
     })
       ? 1
       : 0;
+  }
+  const goalMultiple = payload.goalMultiple;
+  if (
+    !payload.settings.sameLeague &&
+    goalMultiple?.available &&
+    payload.match.goals
+  ) {
+    const marketContext = context.sources.goals;
+    const odds = ledgerMarketOdds(payload.match, "goals");
+    if (marketContext?.source && marketContext.watermark) {
+      inserted += predictionLedger.record({
+        matchId: payload.match.id,
+        policyVersion: `${productionPolicy.probabilityPolicy}:goal-multiple-v1:all-leagues`,
+        algorithmVersion: ledgerAlgorithmVersion("goalMultiple", {
+          sameLeague: false,
+        }),
+        dataVersion: marketContext.updatedAt,
+        validationStatus: "reference_only",
+        market: "goalMultiple",
+        handicap: null,
+        capturedAt,
+        sourceUpdatedAt: marketContext.updatedAt,
+        historySourceFile: marketContext.source,
+        historyRowWatermark: marketContext.watermark,
+        league: payload.match.league,
+        home: payload.match.home,
+        away: payload.match.away,
+        displayName: payload.match.displayName,
+        predicted: goalMultiple.labels.join(" / "),
+        topLabels: goalMultiple.labels,
+        selectedProbability: goalMultiple.coverageProbability,
+        selectedOdds: goalMultiple.zeroOdds,
+        probabilities: goalMultiple.probabilities,
+        odds,
+        reliabilityLevel: "cautious",
+        reliabilityLabel: "倍数历史观察",
+        reliabilityReason:
+          "按相同0球终赔的整数倍历史档位统计前两名；独立记录命中率，不计模拟盈亏",
+        threshold: 0,
+        samples: goalMultiple.samples,
+        settings: {
+          sameLeague: false,
+          goalMultipleCounts: goalMultiple.counts,
+          goalMultipleProbabilities: goalMultiple.probabilities,
+          goalMultipleCoverage: goalMultiple.coverageProbability,
+          goalMultipleZeroOdds: goalMultiple.zeroOdds,
+          goalMultipleRelations: goalMultiple.relations,
+          goalMultipleSource: goalMultiple.source,
+          goalMultipleTieBreak: goalMultiple.tieBreak,
+        },
+      })
+        ? 1
+        : 0;
+    }
   }
   return inserted;
 }
@@ -1880,7 +2734,7 @@ function settlePredictionLedger() {
   const context = ledgerHistoryContext();
   const pending = predictionLedger.pending();
   const settledAt = new Date().toISOString();
-  let settled = 0;
+  const settlements = [];
   for (const snapshot of pending) {
     const result = findLedgerResult(context.history, snapshot, {
       market: snapshot.market,
@@ -1892,19 +2746,146 @@ function settlePredictionLedger() {
     if (!result) continue;
     const actualResult = ledgerActualResult(result, snapshot.market);
     const resultReference = ledgerResultReference(result, snapshot.market);
-    const topLabels = JSON.parse(snapshot.top_labels_json || "[]");
-    predictionLedger.settle(snapshot.id, {
+    settlements.push({ id: snapshot.id, result: {
       actualResult,
       score: result.score,
-      correct: topLabels.includes(actualResult),
-      selectedOdds: snapshot.selected_odds,
       sourceFile: resultReference.source,
       sourceRow: resultReference.row,
       settledAt,
-    });
-    settled += 1;
+    } });
   }
-  return settled;
+  return predictionLedger.transaction(() =>
+    settlements.reduce(
+      (count, settlement) =>
+        count +
+        Number(
+          predictionLedger.settle(settlement.id, settlement.result).changes || 0,
+        ),
+      0,
+    ),
+  );
+}
+
+function applyThreeWayProbabilityPolicy(
+  prediction,
+  market,
+  samples,
+  target,
+  { sameLeague = false, tolerance = 0.1 } = {},
+) {
+  const scope = sameLeague ? "sameLeague" : "all";
+  if (
+    productionPolicy.probabilityPolicy !== "historical-similarity-v4"
+  ) {
+    return {
+      ...prediction,
+      probabilityModel: {
+        enabled: false,
+        scope,
+        reason: `正式模型已锁定 ${LOCKED_PRODUCTION_PROBABILITY_POLICY}；v4仅保留为候选验证`,
+      },
+    };
+  }
+  const policy = productionPolicy.threeWayProbability?.scopes?.[scope]?.[market];
+  const selected = policy?.selected;
+  if (!policy?.enabled || !selected || !prediction?.available) {
+    return {
+      ...prediction,
+      probabilityModel: {
+        enabled: false,
+        scope,
+        reason: policy?.gate?.reason || "组合概率模型未通过当前范围验证",
+      },
+    };
+  }
+  const profile = selected.profile || {};
+  const weighted = weightedThreeWayProbabilities(samples, target, {
+    ...profile,
+    decay: selected.decay,
+    finalScale: tolerance,
+    initialScale: tolerance * 1.5,
+    movementScale: Math.max(0.006, tolerance * 0.15),
+  });
+  const marketProbabilities = impliedThreeWayProbabilities(target.odds);
+  if (!weighted || !marketProbabilities) {
+    return {
+      ...prediction,
+      probabilityModel: {
+        enabled: false,
+        scope,
+        reason: "当前比赛缺少组合概率模型所需的完整赔率",
+      },
+    };
+  }
+  const final = blendThreeWayProbabilities(
+    weighted.probabilities,
+    marketProbabilities,
+    selected.marketWeight,
+  );
+  const highest = Math.max(...final);
+  const topLabels = prediction.labels.filter(
+    (_, index) => Math.abs(final[index] - highest) < 1e-12,
+  );
+  const usesInitial = Number(profile.initialWeight || 0) > 0;
+  const usesMovement = Number(profile.movementWeight || 0) > 0;
+  const hasInitial = Array.isArray(target.initialOdds);
+  return {
+    ...prediction,
+    market: marketProbabilities,
+    weightedEmpirical: weighted.probabilities,
+    stableEmpirical: weighted.probabilities,
+    baseline: weighted.probabilities,
+    final,
+    empiricalWeight: 1 - Number(selected.marketWeight || 0),
+    predicted: topLabels[0] || null,
+    topLabels,
+    isTie: topLabels.length > 1,
+    confidence: confidenceLabel(final, weighted.effectiveSamples),
+    productionModel: "validated-three-way-composite",
+    weighting: {
+      ...prediction.weighting,
+      enabled: true,
+      validated: true,
+      method: "validated-composite-exponential-decay",
+      tolerance,
+      effectiveSamples: weighted.effectiveSamples,
+      totalWeight: weighted.totalWeight,
+      coreSamples: weighted.coreSamples,
+      minimumWeight: weighted.minimumWeight,
+      maximumWeight: weighted.maximumWeight,
+    },
+    movement: usesMovement && hasInitial
+      ? {
+          ...prediction.movement,
+          applied: false,
+          referenceOnly: false,
+          reason: "included-in-composite-distance",
+          sampleSize: weighted.usableSamples,
+          weight: Number(profile.movementWeight || 0),
+        }
+      : prediction.movement,
+    probabilityModel: {
+      enabled: true,
+      validated: true,
+      scope,
+      id: selected.id,
+      marketWeight: Number(selected.marketWeight || 0),
+      historyWeight: 1 - Number(selected.marketWeight || 0),
+      decay: Number(selected.decay || 0),
+      features: {
+        final: Number(profile.finalWeight || 0),
+        initial: usesInitial && hasInitial
+          ? Number(profile.initialWeight || 0)
+          : 0,
+        movement: usesMovement && hasInitial
+          ? Number(profile.movementWeight || 0)
+          : 0,
+      },
+      initialAvailable: hasInitial,
+      validation: policy.validation,
+      gate: policy.gate,
+    },
+  };
 }
 
 function buildSpfPrediction(
@@ -1963,7 +2944,7 @@ function buildSpfPrediction(
       movementSimilar,
       initialOdds,
       {
-        ...movementOptions("spf"),
+        ...movementOptions("spf", effectiveModel.usesRecommendedThreshold),
         blendOptions: blendOptions(
           effectiveModel,
           smoothingOptions(
@@ -1974,8 +2955,20 @@ function buildSpfPrediction(
         ),
       },
     );
+  const productionPrediction = applyThreeWayProbabilityPolicy(
+    prediction,
+    "spf",
+    similar,
+    {
+      odds: hadOdds,
+      initialOdds: match.had.history?.initial
+        ? threeWayOdds(match.had.history.initial, match.had)
+        : null,
+    },
+    { sameLeague, tolerance: effectiveTolerance },
+  );
   return {
-    prediction: attachChallenger(prediction, "spf", challenger),
+    prediction: attachChallenger(productionPrediction, "spf", challenger),
     similar,
     movementSimilar,
     tolerance: effectiveTolerance,
@@ -2044,7 +3037,7 @@ function buildHhadPrediction(
       movementSimilar,
       initialOdds,
       {
-        ...movementOptions("hhad"),
+        ...movementOptions("hhad", effectiveModel.usesRecommendedThreshold),
         blendOptions: blendOptions(
           effectiveModel,
           smoothingOptions(
@@ -2055,9 +3048,25 @@ function buildHhadPrediction(
         ),
       },
     );
+  const productionPrediction = applyThreeWayProbabilityPolicy(
+    prediction,
+    "hhad",
+    similar,
+    {
+      odds,
+      initialOdds: match.hhad.history?.initial
+        ? threeWayOdds(match.hhad.history.initial, match.hhad)
+        : null,
+    },
+    { sameLeague, tolerance: effectiveTolerance },
+  );
   return {
     handicap,
-    prediction: attachChallenger(prediction, "hhad", challenger),
+    prediction: attachChallenger(
+      productionPrediction,
+      "hhad",
+      challenger,
+    ),
     similar,
     movementSimilar,
     tolerance: effectiveTolerance,
@@ -2121,6 +3130,7 @@ function buildThreeWayPredictionResults(
     {
       spfTolerance: spfResult?.tolerance ?? spfTolerance,
       hhadTolerance: hhadResult?.tolerance ?? hhadTolerance,
+      sameLeague,
     },
   );
   if (selection.spf && spfResult) {
@@ -2185,6 +3195,12 @@ function marketCandidate(match, market, prediction, handicap = null) {
       (market === "hhad" ? "让球单盘口匹配" : "胜平负单盘口匹配"),
     movement: prediction.movement,
     reliability: prediction.reliability || null,
+    // 稳定性字段提到顶层，供串关「稳定优先」排序取用。
+    // 这三项是本项目唯一通过门禁验证的筛选维度（见 data/reliability-config.json）。
+    stabilityTopProbability: prediction.reliability?.observed?.topProbability ?? 0,
+    stabilityMargin: prediction.reliability?.observed?.margin ?? 0,
+    stabilityConsensus: prediction.reliability?.observed?.consensus ?? 0,
+    reliabilityLevel: prediction.reliability?.level || null,
   };
 }
 
@@ -2207,7 +3223,13 @@ function buildGoalPredictionResult(
     odds,
     goalTolerance,
     findSimilarGoals,
-    { sameLeague },
+    {
+      sameLeague,
+      finderOptions: {
+        league: match.league,
+        targetInitialOdds: initialOdds,
+      },
+    },
   );
   const similar = scope.similar;
   const effectiveTolerance = scope.threshold;
@@ -2224,29 +3246,30 @@ function buildGoalPredictionResult(
     {
       labels: GOAL_LABELS,
       outcomeField: "goals",
-      distance: (left, right) => goalDistance(left.odds, right.odds),
-      threshold: effectiveTolerance,
+      distance: (left, right) =>
+        Math.abs(Number(left.odds?.[0]) - Number(right.odds?.[0])),
+      threshold: sameLeague
+        ? SAME_LEAGUE_GOAL_ZERO_ODDS_TOLERANCE
+        : GOAL_ZERO_ODDS_TOLERANCE,
     },
   );
-  const movementSimilar = findSimilarGoalMovements(
-    similar,
-    initialOdds,
-    odds,
-    { finalTolerance: effectiveTolerance },
+  const goalBlendOptions = blendOptions(
+    model,
+    smoothingOptions("goals", prior, model.usesRecommendedThreshold),
   );
-  const base = predictGoalsWithMovement(
-    odds,
-    similar,
-    movementSimilar,
-    initialOdds,
-    {
-      ...movementOptions("goals"),
-      blendOptions: blendOptions(
-        model,
-        smoothingOptions("goals", prior, model.usesRecommendedThreshold),
-      ),
+  const base = {
+    ...predictProductionGoals(odds, {
+      similar,
+      weighting: scope.goalWeighting,
+    }, { blendOptions: goalBlendOptions }),
+    movement: {
+      applied: false,
+      referenceOnly: false,
+      reason: "included-in-composite-distance",
+      sampleSize: similar.length,
+      weight: 0,
     },
-  );
+  };
   const predictionWithChallenger = attachChallenger(
     base,
     "goals",
@@ -2256,7 +3279,13 @@ function buildGoalPredictionResult(
     ...predictionWithChallenger,
     goalPair: selectTopGoalPair(predictionWithChallenger.final, odds),
   };
-  const stability = buildGoalStability(history, odds, match.league);
+  const stability = buildGoalStability(
+    history,
+    odds,
+    initialOdds,
+    match.league,
+    sameLeague,
+  );
   const reliability = reliabilityView("goals", prediction, stability, {
     threshold: effectiveTolerance,
     sameLeague,
@@ -2291,6 +3320,7 @@ function buildGoalPairCandidate(
   if (!result) return null;
   const {
     odds,
+    initialOdds,
     scope,
     tolerance: effectiveTolerance,
     prediction,
@@ -2300,17 +3330,11 @@ function buildGoalPairCandidate(
   const stability = buildGoalPairStability(
     history,
     odds,
+    initialOdds,
     match.league,
+    sameLeague,
   );
   const notices = [];
-  if (
-    Math.abs(
-      goalTolerance -
-        Number(goalPairSelectionConfig.settings?.goalTolerance || 0),
-    ) > 1e-9
-  ) {
-    notices.push("当前使用的是自定义进球相似阈值");
-  }
   if (!stability.stable) {
     notices.push("不同相似阈值下的前两名会变化");
   }
@@ -2359,8 +3383,8 @@ function buildGoalPairCandidate(
     stability,
     eligible: true,
     eligibilityReason: notices.length
-      ? `按相似历史占比选择前两名；${notices.join("；")}`
-      : "按相似历史占比选择前两名；四档阈值结果稳定",
+      ? `按当前范围的相似历史概率选择前两名；${notices.join("；")}`
+      : "按当前范围的相似历史概率选择前两名；四档阈值结果稳定",
     reliability: {
       level: stability.stable ? "recommended" : "cautious",
       label: stability.stable ? "前两名稳定" : "前两名有波动",
@@ -2414,6 +3438,7 @@ function buildParlayCandidate(
     pairedHistory,
     spfResult: hadResult,
     hhadResult: hhad,
+    sameLeague,
   });
   const had = hadResult
     ? (() => {
@@ -2492,6 +3517,7 @@ function buildParlayPayload(url) {
       ? "goalsPair"
       : "standard";
   const legs = numberParam(url.searchParams, "legs", 2, 2, 5);
+  const goalPairStake = 2 ** legs;
   const targetOdds = numberParam(url.searchParams, "targetOdds", 1.8, 1, 100);
   const minLegOdds = numberParam(
     url.searchParams,
@@ -2523,10 +3549,15 @@ function buildParlayPayload(url) {
     0.1,
   );
   const sameLeague = url.searchParams.get("sameLeague") === "true";
-  const requestedSort = url.searchParams.get("sort") || "value";
-  const sort = ["value", "probability", "target"].includes(requestedSort)
+  const requestedSort = url.searchParams.get("sort") || "probability";
+  const sort = [
+    "stability",
+    "value",
+    "probability",
+    "target",
+  ].includes(requestedSort)
     ? requestedSort
-    : "value";
+    : "probability";
   const selectedIds = new Set(
     (url.searchParams.get("selected") || "")
       .split(",")
@@ -2546,14 +3577,6 @@ function buildParlayPayload(url) {
   const allLeagueHistory = sameLeague
     ? null
     : dataStore.getVerifiedHistory();
-  const allLeagueMarketHistory = sameLeague
-    ? null
-    : {
-        spfHistory: dataStore.getSpfHistory(),
-        hhadHistory: dataStore.getHhadHistory(),
-        pairedHistory: dataStore.getPairedSpfHhadHistory(),
-        goalHistory: dataStore.getGoalHistory(),
-      };
   const candidates = dataStore
     .getMatches()
     .filter((match) => match.had || match.hhad || match.goals)
@@ -2564,26 +3587,11 @@ function buildParlayPayload(url) {
             sameLeague: true,
           })
         : allLeagueHistory;
-      const marketHistory = sameLeague
-        ? {
-            spfHistory: dataStore.getSpfHistory({
-              league: match.league,
-              sameLeague: true,
-            }),
-            hhadHistory: dataStore.getHhadHistory({
-              league: match.league,
-              sameLeague: true,
-            }),
-            pairedHistory: dataStore.getPairedSpfHhadHistory({
-              league: match.league,
-              sameLeague: true,
-            }),
-            goalHistory: dataStore.getGoalHistory({
-              league: match.league,
-              sameLeague: true,
-            }),
-          }
-        : allLeagueMarketHistory;
+      const marketHistory = predictionMarketHistories(match, {
+        spfTolerance,
+        hhadTolerance,
+        sameLeague,
+      });
       return buildParlayCandidate(
         match,
         { verifiedHistory, ...marketHistory },
@@ -2610,7 +3618,7 @@ function buildParlayPayload(url) {
               right.markets.goalsPair.samples -
                 left.markets.goalsPair.samples,
           )
-          .slice(0, 2)
+          .slice(0, legs)
       : candidates;
   const selectedCandidates =
     mode === "goalsPair"
@@ -2637,6 +3645,7 @@ function buildParlayPayload(url) {
   const combinations =
     mode === "goalsPair"
       ? generateGoalPairParlays(selectedCandidates, {
+          legs,
           sort,
           limit,
         })
@@ -2656,7 +3665,7 @@ function buildParlayPayload(url) {
     goalPairPolicy: goalPairSelectionConfig,
     requestSettings: {
       mode,
-      legs: mode === "goalsPair" ? 2 : legs,
+      legs,
       ...(mode === "goalsPair" ? {} : { targetOdds }),
       ...(mode === "goalsPair" ? {} : { minLegOdds }),
       sort,
@@ -2671,17 +3680,21 @@ function buildParlayPayload(url) {
       mode === "goalsPair"
         ? {
             scope: sameLeague ? "只看同联赛" : "全部联赛",
-            tolerance: `${sameLeague ? "同联赛" : "全部联赛"} · 进球距离 ${(goalTolerance * 100).toFixed(1)}pp / 历史占比前两名`,
+            tolerance: `${sameLeague ? "同联赛" : "全部联赛"} · 进球距离 ${(goalTolerance * 100).toFixed(1)}pp / 相似历史概率前两名`,
             probability:
-              "默认按单场双选覆盖率选两场；不设置最低组合赔率；两场均覆盖概率仅展示；后台按4注核算",
+              `默认按单场双选覆盖率选择${legs}场；不设置最低组合赔率；${legs}场均覆盖概率仅展示；后台按${goalPairStake}注核算`,
             value:
-              "回报指数 = 四种结果的概率加权预期返还 ÷ 4注成本，1.00 为理论盈亏平衡线",
+              `回报指数 = ${goalPairStake}种结果的概率加权预期返还 ÷ ${goalPairStake}注成本，1.00 为理论盈亏平衡线`,
           }
         : {
             scope: sameLeague ? "只看同联赛" : "全部联赛",
             tolerance: `${sameLeague ? "同联赛" : "全部联赛"} · 胜平负 ±${(spfTolerance * 100).toFixed(0)}% / 让球 ±${(hhadTolerance * 100).toFixed(0)}%`,
             probability:
-              `每关赔率不低于 ${minLegOdds.toFixed(2)}；组合命中率为各场验证后历史预测概率的乘积，按场次相互独立估算`,
+              `每关赔率不低于 ${minLegOdds.toFixed(2)}；${
+                sort === "stability"
+                  ? "当前按最弱一环排序；这是未通过串关时间验证的研究观察口径"
+                  : "组合命中率为各场验证后历史预测概率的乘积，按场次相互独立估算"
+              }`,
             value:
               "回报指数 = 组合赔率 × 估算命中率，1.00 为理论盈亏平衡线",
           },
@@ -2720,6 +3733,7 @@ function parlaySnapshotLeg(leg, mode, context) {
     samples: Number(leg.samples || 0),
     historySourceFile: marketContext?.source || context.source,
     historyRowWatermark: marketContext?.watermark || context.watermark,
+    historySourceUpdatedAt: marketContext?.updatedAt || null,
   };
 }
 
@@ -2736,7 +3750,10 @@ function recordParlayCombination(payload, combination, selectionSource) {
       sameLeague: Boolean(payload.requestSettings.sameLeague),
     }),
     capturedAt: new Date().toISOString(),
-    sourceUpdatedAt: dataStore.getSourceUpdatedAt(),
+    sourceUpdatedAt:
+      context.sources[ledgerMarketKey(combination.legs[0]?.market)]?.updatedAt ||
+      context.sources.goals?.updatedAt ||
+      dataStore.getSourceUpdatedAt(),
     historySourceFile: context.source,
     historyRowWatermark: context.watermark,
     legs: combination.legs.map((leg) =>
@@ -2744,7 +3761,7 @@ function recordParlayCombination(payload, combination, selectionSource) {
     ),
     settings: {
       ...payload.requestSettings,
-      ledgerValidationPending: Boolean(challengerConfig.stale),
+      ledgerValidationPending: Boolean(challengerConfig.selectionStale),
     },
     totalStake: Number(combination.totalStake || 1),
     hitProbability: Number(combination.hitProbability),
@@ -2756,22 +3773,33 @@ function settleParlayLedger() {
   const context = ledgerHistoryContext();
   const settledAt = new Date().toISOString();
   let settled = 0;
-  for (const snapshot of parlayLedger.pending()) {
+  let backfilled = 0;
+  const snapshots = [
+    ...parlayLedger.pending().map((snapshot) => ({
+      snapshot,
+      alreadySettled: false,
+    })),
+    ...parlayLedger.incompleteSettled().map((snapshot) => ({
+      snapshot,
+      alreadySettled: true,
+    })),
+  ];
+  return parlayLedger.transaction(() => {
+    for (const { snapshot, alreadySettled } of snapshots) {
     const legs = JSON.parse(snapshot.legs_json || "[]");
-    const actualResults = [];
-    let ready = true;
+    const previousResults = JSON.parse(snapshot.actual_results_json || "[]");
+    const resultByMatch = new Map(
+      previousResults.map((result) => [String(result.matchId), result]),
+    );
     for (const leg of legs) {
       const result = findLedgerResult(context.history, snapshot, leg);
-      if (!result) {
-        ready = false;
-        break;
-      }
+      if (!result) continue;
       const actualResult = ledgerActualResult(result, leg.market);
       const resultReference = ledgerResultReference(result, leg.market);
       const selection = leg.selections.find(
         (item) => String(item.label) === String(actualResult),
       );
-      actualResults.push({
+      resultByMatch.set(String(leg.matchId), {
         matchId: leg.matchId,
         actualResult,
         score: result.score,
@@ -2781,39 +3809,68 @@ function settleParlayLedger() {
         sourceRow: resultReference.row,
       });
     }
-    if (!ready || actualResults.length !== legs.length) continue;
-    const correct = actualResults.every((result) => result.correct);
-    const simulatedReturn = correct
-      ? actualResults.reduce(
-          (product, result) => product * Number(result.selectedOdds),
-          1,
-        )
-      : 0;
-    parlayLedger.settle(snapshot.id, {
-      correct,
-      simulatedReturn,
-      totalStake: Number(snapshot.total_stake),
-      actualResults,
-      settledAt,
-    });
-    settled += 1;
-  }
-  return settled;
+    const actualResults = legs
+      .map((leg) => resultByMatch.get(String(leg.matchId)))
+      .filter(Boolean);
+      if (alreadySettled) {
+        if (parlayLedger.updateProgress(snapshot.id, actualResults)) {
+          backfilled += 1;
+        }
+        continue;
+      }
+      const decision = parlaySettlementDecision(legs.length, actualResults);
+      if (!decision.ready) {
+        parlayLedger.updateProgress(snapshot.id, actualResults);
+        continue;
+      }
+      const simulatedReturn = decision.correct
+        ? actualResults.reduce(
+            (product, result) => product * Number(result.selectedOdds),
+            1,
+          )
+        : 0;
+      parlayLedger.settle(snapshot.id, {
+        correct: decision.correct,
+        simulatedReturn,
+        totalStake: Number(snapshot.total_stake),
+        actualResults,
+        settledAt,
+      });
+      settled += 1;
+    }
+    return { settled, backfilled };
+  });
 }
 
 async function handleApi(request, url, response) {
-  if (url.pathname === "/api/ledger") {
-    const shouldSettle = url.searchParams.get("settle") !== "false";
+  if (
+    url.pathname === "/api/ledger" ||
+    url.pathname === "/api/ledger/settle"
+  ) {
+    const shouldSettle = url.pathname === "/api/ledger/settle";
+    const expectedMethod = shouldSettle ? "POST" : "GET";
+    if (request.method !== expectedMethod) {
+      response.setHeader("Allow", expectedMethod);
+      return sendJson(response, 405, { error: "请求方法不允许" });
+    }
     const settledNow = shouldSettle ? settlePredictionLedger() : 0;
-    const parlaySettledNow = shouldSettle ? settleParlayLedger() : 0;
+    const parlaySettlement = shouldSettle
+      ? settleParlayLedger()
+      : { settled: 0, backfilled: 0 };
     const singleOptions = {
       status: url.searchParams.get("singleStatus") || "all",
       market: url.searchParams.get("singleMarket") || "all",
       scope: url.searchParams.get("singleScope") || "all",
       league: url.searchParams.get("singleLeague") || "all",
       query: url.searchParams.get("singleQuery") || "",
+      predicted: url.searchParams.get("singlePredicted") || "",
+      actual: url.searchParams.get("singleActual") || "",
       from: url.searchParams.get("singleFrom") || "",
       to: url.searchParams.get("singleTo") || "",
+      policyVersion: url.searchParams.get("singlePolicy") || "current",
+      currentPolicyPrefix: ledgerPolicyPrefix(),
+      currentPolicyVersions: ledgerCurrentAlgorithmVersions(),
+      currentAlgorithmSpec: ledgerCurrentAlgorithmSpec(),
       page: numberParam(url.searchParams, "singlePage", 1, 1, 100000),
       pageSize: numberParam(url.searchParams, "pageSize", 20, 5, 100),
     };
@@ -2824,15 +3881,67 @@ async function handleApi(request, url, response) {
       query: url.searchParams.get("parlayQuery") || "",
       from: url.searchParams.get("parlayFrom") || "",
       to: url.searchParams.get("parlayTo") || "",
+      policyVersion: url.searchParams.get("parlayPolicy") || "current",
+      currentPolicyPrefix: ledgerPolicyPrefix(),
+      currentPolicyVersions: ledgerCurrentSnapshotPolicyVersions(),
       page: numberParam(url.searchParams, "parlayPage", 1, 1, 100000),
       pageSize: numberParam(url.searchParams, "pageSize", 20, 5, 100),
     };
+    const overviewPolicy = url.searchParams.get("overviewPolicy") || "current";
+    const overviewOptions = {
+      status: "all",
+      scope: "all",
+      policyVersion: overviewPolicy,
+      currentPolicyPrefix: ledgerPolicyPrefix(),
+      currentPolicyVersions: ledgerCurrentAlgorithmVersions(),
+      currentAlgorithmSpec: ledgerCurrentAlgorithmSpec(),
+      page: 1,
+      pageSize: 5,
+    };
+    const singleSummary = predictionLedger.summary(singleOptions);
+    const parlaySummary = parlayLedger.summary(parlayOptions);
+    const overviewSummary = predictionLedger.summary(overviewOptions);
+    const currentEvidenceSummary =
+      overviewPolicy === "current"
+        ? overviewSummary
+        : predictionLedger.summary({
+            ...overviewOptions,
+            policyVersion: "current",
+          });
+    const lifetimeEvidenceSummary =
+      overviewPolicy === "all"
+        ? overviewSummary
+        : predictionLedger.summary({
+            ...overviewOptions,
+            policyVersion: "all",
+          });
+    const overviewParlays = parlayLedger.summary({
+      status: "all",
+      policyVersion: overviewPolicy,
+      currentPolicyPrefix: ledgerPolicyPrefix(),
+      currentPolicyVersions: ledgerCurrentSnapshotPolicyVersions(),
+      page: 1,
+      pageSize: 5,
+    });
     return sendJson(response, 200, {
-      ...predictionLedger.summary(singleOptions),
-      parlays: parlayLedger.summary(parlayOptions),
+      ...singleSummary,
+      parlays: parlaySummary,
+      overview: {
+        ...overviewSummary,
+        policyMode: overviewPolicy,
+        evidence: {
+          current: ledgerEvidenceLayer(currentEvidenceSummary),
+          lifetime: ledgerEvidenceLayer(lifetimeEvidenceSummary),
+          historical: historicalValidationEvidence(),
+        },
+        parlays: overviewParlays,
+      },
       settledNow,
-      parlaySettledNow,
+      parlaySettledNow: parlaySettlement.settled,
+      parlayBackfilledNow: parlaySettlement.backfilled,
       policyVersion: ledgerPolicyVersion(),
+      currentPolicyVersions: ledgerCurrentAlgorithmVersions(),
+      currentSnapshotPolicyVersions: ledgerCurrentSnapshotPolicyVersions(),
       sourceUpdatedAt: dataStore.getSourceUpdatedAt(),
       selectionPolicy: challengerConfig.selection || null,
     });
@@ -2889,7 +3998,21 @@ async function handleApi(request, url, response) {
     return sendJson(response, 200, buildParlayPayload(url));
   }
 
-  if (url.pathname === "/api/predict") {
+  if (
+    url.pathname === "/api/predict" ||
+    url.pathname === "/api/predict/snapshot"
+  ) {
+    const shouldSnapshot = url.pathname === "/api/predict/snapshot";
+    if (
+      (!shouldSnapshot && request.method !== "GET") ||
+      (shouldSnapshot && request.method !== "POST")
+    ) {
+      return sendJson(response, 405, {
+        error: shouldSnapshot
+          ? "预测留档请使用POST"
+          : "预测查询请使用GET",
+      });
+    }
     const matches = dataStore.getMatches();
     const match = matches.find((item) => item.id === url.searchParams.get("matchId"));
     if (!match) return sendJson(response, 404, { error: "没有找到这场比赛" });
@@ -2929,24 +4052,29 @@ async function handleApi(request, url, response) {
       sameLeague,
     });
     const historyOptions = { league: match.league, sameLeague };
-    const spfHistory = match.had
-      ? dataStore.getSpfHistory(historyOptions)
-      : [];
-    const hhadHistory = match.hhad
-      ? dataStore.getHhadHistory(historyOptions)
-      : [];
-    const pairedHistory = match.had && match.hhad
-      ? dataStore.getPairedSpfHhadHistory(historyOptions)
-      : [];
-    const goalHistory = match.goals
-      ? dataStore.getGoalHistory(historyOptions)
-      : [];
+    const {
+      spfHistory,
+      hhadHistory,
+      pairedHistory,
+      goalHistory,
+    } = predictionMarketHistories(match, {
+      spfTolerance,
+      hhadTolerance,
+      sameLeague,
+    });
+    const scopedHistoryCounts = dataStore.getHistoryCounts(historyOptions);
     const challengerHistory = sameLeague
       ? dataStore.getVerifiedHistory()
       : verifiedHistory;
+    const challengerGoalHistory = sameLeague
+      ? dataStore.getGoalHistory()
+      : goalHistory;
     const challenger =
       match.had && match.hhad && match.goals
-        ? challengerEngine?.predict(match, challengerHistory) || null
+        ? challengerEngine?.predict(match, {
+            paired: challengerHistory,
+            goals: challengerGoalHistory,
+          }) || null
         : null;
 
     const { spfResult, hhadResult } = buildThreeWayPredictionResults(match, {
@@ -2972,6 +4100,18 @@ async function handleApi(request, url, response) {
     const effectiveGoalTolerance = goalResult?.tolerance ?? null;
     const goalModel = goalResult?.model || null;
     const goalPrediction = goalResult?.prediction || null;
+    const goalMultiple = match.goals
+      ? selectGoalMultiplePrediction(
+          ledgerMarketOdds(match, "goals"),
+          goalMultipleDistribution,
+        )
+      : null;
+    const goalEquality = match.goals
+      ? selectGoalEqualityPrediction(
+          ledgerMarketOdds(match, "goals"),
+          goalEqualityDistribution,
+        )
+      : null;
     const {
       spf: spfStability,
       hhad: hhadStability,
@@ -2981,6 +4121,7 @@ async function handleApi(request, url, response) {
       pairedHistory,
       spfResult,
       hhadResult,
+      sameLeague,
     });
     const goalStability = goalResult?.stability || null;
     const spfReliability = spfPrediction
@@ -3001,12 +4142,19 @@ async function handleApi(request, url, response) {
       : null;
     const goalReliability = goalResult?.reliability || null;
 
+    const topScores = computeScoreDistribution(similarGoals);
+    const topScoresSuggest = topScores.length
+      ? `历史出现较多 ${topScores[0].score}${topScores[1] ? ` · 其次 ${topScores[1].score}` : ""}`
+      : "";
+
     const initialHad = match.had?.history?.initial;
     const initialHadOdds = initialHad
       ? [initialHad.h, initialHad.d, initialHad.a]
       : hadOdds;
 
     const payload = {
+      topScores,
+      topScoresSuggest,
       match: {
         id: match.id,
         displayName: match.displayName,
@@ -3092,6 +4240,8 @@ async function handleApi(request, url, response) {
             reliability: goalReliability,
           }
         : null,
+      goalMultiple,
+      goalEquality,
       stability: {
         spf: spfStability
           ? {
@@ -3142,18 +4292,30 @@ async function handleApi(request, url, response) {
           : "缺少让球胜平负赔率",
         goals: !goalResult
           ? "缺少总进球赔率"
-          : goalScope.zeroOdds
+          : goalScope.zeroOddsBlocked
+            ? goalScope.reason
+            : goalScope.zeroOdds
             ? `总进球独立匹配；${zeroOddsMethodText(goalScope, goalPrediction)}；${smoothingMethodText(goalPrediction)}；${movementMethodText(goalPrediction)}`
             : `总进球独立匹配；八档最新去水概率每一档差值均不超过 ${(effectiveGoalTolerance * 100).toFixed(1)} 个百分点；${historicalMethodText(goalPrediction, "按概率距离加权")}；${smoothingMethodText(goalPrediction)}；${movementMethodText(goalPrediction)}`,
+        goalMultiple: goalMultiple?.available
+          ? `${goalMultiple.reason}；前两名覆盖 ${(
+              goalMultiple.coverageProbability * 100
+            ).toFixed(1)}%，只作独立倍数历史预测并记录命中率`
+          : goalMultiple?.reason || "缺少总进球赔率",
+        goalEquality: goalEquality?.available
+          ? `${goalEquality.reason}；仅作同赔历史参考`
+          : goalEquality?.reason || "缺少总进球赔率",
       },
       dataStats: {
         ...dataStore.getCounts(),
-        currentSpfHistory: spfHistory.length,
-        currentHhadHistory: hhadHistory.length,
-        currentGoalHistory: goalHistory.length,
+        currentSpfHistory: scopedHistoryCounts.spfHistory,
+        currentHhadHistory: scopedHistoryCounts.hhadHistory,
+        currentGoalHistory: scopedHistoryCounts.goalHistory,
       },
     };
-    const ledgerSnapshotInserted = recordPredictionPayload(payload);
+    const ledgerSnapshotInserted = shouldSnapshot
+      ? recordPredictionPayload(payload)
+      : 0;
     return sendJson(response, 200, {
       ...payload,
       ledgerSnapshotInserted,
@@ -3212,8 +4374,9 @@ const server = createServer(async (request, response) => {
     }
     await serveStatic(url, response);
   } catch (error) {
-    console.error(error);
-    sendJson(response, 500, { error: "服务处理失败", detail: error.message });
+    const requestId = randomUUID();
+    console.error(`[request ${requestId}]`, error);
+    sendJson(response, 500, { error: "服务处理失败", requestId });
   }
 });
 
@@ -3236,7 +4399,60 @@ function refreshCurrentLedger({ force = false } = {}) {
   return ledgerRefreshPromise;
 }
 
-server.listen(PORT, () => {
+let ledgerRefreshTimer = null;
+let resourcesClosed = false;
+
+function closeResources() {
+  if (resourcesClosed) return;
+  resourcesClosed = true;
+  predictionLedger.close();
+  parlayLedger.close();
+  dataStore.close();
+}
+
+let fatalShutdownStarted = false;
+
+function fatalShutdown(kind, error) {
+  if (fatalShutdownStarted) return;
+  fatalShutdownStarted = true;
+  const detail = error instanceof Error ? error.stack || error.message : error;
+  console.error(`[${kind}] 进程发生不可恢复异常：`, detail);
+  if (ledgerRefreshTimer) clearInterval(ledgerRefreshTimer);
+  try {
+    server.close();
+  } catch {
+    // 服务器可能尚未开始监听；仍需继续关闭数据库。
+  }
+  try {
+    closeResources();
+  } catch (closeError) {
+    console.error("关闭数据库资源失败：", closeError);
+  }
+  process.exit(1);
+}
+
+process.on("unhandledRejection", (reason) => {
+  fatalShutdown("unhandledRejection", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  fatalShutdown("uncaughtException", error);
+});
+
+server.on("error", (error) => {
+  if (ledgerRefreshTimer) clearInterval(ledgerRefreshTimer);
+  if (error?.code === "EADDRINUSE") {
+    console.error(
+      `无法启动：端口 ${PORT} 已被占用。原服务可能已经在运行，请先打开 http://localhost:${PORT}；如需另开服务，可执行 PORT=${PORT + 1} npm start。`,
+    );
+  } else {
+    console.error(`服务器启动失败：${error?.message || error}`);
+  }
+  closeResources();
+  process.exitCode = 1;
+});
+
+server.listen(PORT, "127.0.0.1", () => {
   const counts = dataStore.getCounts();
   console.log(`竞彩赔率雷达已启动：http://localhost:${PORT}`);
   console.log(`数据库：${DATABASE_PATH}`);
@@ -3248,7 +4464,7 @@ server.listen(PORT, () => {
   });
 });
 
-const ledgerRefreshTimer = setInterval(() => {
+ledgerRefreshTimer = setInterval(() => {
   refreshCurrentLedger().catch((error) => {
     console.error(`赛前账本自动更新失败：${error.message}`);
   });
@@ -3300,7 +4516,8 @@ async function snapshotCurrentMatches() {
         sameLeague: String(sameLeague),
       });
       const response = await fetch(
-        `http://127.0.0.1:${PORT}/api/predict?${params}`,
+        `http://127.0.0.1:${PORT}/api/predict/snapshot?${params}`,
+        { method: "POST" },
       );
       if (!response.ok) {
         const detail = await response.text();
@@ -3317,10 +4534,9 @@ async function snapshotCurrentMatches() {
 }
 
 function shutdown() {
-  clearInterval(ledgerRefreshTimer);
+  if (ledgerRefreshTimer) clearInterval(ledgerRefreshTimer);
   server.close(() => {
-    predictionLedger.close();
-    dataStore.close();
+    closeResources();
     process.exit(0);
   });
 }
