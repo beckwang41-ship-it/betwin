@@ -88,6 +88,69 @@ const signedPp = (value, digits = 1) => {
 };
 const oddsText = (values) => values.map((value) => Number(value).toFixed(2)).join(" / ");
 
+function marketComparisonLabel(labels, market) {
+  const safeLabels = Array.isArray(labels) ? labels : [];
+  return safeLabels
+    .map((label) => {
+      if (market === "goals") return `${label}球`;
+      if (market === "hhad") return `让${label}`;
+      return label;
+    })
+    .join(" / ");
+}
+
+function marketComparisonMarkup(prediction, market, { detailed = false } = {}) {
+  const comparison = prediction?.marketComparison;
+  if (!comparison?.available || !comparison.selected) {
+    return '<p class="market-comparison-empty">缺少完整市场基准，暂时无法比较。</p>';
+  }
+  const selected = comparison.selected;
+  const statusClass = comparison.status === "historical-divergence"
+    ? "divergent"
+    : "aligned";
+  const historicalLabel = marketComparisonLabel(
+    comparison.historicalTopLabels,
+    market,
+  );
+  const marketLabel = marketComparisonLabel(comparison.marketTopLabels, market);
+  const breakEven = selected.breakEvenProbability !== null &&
+    selected.breakEvenProbability !== undefined &&
+    Number.isFinite(Number(selected.breakEvenProbability))
+    ? `<span><small>保本线差</small><strong>${signedPp(selected.breakEvenDelta)}</strong></span>`
+    : "";
+  const details = detailed
+    ? `<p>${escapeHtml(comparison.reason)}；正差值仍需由账本滚动验证，当前不构成优势信号。</p>`
+    : `<p>${escapeHtml(comparison.reason)}</p>`;
+  return `
+    <div class="market-comparison-head">
+      <strong class="market-comparison-status ${statusClass}">${escapeHtml(comparison.label)}</strong>
+      <span>市场 ${escapeHtml(marketLabel)} · 历史 ${escapeHtml(historicalLabel)}</span>
+    </div>
+    <div class="market-comparison-metrics">
+      <span><small>历史概率</small><strong>${pct(selected.historicalProbability)}</strong></span>
+      <span><small>去水市场</small><strong>${pct(selected.marketProbability)}</strong></span>
+      <span><small>历史－市场</small><strong>${signedPp(selected.probabilityDelta)}</strong></span>
+      ${breakEven}
+    </div>
+    ${details}`;
+}
+
+function renderMarketComparisons(spf, hhad, goals) {
+  [
+    ["#spf-market-comparison", spf, "spf"],
+    ["#hhad-market-comparison", hhad, "hhad"],
+    ["#goal-market-comparison", goals, "goals"],
+  ].forEach(([selector, prediction, market]) => {
+    const element = $(selector);
+    if (!element) return;
+    element.innerHTML = marketComparisonMarkup(prediction, market);
+    element.classList.toggle(
+      "divergent",
+      prediction?.marketComparison?.status === "historical-divergence",
+    );
+  });
+}
+
 function showToast(message, options = {}) {
   const container = $("#toast-container");
   if (!container) return;
@@ -300,9 +363,9 @@ const finalProbabilities = (prediction) =>
     : prediction?.market || [];
 const smoothingLabel = (prediction) =>
   prediction?.probabilityModel?.enabled
-    ? "主预测 · 赔率与历史融合"
+    ? "最终概率 · 赔率与历史融合"
     : Number(prediction?.empiricalWeight || 0) >= 1 - 1e-12
-    ? "主预测 · 相似历史占比"
+    ? "相似历史概率"
     : Number(prediction?.empiricalWeight || 0) === 0
     ? "最终概率 · 终赔去水"
     : prediction?.smoothing?.applied
@@ -339,10 +402,10 @@ function reliabilityDisplay(prediction) {
     level,
     label:
       level === "recommended"
-        ? "重点参考"
+        ? "历史稳定"
         : level === "skip"
-          ? "建议跳过"
-          : "谨慎参考",
+          ? "样本不足"
+          : "历史观察",
     reason: reliability.reason || "当前结果尚缺少足够的历史验证依据。",
   };
 }
@@ -1373,7 +1436,7 @@ function renderParlayLedger(parlays) {
             ? `🎉 已红单 +${(row.simulatedProfit || 0).toFixed(2)}元`
             : `❌ 未中 (-${(row.stake || 1).toFixed(0)}注)`;
       const sourceText =
-        row.selectionSource === "system_default" ? "系统默认" : "自选规则";
+        row.selectionSource === "system_default" ? "测算默认" : "自选规则";
       const modeText =
         row.mode === "goalsPair"
           ? "进球双选 · 2串1"
@@ -1652,18 +1715,18 @@ function matchReliabilityBadges(match) {
     const label = state.matchReliabilityError
       ? "评估暂不可用"
       : state.matchReliabilityLoaded
-        ? "暂无重点"
+        ? "暂无稳定项"
         : "评估中";
     badges.push(`<em class="match-reliability-badge">${label}</em>`);
   } else {
     if (isRecommendedMarket(summary, "spf")) {
-      badges.push('<em class="match-reliability-badge recommended">胜平负 · 重点</em>');
+      badges.push('<em class="match-reliability-badge recommended">胜平负 · 稳定</em>');
     }
     if (isRecommendedMarket(summary, "hhad")) {
-      badges.push('<em class="match-reliability-badge recommended">让球 · 重点</em>');
+      badges.push('<em class="match-reliability-badge recommended">让球 · 稳定</em>');
     }
     if (!badges.length) {
-      badges.push('<em class="match-reliability-badge">暂无重点</em>');
+      badges.push('<em class="match-reliability-badge">暂无稳定项</em>');
     }
   }
   const relations = matchGoalMultipleRelations(match);
@@ -1694,15 +1757,15 @@ function matchQuickPicksHtml(match) {
 
   if (hhadRec && summary.hhadPick && !spfRec) {
     picks.push(
-      `<span class="match-quick-pick hhad highlight">🎯 ${escapeHtml(summary.hhadPick)}</span>`,
+      `<span class="match-quick-pick hhad highlight">历史↑ ${escapeHtml(summary.hhadPick)}</span>`,
     );
   } else if (summary.hadPick) {
     picks.push(
-      `<span class="match-quick-pick spf ${spfRec ? "highlight" : ""}">🎯 ${escapeHtml(summary.hadPick)}</span>`,
+      `<span class="match-quick-pick spf ${spfRec ? "highlight" : ""}">历史↑ ${escapeHtml(summary.hadPick)}</span>`,
     );
   } else if (summary.hhadPick) {
     picks.push(
-      `<span class="match-quick-pick hhad ${hhadRec ? "highlight" : ""}">🎯 ${escapeHtml(summary.hhadPick)}</span>`,
+      `<span class="match-quick-pick hhad ${hhadRec ? "highlight" : ""}">历史↑ ${escapeHtml(summary.hhadPick)}</span>`,
     );
   }
   if (summary.goalsPick) {
@@ -1791,7 +1854,7 @@ function renderMatchList(query = $("#match-search")?.value || "") {
             ? "当前没有0球赔率存在整数倍关系的比赛。"
             : state.matchReliabilityFilter === "equal"
               ? "当前没有总进球赔率存在同赔关系的比赛。"
-            : "当前条件下没有符合该重点筛选的比赛。"
+            : "当前条件下没有历史方向足够稳定的比赛。"
       }</p>`;
 
   $$(".match-button").forEach((button) => {
@@ -2214,7 +2277,7 @@ function renderDashboard() {
   $("#match-id").textContent = `MATCH ${match.id}`;
   $("#home-team").textContent = match.home;
   $("#away-team").textContent = match.away;
-  $("#primary-market-label").textContent = "胜平负预测";
+  $("#primary-market-label").textContent = "相似历史分布";
   $("#prediction-label").textContent = predictionText(spf, "");
   $(".spf-decision").classList.toggle("tie", Boolean(spf?.isTie));
   $("#confidence-label").textContent = primaryAvailable
@@ -2275,7 +2338,7 @@ function renderDashboard() {
           cell.appendChild(crown);
         }
         crown.textContent =
-          primary?.reliability?.level === "recommended" ? "★ 重点首选" : "★ 主选";
+          primary?.reliability?.level === "recommended" ? "★ 历史稳定" : "★ 历史最高";
       } else if (crown) {
         crown.remove();
       }
@@ -2314,7 +2377,7 @@ function renderDashboard() {
     ? goals.expected.toFixed(2)
     : "—";
   $("#top-goals").textContent = goalsAvailable
-    ? `精确首选 ${goals.predicted} 球`
+    ? `历史最高 ${goals.predicted} 球`
     : "无相似进球样本";
   const goalPair = goals?.goalPair;
   $("#goal-exact-label").textContent = goalsAvailable
@@ -2341,7 +2404,7 @@ function renderDashboard() {
   const signalsContainer = $("#match-market-signals");
   if (signalsContainer) {
     signalsContainer.innerHTML = `
-      <div class="market-signal-notice">研究观察 · 未经时间滚动验证 · 不参与正式主预测</div>
+      <div class="market-signal-notice">研究观察 · 未经时间滚动验证 · 不改变当前历史分布结论</div>
       ${signals
         .map(
           (sig) => `
@@ -2371,7 +2434,7 @@ function renderDashboard() {
         <span class="score-chip">
           <strong class="score-num">${escapeHtml(item.score)}</strong>
           <small class="score-pct">${pct(item.probability, 1)}</small>
-          ${item.isGoalMatch ? `<span class="score-goal-match" title="与总进球推荐吻合">⚽ ${item.sumGoals}球✓</span>` : ""}
+          ${item.isGoalMatch ? `<span class="score-goal-match" title="与总进球历史高频档吻合">⚽ ${item.sumGoals}球✓</span>` : ""}
         </span>`,
       )
       .join("");
@@ -2400,7 +2463,7 @@ function renderDashboard() {
     const oddFmt = formatOddsWithMovement(oddVal, initOddVal);
     const arrow = oddFmt.badgeText ? ` ${oddFmt.badgeText}` : "";
     const probVal = spf.final ? pct(Math.max(...spf.final)) : "";
-    const rec = spf.reliability?.level === "recommended" ? "🔥 " : "";
+    const rec = spf.reliability?.level === "recommended" ? "历史稳定 · " : "";
     verdictSpf = oddVal
       ? `${rec}${spfName} @${oddVal.toFixed(2)}${arrow}${probVal ? ` (${probVal})` : ""}`
       : `${rec}${spfName}`;
@@ -2416,7 +2479,7 @@ function renderDashboard() {
     const initOddVal = outcomeOdds(match.hhad?.history?.initial, hhad.predicted);
     const oddFmt = formatOddsWithMovement(oddVal, initOddVal);
     const arrow = oddFmt.badgeText ? ` ${oddFmt.badgeText}` : "";
-    const rec = hhad.reliability?.level === "recommended" ? "🔥 " : "";
+    const rec = hhad.reliability?.level === "recommended" ? "历史稳定 · " : "";
     verdictHhad = oddVal
       ? `${rec}${hhadName}(${lineStr}) @${oddVal.toFixed(2)}${arrow}`
       : `${rec}${hhadName}(${lineStr})`;
@@ -2426,7 +2489,7 @@ function renderDashboard() {
   if (goals && goals.available !== false && goalPair?.available) {
     verdictGoals = `${goalPair.labels.join("/")}球 (${pct(goalPair.probability)})`;
   } else if (goals && goals.predicted) {
-    verdictGoals = `首选 ${goals.predicted}球`;
+    verdictGoals = `历史最高 ${goals.predicted}球`;
   }
 
   let verdictScore = "暂无数据";
@@ -2514,14 +2577,15 @@ function renderDashboard() {
   $("#prediction-method-legend").textContent = smoothingLabel(chartPrediction);
   $("#probability-panel-title").textContent =
     chartMarket === "hhad"
-      ? "让球胜平负：赔率隐含概率与相似历史主预测"
-      : "胜平负：赔率隐含概率与相似历史主预测";
+      ? "让球胜平负：市场基准与相似历史差值"
+      : "胜平负：市场基准与相似历史差值";
   $("#history-stats").textContent =
     `统一已校验 ${dataStats.verifiedHistory.toLocaleString()} / 全部统一比赛 ${dataStats.unifiedHistory.toLocaleString()}`;
   $("#spf-tolerance").disabled = !spf;
   syncHistoryTabs({ spf: Boolean(spf), hhad: Boolean(hhad), goals: Boolean(goals) });
 
   renderHhad(hhad, match.hhad);
+  renderMarketComparisons(spf, hhad, goals);
   renderDecisionReliability(spf, hhad, goals);
   renderReliability(spf, hhad, goals);
   renderStability(stability);
@@ -2824,7 +2888,7 @@ function renderHhad(hhad, market) {
           cell.appendChild(crown);
         }
         crown.textContent =
-          hhad?.reliability?.level === "recommended" ? "★ 重点首选" : "★ 主选";
+          hhad?.reliability?.level === "recommended" ? "★ 历史稳定" : "★ 历史最高";
       } else if (crown) {
         crown.remove();
       }
@@ -2886,9 +2950,17 @@ function renderProbabilityBars(prediction, market = "spf") {
   }
   const final = finalProbabilities(prediction);
   const prefix = market === "hhad" ? "让" : "";
-  $("#probability-bars").innerHTML = prediction.labels
+  const comparisonByLabel = new Map(
+    (prediction.marketComparison?.outcomes || []).map((outcome) => [
+      String(outcome.label),
+      outcome,
+    ]),
+  );
+  const rows = prediction.labels
     .map(
-      (label, index) => `
+      (label, index) => {
+        const comparison = comparisonByLabel.get(String(label));
+        return `
       <div class="prob-row">
         <strong>${prefix}${label}</strong>
         <div class="bar-stack" aria-label="${prefix}${label}三层概率">
@@ -2896,10 +2968,19 @@ function renderProbabilityBars(prediction, market = "spf") {
           <div class="bar-track"><div class="bar-fill history" style="width:${prediction.empirical[index] * 100}%"></div></div>
           <div class="bar-track"><div class="bar-fill model" style="width:${final[index] * 100}%"></div></div>
         </div>
-        <span>${prediction.available === false ? "—" : pct(final[index])}</span>
-      </div>`,
+        <span class="prob-row-values">
+          <b>${prediction.available === false ? "—" : pct(final[index])}</b>
+          <small>${comparison ? signedPp(comparison.probabilityDelta) : "—"}</small>
+        </span>
+      </div>`;
+      },
     )
     .join("");
+  $("#probability-bars").innerHTML = `
+    <section class="market-comparison-deep ${prediction.marketComparison?.status === "historical-divergence" ? "divergent" : ""}">
+      ${marketComparisonMarkup(prediction, market, { detailed: true })}
+    </section>
+    ${rows}`;
 }
 
 function smoothingInsightCard(title, prediction, labels) {
@@ -2915,7 +2996,7 @@ function smoothingInsightCard(title, prediction, labels) {
     return `
       <article class="smoothing-insight unavailable">
         <header><span>${escapeHtml(title)}</span><strong>未配置</strong></header>
-        <p>主预测直接采用当前范围的相似历史赛果占比；该玩法未配置额外平滑。</p>
+        <p>最终概率直接采用当前范围的相似历史赛果占比；该玩法未配置额外平滑。</p>
       </article>`;
   }
   const strongest = smoothing.adjustment
@@ -3903,6 +3984,18 @@ function renderCandidates() {
         level: "cautious",
         label: "谨慎参考",
       };
+      const reliabilityLabel = reliability.level === "recommended"
+        ? "历史稳定"
+        : reliability.level === "skip"
+          ? "样本不足"
+          : "历史观察";
+      const marketComparison = pick?.marketComparison;
+      const marketSignalClass = marketComparison?.status === "historical-divergence"
+        ? "divergent"
+        : "aligned";
+      const marketSignal = marketComparison?.available
+        ? `<b class="candidate-market-signal ${marketSignalClass}" title="${escapeHtml(marketComparison.reason)}">${escapeHtml(marketComparison.label)} · ${signedPp(pick.probabilityDelta)}</b>`
+        : '<b class="candidate-market-signal unknown">未完成市场比较</b>';
       const marketControl = goalPairMode
         ? '<span class="candidate-market-fixed">总进球双选</span>'
         : `
@@ -3932,7 +4025,7 @@ function renderCandidates() {
               <small>${escapeHtml(candidate.id)}</small>
             </span>
             <strong>${escapeHtml(candidate.home)} <em>vs</em> ${escapeHtml(candidate.away)}</strong>
-            <small><b class="candidate-reliability ${escapeHtml(reliability.level)}">${escapeHtml(reliability.label)}</b><span>${sampleDetail}</span></small>
+            <small><b class="candidate-reliability ${escapeHtml(reliability.level)}">${escapeHtml(reliabilityLabel)}</b>${marketSignal}<span>${sampleDetail}</span></small>
           </span>
           <span class="candidate-pick">
             ${marketControl}
@@ -4030,7 +4123,7 @@ function applyParlayMode(mode) {
   const sortNote =
     parlaySettings().sort === "stability"
       ? "当前按最弱一环排序（研究观察，未经串关时间验证）"
-      : "默认按估算命中率排序";
+      : "默认按历史联合概率排序（仅为测算顺序）";
   $("#parlay-rule-note").textContent = goalPairMode
     ? `${scope}；每场取两个高概率进球档位（共${goalPairStake}注），不设最低组合赔率。按市场平均返还率估算，${legCount} 关无优势基准约 ${baselineRtp}%，不是收益上限。`
     : `${scope}；每关赔率不低于 ${parlaySettings().minLegOdds.toFixed(2)}；${sortNote}。按市场平均返还率估算，${legCount} 关无优势基准约 ${baselineRtp}%，不是收益上限。`;
@@ -4042,12 +4135,12 @@ function applyParlayMode(mode) {
   state.parlayMarkets = defaults.markets;
   renderCandidates();
   $("#combination-summary").textContent = goalPairMode
-    ? `默认选择单场历史双选覆盖率最高的${legCount}场，样本数和稳定性仅作提示。`
-    : "设置规则后生成串关组合。";
+    ? `为便于测算，先选中历史双选覆盖率最高的${legCount}场；可随时改选，不构成推荐。`
+    : "设置规则后测算串关组合；结果不代表已验证优势。";
   showParlayEmpty(
     "组合结果会出现在这里",
     goalPairMode
-      ? `已默认选择单场覆盖率最高的${legCount}场，点击“生成组合”即可。`
+      ? `已为测算选中单场覆盖率最高的${legCount}场，可改选后再生成。`
       : "先选择至少两场比赛，再点击“生成组合”。",
   );
 }
@@ -4081,7 +4174,7 @@ async function loadParlayCandidates() {
     $("#candidate-loading").hidden = true;
     $("#parlay-method-chip").textContent = payload.method.tolerance;
     $("#parlay-rule-note").textContent =
-      `${payload.method.scope}；${payload.method.probability}。`;
+      `${payload.method.scope}；${payload.method.probability}；市场一致不表示优势，历史偏离也只作待验证观察。`;
     renderCandidates();
   } catch (error) {
     $("#candidate-loading").hidden = true;
@@ -4182,7 +4275,7 @@ function renderCombinations(payload, saveQuery) {
   }
   const { rows, total, eligible, settings } = payload.combinations;
   $("#combination-summary").textContent =
-    `每关赔率 ≥ ${settings.minLegOdds.toFixed(2)}；共计算 ${total.toLocaleString()} 种，${eligible.toLocaleString()} 种达到组合赔率 ${settings.targetOdds.toFixed(2)}，展示前 ${rows.length} 种。`;
+    `仅作组合测算：每关赔率 ≥ ${settings.minLegOdds.toFixed(2)}；共计算 ${total.toLocaleString()} 种，${eligible.toLocaleString()} 种达到组合赔率 ${settings.targetOdds.toFixed(2)}，展示前 ${rows.length} 种。`;
 
   if (!rows.length) {
     showParlayEmpty(
@@ -4200,6 +4293,9 @@ function renderCombinations(payload, saveQuery) {
       const payout = (combination.combinedOdds * 2).toFixed(2);
       const netProfit = (combination.combinedOdds * 2 - 2).toFixed(2);
       const ratio = Number(combination.combinedOdds).toFixed(2);
+      const assessment = combination.marketAssessment || {};
+      const divergentLegs = Number(assessment.historicalDivergenceLegs || 0);
+      const alignedLegs = Number(assessment.marketAlignedLegs || 0);
       return `
         <article class="combination-card" style="--order:${index}">
           <header>
@@ -4207,9 +4303,13 @@ function renderCombinations(payload, saveQuery) {
             <span class="combination-type">${settings.legs} 串 1</span>
             <span class="combination-confidence level-${confidenceClass(combination.confidenceLevel)}"
                   title="按各关是否通过所属玩法的已验证筛选规则统计；含建议跳过关时只显示低信心">
-              信心 ${escapeHtml(combination.confidenceLevel || "—")} · 重点 ${Number(combination.recommendedLegs || 0)}/${Number(combination.totalLegs || settings.legs)}
+              历史稳定 ${escapeHtml(combination.confidenceLevel || "—")} · 规则通过 ${Number(combination.recommendedLegs || 0)}/${Number(combination.totalLegs || settings.legs)}
             </span>
           </header>
+          <div class="combination-market-note ${divergentLegs ? "divergent" : "aligned"}">
+            <strong>市场一致 ${alignedLegs} 关 · 历史偏离 ${divergentLegs} 关</strong>
+            <span>没有已验证优势，仅作组合测算</span>
+          </div>
           <div class="combination-legs">
             ${combination.legs
               .map(
@@ -4219,7 +4319,7 @@ function renderCombinations(payload, saveQuery) {
                   <span class="leg-match">
                     <small>${escapeHtml(leg.league)}</small>
                     <strong>${escapeHtml(leg.home)} <em>vs</em> ${escapeHtml(leg.away)}</strong>
-                    <span class="leg-market">${escapeHtml(leg.marketLabel)}</span>
+                    <span class="leg-market">${escapeHtml(leg.marketLabel)} · ${escapeHtml(leg.marketComparison?.label || "未比较")}</span>
                   </span>
                   <span class="leg-result ${resultClass(leg.predicted)}">${escapeHtml(leg.predicted)}</span>
                   <span class="leg-stat"><small>概率</small>${pct(leg.probability)}</span>
@@ -4236,8 +4336,8 @@ function renderCombinations(payload, saveQuery) {
 
           <div class="combination-payout-banner">
             <span>投 2元 (1注)</span>
-            <strong>🎯 命中预计返还 ${payout} 元 <small>(净赚 +${netProfit}元 · ${ratio}倍返奖)</small></strong>
-            <span class="payout-expected-tag">常规组合</span>
+            <strong>命中时返还 ${payout} 元 <small>(票面差额 +${netProfit}元 · ${ratio}倍；未计概率误差)</small></strong>
+            <span class="payout-expected-tag">票面测算</span>
           </div>
 
           <footer>
@@ -4261,7 +4361,7 @@ function renderCombinations(payload, saveQuery) {
                 data-combination-id="${escapeHtml(combination.id)}"
                 data-selection-source="${isDefaultParlayCombination(index) ? "system_default" : "user_saved"}"
               >记录此组合</button>
-              <small>${isDefaultParlayCombination(index) ? "系统默认" : "自选规则"}</small>
+              <small>${isDefaultParlayCombination(index) ? "测算默认" : "自选规则"}</small>
             </div>
           </footer>
         </article>`;
@@ -4272,12 +4372,12 @@ function renderCombinations(payload, saveQuery) {
 
 function renderGoalPairCombinations(payload) {
   const { rows, total, settings } = payload.combinations;
-  const sortLabel = settings?.sort === "value" ? "回报指数优先" : "联合命中率优先";
+  const sortLabel = settings?.sort === "value" ? "回报指数排序" : "历史联合概率排序";
   const legCount = Number(settings?.legs || 2);
   const stakeUnits = Number(settings?.stakePerCombination || 2 ** legCount);
   const stakeYuan = stakeUnits * 2;
   $("#combination-summary").textContent =
-    `共计算 ${total.toLocaleString()} 组双选${legCount}串1 · ${sortLabel}；每组投入${stakeUnits}注（${stakeYuan}元），展示前 ${rows.length} 种。`;
+    `仅作组合测算：共计算 ${total.toLocaleString()} 组双选${legCount}串1 · ${sortLabel}；每组投入${stakeUnits}注（${stakeYuan}元），展示前 ${rows.length} 种。`;
   if (!rows.length) {
     showParlayEmpty(
       "暂时无法生成总进球双选组合",
@@ -4292,6 +4392,9 @@ function renderGoalPairCombinations(payload) {
       const maxPayout = (combination.maximumTicketOdds * 2).toFixed(2);
       const minRatio = ((combination.minimumTicketOdds * 2) / stakeYuan).toFixed(1);
       const maxRatio = ((combination.maximumTicketOdds * 2) / stakeYuan).toFixed(1);
+      const assessment = combination.marketAssessment || {};
+      const divergentLegs = Number(assessment.historicalDivergenceLegs || 0);
+      const alignedLegs = Number(assessment.marketAlignedLegs || 0);
 
       const ticketsList = (combination.tickets || []).map((t, tIdx) => {
         const payout = (t.combinedOdds * 2).toFixed(2);
@@ -4315,6 +4418,10 @@ function renderGoalPairCombinations(payload) {
             <span class="combination-rank">双选组合 ${String(index + 1).padStart(2, "0")}</span>
             <span class="combination-type">${legCount} 串 1 · 双选${stakeUnits}注</span>
           </header>
+          <div class="combination-market-note ${divergentLegs ? "divergent" : "aligned"}">
+            <strong>市场前两项一致 ${alignedLegs} 关 · 历史偏离 ${divergentLegs} 关</strong>
+            <span>没有已验证优势，仅作组合测算</span>
+          </div>
           <div class="combination-legs">
             ${combination.legs
               .map(
@@ -4324,7 +4431,7 @@ function renderGoalPairCombinations(payload) {
                   <span class="leg-match">
                     <small>${escapeHtml(leg.league)}</small>
                     <strong>${escapeHtml(leg.home)} <em>vs</em> ${escapeHtml(leg.away)}</strong>
-                    <span class="leg-market">总进球双选 · ${Number(leg.samples).toLocaleString()}场相似</span>
+                    <span class="leg-market">总进球双选 · ${escapeHtml(leg.marketComparison?.label || "未比较")} · ${Number(leg.samples).toLocaleString()}场相似</span>
                   </span>
                   <span class="leg-result goal-pair-result">${escapeHtml(leg.predicted)}</span>
                   <span class="leg-stat"><small>覆盖率</small>${pct(leg.probability)}</span>
@@ -4336,8 +4443,8 @@ function renderGoalPairCombinations(payload) {
 
           <div class="goal-pair-payout-banner">
             <span>投 ${stakeYuan}元 (${stakeUnits}注)</span>
-            <strong>🎯 命中预计返还 ${minPayout} ~ ${maxPayout} 元 <small>(${minRatio} ~ ${maxRatio}倍返还)</small></strong>
-            <span class="payout-expected-tag">高赔博取</span>
+            <strong>命中时返还 ${minPayout} ~ ${maxPayout} 元 <small>(${minRatio} ~ ${maxRatio}倍；未计概率误差)</small></strong>
+            <span class="payout-expected-tag">区间测算</span>
           </div>
 
           <details class="goal-pair-breakdown-details">
@@ -4368,7 +4475,7 @@ function renderGoalPairCombinations(payload) {
                 data-combination-id="${escapeHtml(combination.id)}"
                 data-selection-source="${isDefaultParlayCombination(index) ? "system_default" : "user_saved"}"
               >记录此组合</button>
-              <small>${isDefaultParlayCombination(index) ? "系统默认" : "自选规则"}</small>
+              <small>${isDefaultParlayCombination(index) ? "测算默认" : "自选规则"}</small>
             </div>
           </footer>
         </article>`;

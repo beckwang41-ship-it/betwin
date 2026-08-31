@@ -33,6 +33,40 @@ test("parlay generator multiplies odds and estimated probabilities", () => {
   assert.equal(result.rows[0].valueIndex, 1.096);
 });
 
+test("parlay output reports market alignment without claiming validated advantage", () => {
+  const result = generateParlayCombinations(
+    [
+      {
+        id: "a",
+        odds: 1.8,
+        probability: 0.6,
+        marketComparison: {
+          status: "market-aligned",
+          actionable: false,
+        },
+      },
+      {
+        id: "b",
+        odds: 2.2,
+        probability: 0.45,
+        marketComparison: {
+          status: "historical-divergence",
+          actionable: false,
+        },
+      },
+    ],
+    { legs: 2, targetOdds: 1 },
+  );
+  assert.deepEqual(result.rows[0].marketAssessment, {
+    marketAlignedLegs: 1,
+    historicalDivergenceLegs: 1,
+    unknownLegs: 0,
+    validatedAdvantageLegs: 0,
+    hasValidatedAdvantage: false,
+    presentation: "calculator-only",
+  });
+});
+
 test("常规串关默认按估算命中率排序", () => {
   const result = generateParlayCombinations(candidates, {
     legs: 2,

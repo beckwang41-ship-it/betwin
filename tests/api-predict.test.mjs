@@ -375,6 +375,25 @@ test(
         jointWithoutGoals.settings.matching.jointSamples,
       );
       for (const market of ["spf", "hhad"]) {
+        const comparison = jointWithoutGoals[market].marketComparison;
+        assert.equal(comparison.available, true);
+        assert.ok(
+          ["market-aligned", "historical-divergence"].includes(
+            comparison.status,
+          ),
+        );
+        assert.equal(comparison.actionable, false);
+        assert.equal(comparison.outcomes.length, 3);
+        assert.equal(
+          typeof comparison.selected.probabilityDelta,
+          "number",
+        );
+        assert.equal(
+          typeof comparison.selected.breakEvenDelta,
+          "number",
+        );
+      }
+      for (const market of ["spf", "hhad"]) {
         const support = jointWithoutGoals.stability[market];
         assert.ok(["supported", "mixed", "opposed", "insufficient"].includes(support.status));
         assert.equal(support.points.length, 4);
@@ -398,6 +417,8 @@ test(
       assert.equal(onlyGoals.spf, null);
       assert.equal(onlyGoals.hhad, null);
       assert.ok(onlyGoals.goals);
+      assert.equal(onlyGoals.goals.marketComparison.available, true);
+      assert.equal(onlyGoals.goals.marketComparison.outcomes.length, 8);
       assert.equal(onlyGoals.goals.empiricalWeight, 1);
       assert.deepEqual(
         onlyGoals.goals.final,

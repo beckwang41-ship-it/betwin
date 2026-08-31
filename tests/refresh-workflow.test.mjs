@@ -201,10 +201,15 @@ test("界面文案不得把未验证盈利的信号包装成投注建议", () =>
   assert.doesNotMatch(app, /const positive = combination\.valueIndex >= 1/);
   assert.doesNotMatch(app, /理论正期望/);
   assert.doesNotMatch(app, /平均期望净正/);
+  assert.match(app, /没有已验证优势，仅作组合测算/);
+  assert.match(app, /市场一致不表示优势/);
 
   const html = readFileSync(path.join(ROOT, "public", "index.html"), "utf8");
   assert.doesNotMatch(html, /理论正期望/);
+  assert.doesNotMatch(html, />推荐组合</);
+  assert.match(html, />组合测算</);
   assert.match(html, /不代表值得投注/);
+  assert.match(html, /两者一致不代表发现优势/);
 });
 
 test("可靠性训练绑定正式防零概率版本", () => {

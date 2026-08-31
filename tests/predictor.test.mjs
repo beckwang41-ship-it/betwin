@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  compareHistoricalToMarket,
   distribution,
   distanceWeight,
   findSimilarGoalMovements,
@@ -19,6 +20,53 @@ import {
   summarizeStability,
   weightedDistribution,
 } from "../lib/predictor.mjs";
+
+test("market comparison distinguishes market alignment from historical divergence", () => {
+  const aligned = compareHistoricalToMarket(
+    ["胜", "平", "负"],
+    [1.8, 3.5, 4.5],
+    [0.58, 0.24, 0.18],
+  );
+  assert.equal(aligned.status, "market-aligned");
+  assert.equal(aligned.agreesWithMarket, true);
+  assert.equal(aligned.actionable, false);
+  assert.deepEqual(aligned.historicalTopLabels, ["胜"]);
+  assert.deepEqual(aligned.marketTopLabels, ["胜"]);
+  assert.equal(aligned.selected.labels[0], "胜");
+  assert.ok(
+    Math.abs(aligned.selected.breakEvenProbability - 1 / 1.8) < 1e-12,
+  );
+  assert.ok(
+    Math.abs(
+      aligned.outcomes[0].probabilityDelta -
+        (0.58 - normalizeOdds([1.8, 3.5, 4.5])[0]),
+    ) < 1e-12,
+  );
+
+  const divergent = compareHistoricalToMarket(
+    ["胜", "平", "负"],
+    [1.8, 3.5, 4.5],
+    [0.31, 0.29, 0.4],
+  );
+  assert.equal(divergent.status, "historical-divergence");
+  assert.equal(divergent.agreesWithMarket, false);
+  assert.deepEqual(divergent.historicalTopLabels, ["负"]);
+  assert.deepEqual(divergent.marketTopLabels, ["胜"]);
+  assert.match(divergent.reason, /仅作待验证观察/);
+});
+
+test("market comparison supports top-two goal selections", () => {
+  const comparison = compareHistoricalToMarket(
+    ["0", "1", "2", "3"],
+    [8, 4, 3, 3.5],
+    [0.1, 0.35, 0.2, 0.35],
+    { selectionSize: 2 },
+  );
+  assert.equal(comparison.selectionSize, 2);
+  assert.deepEqual(comparison.selected.labels, ["1", "3"]);
+  assert.equal(comparison.selected.breakEvenProbability, null);
+  assert.equal(comparison.selected.breakEvenDelta, null);
+});
 
 test("goal pair selects the two outcomes with the highest historical probabilities", () => {
   const pair = selectTopGoalPair(

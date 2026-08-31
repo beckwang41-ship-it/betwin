@@ -49,6 +49,7 @@ import {
 } from "./lib/parlay.mjs";
 import {
   GOAL_LABELS,
+  compareHistoricalToMarket,
   confidenceLabel,
   distanceWeight,
   findSimilarGoals,
@@ -2239,6 +2240,22 @@ function attachChallenger(prediction, market, result) {
   };
 }
 
+function attachMarketComparison(prediction, odds, selectionSize = 1) {
+  if (!prediction) return prediction;
+  return {
+    ...prediction,
+    marketComparison: compareHistoricalToMarket(
+      prediction.labels,
+      odds,
+      prediction.final,
+      {
+        available: prediction.available,
+        selectionSize,
+      },
+    ),
+  };
+}
+
 function reliabilityView(
   market,
   prediction,
@@ -2968,7 +2985,10 @@ function buildSpfPrediction(
     { sameLeague, tolerance: effectiveTolerance },
   );
   return {
-    prediction: attachChallenger(productionPrediction, "spf", challenger),
+    prediction: attachMarketComparison(
+      attachChallenger(productionPrediction, "spf", challenger),
+      hadOdds,
+    ),
     similar,
     movementSimilar,
     tolerance: effectiveTolerance,
@@ -3062,10 +3082,13 @@ function buildHhadPrediction(
   );
   return {
     handicap,
-    prediction: attachChallenger(
-      productionPrediction,
-      "hhad",
-      challenger,
+    prediction: attachMarketComparison(
+      attachChallenger(
+        productionPrediction,
+        "hhad",
+        challenger,
+      ),
+      odds,
     ),
     similar,
     movementSimilar,
@@ -3170,6 +3193,7 @@ function marketCandidate(match, market, prediction, handicap = null) {
   const source = market === "hhad" ? match.hhad : match.had;
   const odds = [source.h, source.d, source.a][index];
   const probability = prediction.final[index];
+  const marketComparison = prediction.marketComparison || null;
   return {
     id: match.id,
     displayName: match.displayName,
@@ -3186,6 +3210,14 @@ function marketCandidate(match, market, prediction, handicap = null) {
     confidence: prediction.confidence,
     probability,
     marketProbability: prediction.market[index],
+    probabilityDelta:
+      marketComparison?.selected?.probabilityDelta ??
+      probability - prediction.market[index],
+    breakEvenProbability:
+      marketComparison?.selected?.breakEvenProbability ?? 1 / odds,
+    breakEvenDelta:
+      marketComparison?.selected?.breakEvenDelta ?? probability - 1 / odds,
+    marketComparison,
     odds,
     valueIndex: probability * odds,
     samples: prediction.stats.total,
@@ -3270,10 +3302,13 @@ function buildGoalPredictionResult(
       weight: 0,
     },
   };
-  const predictionWithChallenger = attachChallenger(
-    base,
-    "goals",
-    challenger,
+  const predictionWithChallenger = attachMarketComparison(
+    attachChallenger(
+      base,
+      "goals",
+      challenger,
+    ),
+    odds,
   );
   const prediction = {
     ...predictionWithChallenger,
@@ -3351,6 +3386,12 @@ function buildGoalPairCandidate(
       total + selection.probability * selection.odds,
     0,
   );
+  const marketComparison = compareHistoricalToMarket(
+    prediction.labels,
+    odds,
+    prediction.final,
+    { available: prediction.available, selectionSize: 2 },
+  );
   return {
     id: match.id,
     displayName: match.displayName,
@@ -3371,10 +3412,11 @@ function buildGoalPairCandidate(
       prediction.stats.total,
     ),
     probability: pair.probability,
-    marketProbability: pair.indices.reduce(
-      (total, index) => total + prediction.market[index],
-      0,
-    ),
+    marketProbability: marketComparison.selected.marketProbability,
+    probabilityDelta: marketComparison.selected.probabilityDelta,
+    breakEvenProbability: null,
+    breakEvenDelta: null,
+    marketComparison,
     odds: pair.odds,
     valueIndex: expectedReturn / pair.stakeUnits,
     samples: prediction.stats.total,
