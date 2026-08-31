@@ -168,7 +168,7 @@ function selectedStabilitySamples(payload, market) {
 }
 
 test(
-  "预测接口按实际存在的市场独立计算，并保持联合匹配与零样本回退",
+  "预测接口按实际市场计算，并保持比分净胜球联合一致性",
   { timeout: 60_000 },
   async () => {
     const directory = mkdtempSync(path.join(tmpdir(), "betwin-api-"));
@@ -339,6 +339,53 @@ test(
       assert.deepEqual(jointWithoutGoals.topScores, []);
       assert.equal(jointWithoutGoals.spf.matchingMode, "joint");
       assert.equal(jointWithoutGoals.hhad.matchingMode, "joint");
+      assert.equal(jointWithoutGoals.spf.coherence.available, true);
+      assert.equal(jointWithoutGoals.hhad.coherence.available, true);
+      assert.equal(
+        jointWithoutGoals.spf.coherence.version,
+        "score-margin-joint-v1",
+      );
+      assert.equal(jointWithoutGoals.spf.coherence.maxResidual, 0);
+      assert.equal(
+        jointWithoutGoals.spf.coherence.jointSamples,
+        jointWithoutGoals.hhad.coherence.jointSamples,
+      );
+      if (jointWithoutGoals.hhad.handicap === -1) {
+        assert.equal(
+          jointWithoutGoals.spf.coherence.displayProbabilities[0],
+          jointWithoutGoals.hhad.coherence.displayProbabilities[0] +
+            jointWithoutGoals.hhad.coherence.displayProbabilities[1],
+        );
+        assert.ok(
+          Math.abs(
+            jointWithoutGoals.spf.final[0] -
+              jointWithoutGoals.hhad.final[0] -
+              jointWithoutGoals.hhad.final[1],
+          ) < 1e-12,
+        );
+        assert.ok(
+          Math.abs(
+            jointWithoutGoals.spf.final[1] +
+              jointWithoutGoals.spf.final[2] -
+              jointWithoutGoals.hhad.final[2],
+          ) < 1e-12,
+        );
+      } else if (jointWithoutGoals.hhad.handicap === 1) {
+        assert.ok(
+          Math.abs(
+            jointWithoutGoals.spf.final[0] +
+              jointWithoutGoals.spf.final[1] -
+              jointWithoutGoals.hhad.final[0],
+          ) < 1e-12,
+        );
+        assert.ok(
+          Math.abs(
+            jointWithoutGoals.spf.final[2] -
+              jointWithoutGoals.hhad.final[1] -
+              jointWithoutGoals.hhad.final[2],
+          ) < 1e-12,
+        );
+      }
       assert.equal(jointWithoutGoals.spf.empiricalWeight, 1);
       // empiricalWeight=1 表示完全采用历史分布、不混入赔率先验。
       // 但防零层会先把零样本格抬离 0%，所以 final 等于防零后的
@@ -547,8 +594,12 @@ test(
 
       const zeroJoint = await predict(port, "9990001");
       assert.equal(zeroJoint.settings.matching.jointSamples, 0);
-      assert.equal(zeroJoint.spf.matchingMode, "standalone-fallback");
-      assert.equal(zeroJoint.hhad.matchingMode, "standalone-fallback");
+      assert.equal(zeroJoint.spf.matchingMode, "joint-unavailable");
+      assert.equal(zeroJoint.hhad.matchingMode, "joint-unavailable");
+      assert.equal(zeroJoint.spf.available, false);
+      assert.equal(zeroJoint.hhad.available, false);
+      assert.equal(zeroJoint.spf.coherence.available, false);
+      assert.match(zeroJoint.spf.coherence.reason, /没有同时满足/);
       assert.equal(zeroJoint.goals, null);
 
       const ledgerResponse = await fetch(

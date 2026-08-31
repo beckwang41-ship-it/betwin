@@ -74,6 +74,10 @@ import {
   THREE_WAY_MATCHING_VERSION,
   selectThreeWaySimilarity,
 } from "./lib/three-way-matching.mjs";
+import {
+  THREE_WAY_COHERENCE_VERSION,
+  buildCoherentThreeWayDistribution,
+} from "./lib/three-way-coherence.mjs";
 import { modelConfigIsCurrent } from "./lib/production-thresholds.mjs";
 import { resolveProductionApproval } from "./lib/production-approval.mjs";
 import {
@@ -1814,6 +1818,36 @@ function smoothingMethodText(prediction) {
     : `小样本平滑未通过严格验证，${detail}，仅供参考`;
 }
 
+function threeWayMethodText(result, market) {
+  if (!result) {
+    return market === "spf"
+      ? "竞彩未开售普通胜平负，本场不生成该玩法预测"
+      : "缺少让球胜平负赔率";
+  }
+  if (result.matchingMode === "joint-unavailable") {
+    return "胜平负与让球必须使用同一批有效比分样本；当前联合样本不足，两套历史概率均不生成";
+  }
+  const prediction = result.prediction;
+  if (result.matchingMode === "joint") {
+    return (
+      `${result.matchingLabel}；两个盘口同时命中当前相似范围；` +
+      `${historicalMethodText(prediction, "使用统一联合距离")}；` +
+      "每场比分只进入一次净胜球联合分布，两套玩法从该分布同步派生；" +
+      `${smoothingMethodText(prediction)}；${movementMethodText(prediction)}`
+    );
+  }
+  const handicapText = market === "hhad"
+    ? `让球数 ${result.handicap > 0 ? "+" : ""}${result.handicap}，`
+    : "";
+  return (
+    `${result.matchingLabel}；${handicapText}三项赔率相对误差均不超过 ±${(
+      result.tolerance * 100
+    ).toFixed(0)}%；` +
+    `${historicalMethodText(prediction, "按赔率距离加权")}；` +
+    `${smoothingMethodText(prediction)}；${movementMethodText(prediction)}`
+  );
+}
+
 function zeroOddsMethodText(scope, prediction) {
   const window = scope?.zeroOddsWindow;
   if (!scope?.zeroOdds || !window) return "";
@@ -1947,25 +1981,20 @@ function buildThreeWayStability(
   }
 
   const handicap = hhadResult.handicap;
-  const jointSimilar = (market, threshold) =>
-    pairedHistory
-      .filter(
-        (row) =>
-          (!sameLeague || row.spf.league === match.league) &&
-          row.hhad.handicap === handicap &&
-          spfDistance(row.spf.odds, hadOdds) <=
-            (market === "spf" ? threshold : spfResult.tolerance) &&
-          spfDistance(row.hhad.odds, hhadOdds) <=
-            (market === "hhad" ? threshold : hhadResult.tolerance),
-      )
-      .map((row) => {
-        const selected = market === "spf" ? row.spf : row.hhad;
-        const target = market === "spf" ? hadOdds : hhadOdds;
-        return {
-          ...selected,
-          distance: spfDistance(selected.odds, target),
-        };
-      });
+  const jointSimilar = (market, threshold) => {
+    const selection = selectThreeWaySimilarity(
+      match,
+      { spfHistory, hhadHistory, pairedHistory },
+      {
+        spfTolerance:
+          market === "spf" ? threshold : spfResult.tolerance,
+        hhadTolerance:
+          market === "hhad" ? threshold : hhadResult.tolerance,
+        sameLeague,
+      },
+    );
+    return selection[market]?.similar || [];
+  };
   const pairedSpfHistory = pairedHistory.map((row) => row.spf);
   const pairedHhadHistory = pairedHistory
     .filter((row) => row.hhad.handicap === handicap)
@@ -2254,6 +2283,98 @@ function attachMarketComparison(prediction, odds, selectionSize = 1) {
       },
     ),
   };
+}
+
+function applyCoherentThreeWayPrediction(
+  basePrediction,
+  market,
+  coherent,
+  odds,
+) {
+  const view = coherent?.[market];
+  if (!view || !coherent.available) return basePrediction;
+  const labels = ["胜", "平", "负"];
+  const final = [...view.probabilities];
+  const highest = Math.max(...final);
+  const topLabels = labels.filter(
+    (_, index) => Math.abs(final[index] - highest) < 1e-12,
+  );
+  const stats = {
+    counts: Object.fromEntries(
+      labels.map((label, index) => [label, view.counts[index]]),
+    ),
+    probabilities: Object.fromEntries(
+      labels.map((label, index) => [label, view.rawProbabilities[index]]),
+    ),
+    total: coherent.sampleSize,
+  };
+  const weightedCounts = Object.fromEntries(
+    labels.map((label, index) => [label, view.posteriorCounts[index]]),
+  );
+  const weightedProbabilities = Object.fromEntries(
+    labels.map((label, index) => [label, final[index]]),
+  );
+  const weighting = {
+    ...(basePrediction.weighting || {}),
+    enabled: false,
+    method: "joint-score-uniform",
+    weightField: "jointWeight",
+    raw: stats,
+    weightedCounts,
+    probabilities: weightedProbabilities,
+    totalWeight: coherent.totalWeight,
+    effectiveSamples: coherent.effectiveSamples,
+    coreSamples: coherent.sampleSize,
+    minimumWeight: coherent.sampleSize ? 1 : 0,
+    maximumWeight: coherent.sampleSize ? 1 : 0,
+  };
+  const zeroCellFloor = {
+    applied: coherent.prior.applied,
+    alpha: coherent.prior.alpha,
+    priorMass: coherent.prior.priorMass,
+    sampleSize: coherent.sampleSize,
+    zeroCells: coherent.prior.zeroCells,
+    labelCount: coherent.prior.cellCount,
+    probabilities: final,
+    scope: "logical-joint-score-cells",
+  };
+  const prediction = {
+    ...basePrediction,
+    labels,
+    empirical: [...view.rawProbabilities],
+    rawWeightedEmpirical: [...view.weightedProbabilities],
+    weightedEmpirical: final,
+    zeroCellFloor,
+    stableEmpirical: final,
+    smoothing: {
+      ...(basePrediction.smoothing || {}),
+      applied: false,
+      probabilities: final,
+      reason: "联合净胜球分布已统一处理先验，不再按玩法分别平滑",
+    },
+    weighting,
+    final,
+    empiricalWeight: 1,
+    available: true,
+    predicted: topLabels[0] || null,
+    topLabels,
+    isTie: topLabels.length > 1,
+    confidence: confidenceLabel(final, coherent.effectiveSamples),
+    stats,
+    coherence: {
+      available: true,
+      version: coherent.version,
+      method: coherent.consistency.method,
+      reason: "胜平负与让球概率由同一批比分的净胜球联合分布派生",
+      handicap: coherent.handicap,
+      jointSamples: coherent.sampleSize,
+      invalidScoreSamples: coherent.invalidScoreSamples,
+      logicalCells: coherent.prior.cellCount,
+      maxResidual: coherent.consistency.maxResidual,
+      displayProbabilities: coherent.display[market],
+    },
+  };
+  return attachMarketComparison(prediction, odds);
 }
 
 function reliabilityView(
@@ -3101,9 +3222,9 @@ function buildHhadPrediction(
 }
 
 function matchingLabel(mode, market) {
-  if (mode === "joint") return "胜平负＋让球联合匹配";
-  if (mode === "standalone-fallback") {
-    return `${market === "spf" ? "胜平负" : "让球"}单盘口回退`;
+  if (mode === "joint") return "比分净胜球联合模型";
+  if (mode === "joint-unavailable") {
+    return "联合比分样本不足";
   }
   return `${market === "spf" ? "胜平负" : "让球"}单盘口匹配`;
 }
@@ -3183,6 +3304,66 @@ function buildThreeWayPredictionResults(
       "hhad",
       selection.hhad.jointSamples,
     );
+  }
+  if (
+    selection.spf?.mode === "joint" &&
+    selection.hhad?.mode === "joint" &&
+    spfResult &&
+    hhadResult
+  ) {
+    const coherent = buildCoherentThreeWayDistribution(
+      selection.jointRows,
+      {
+        handicap: hhadResult.handicap,
+        priorMass: DEFAULT_ZERO_CELL_PRIOR_MASS,
+      },
+    );
+    if (coherent.available) {
+      spfResult = {
+        ...spfResult,
+        jointRows: selection.jointRows,
+        prediction: applyCoherentThreeWayPrediction(
+          spfResult.prediction,
+          "spf",
+          coherent,
+          [match.had.h, match.had.d, match.had.a],
+        ),
+      };
+      hhadResult = {
+        ...hhadResult,
+        jointRows: selection.jointRows,
+        prediction: applyCoherentThreeWayPrediction(
+          hhadResult.prediction,
+          "hhad",
+          coherent,
+          [match.hhad.h, match.hhad.d, match.hhad.a],
+        ),
+      };
+    }
+  } else if (
+    selection.spf?.mode === "joint-unavailable" &&
+    selection.hhad?.mode === "joint-unavailable"
+  ) {
+    const coherence = {
+      available: false,
+      version: THREE_WAY_COHERENCE_VERSION,
+      method: "single-score-margin-distribution",
+      reason: "没有同时满足两个盘口范围且比分有效的配对历史比赛",
+      jointSamples: 0,
+      invalidScoreSamples: 0,
+    };
+    if (spfResult) {
+      spfResult = {
+        ...spfResult,
+        prediction: { ...spfResult.prediction, coherence },
+      };
+    }
+    if (hhadResult) {
+      hhadResult = {
+        ...hhadResult,
+        prediction: { ...hhadResult.prediction, coherence },
+      };
+    }
   }
   return { spfResult, hhadResult };
 }
@@ -4326,12 +4507,8 @@ async function handleApi(request, url, response) {
         pageSize,
       ),
       method: {
-        spf: spfPrediction
-          ? `${spfResult.matchingLabel}；三项胜平负赔率相对误差均不超过 ±${(spfResult.tolerance * 100).toFixed(0)}%；${historicalMethodText(spfPrediction, "按赔率距离加权")}；${smoothingMethodText(spfPrediction)}；${movementMethodText(spfPrediction)}`
-          : "竞彩未开售普通胜平负，本场不生成该玩法预测",
-        hhad: hhadResult
-          ? `${hhadResult.matchingLabel}；让球数 ${hhadResult.handicap > 0 ? "+" : ""}${hhadResult.handicap}，三项让球赔率误差均不超过 ±${(hhadResult.tolerance * 100).toFixed(0)}%；${historicalMethodText(hhadResult.prediction, "按赔率距离加权")}；${smoothingMethodText(hhadResult.prediction)}；${movementMethodText(hhadResult.prediction)}`
-          : "缺少让球胜平负赔率",
+        spf: threeWayMethodText(spfResult, "spf"),
+        hhad: threeWayMethodText(hhadResult, "hhad"),
         goals: !goalResult
           ? "缺少总进球赔率"
           : goalScope.zeroOddsBlocked

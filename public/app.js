@@ -2282,19 +2282,25 @@ function renderDashboard() {
   $(".spf-decision").classList.toggle("tie", Boolean(spf?.isTie));
   $("#confidence-label").textContent = primaryAvailable
     ? `样本置信度：${spf.confidence}`
-    : "普通胜平负未开售";
+    : spf
+      ? "联合比分样本不足"
+      : "普通胜平负未开售";
   $("#spf-hero-sample").textContent =
     spf?.weighting?.enabled
-      ? `相似 ${spf.stats.total.toLocaleString()} · 加权等效 ${effectiveSamples(spf).toFixed(1)}`
+      ? `${spf.matchingLabel || "胜平负匹配"} · 相似 ${spf.stats.total.toLocaleString()} · 加权等效 ${effectiveSamples(spf).toFixed(1)}`
       : spf
-        ? `相似样本 ${spf.stats.total.toLocaleString()} 场 · 等权`
+        ? `${spf.matchingLabel || "胜平负匹配"} · ${spf.stats.total.toLocaleString()} 场 · 等权`
         : "无可用胜平负赔率";
   const leadingIndex = primaryAvailable && primary?.final
     ? primary.final.indexOf(Math.max(...primary.final))
     : -1;
+  const primaryDisplayProbabilities =
+    primary?.coherence?.displayProbabilities || primary?.final;
   ["win", "draw", "loss"].forEach((key, index) => {
     $(`#prob-label-${key}`).textContent = primaryLabels[index];
-    const probVal = primaryAvailable && primary?.final ? Number(primary.final[index]) : 0;
+    const probVal = primaryAvailable && primaryDisplayProbabilities
+      ? Number(primaryDisplayProbabilities[index])
+      : 0;
     $(`#prob-${key}`).textContent = primaryAvailable
       ? pct(probVal)
       : "—";
@@ -2869,8 +2875,12 @@ function renderHhad(hhad, market) {
   const hhadLeadingIndex = available && hhad?.final
     ? hhad.final.indexOf(Math.max(...hhad.final))
     : -1;
+  const hhadDisplayProbabilities =
+    hhad?.coherence?.displayProbabilities || hhad?.final;
   ["win", "draw", "loss"].forEach((key, index) => {
-    const probVal = available && hhad?.final ? Number(hhad.final[index]) : 0;
+    const probVal = available && hhadDisplayProbabilities
+      ? Number(hhadDisplayProbabilities[index])
+      : 0;
     $(`#hhad-prob-${key}`).textContent = available ? pct(probVal) : "—";
     const bar = $(`#hhad-prob-bar-${key}`);
     if (bar) {
