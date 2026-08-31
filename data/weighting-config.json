@@ -1,21 +1,32 @@
 {
-  "version": 2,
-  "generatedAt": "2026-07-27T10:00:08.868Z",
+  "version": 3,
+  "generatedAt": "2026-08-28T06:09:59.289Z",
+  "candidateOnly": true,
+  "runtimeEnabled": false,
   "data": {
     "database": "betwin.db",
-    "verifiedMatches": 7835,
-    "sourceUpdatedAt": "2026-07-27T05:31:22+00:00"
+    "verifiedMatches": 9021,
+    "spfHistory": 9198,
+    "hhadHistory": 9599,
+    "pairedHistory": 9196,
+    "goalHistory": 8816,
+    "sourceUpdatedAt": "2026-08-28T05:00:08+00:00",
+    "goalMatchingVersion": "goal-zero-composite-v1"
   },
   "methodology": {
+    "matchingVersion": "spf-hhad-joint-v1",
+    "goalMatchingVersion": "goal-zero-composite-v1",
     "ordering": "每个来源文件按 source_row 递增，每场只使用此前记录",
     "warmup": 500,
     "tuningFraction": 0.8,
     "validationFraction": 0.2,
     "selection": "仅在较早80%选择最低权重与衰减幂次，最新20%不参与选择",
+    "matching": "胜平负与让球胜平负复用生产联合匹配：两者齐全且联合池有样本时共同筛选，否则回退单市场；总进球固定由0球窗口和综合距离指数权重管理，不参与旧floor/power搜索",
+    "baseline": "以当前生产基础预测为基线；已通过门禁的平滑会同时应用于等权和距离加权概率",
     "gate": "最新验证段 Log Loss、Brier 必须同时优于等权统计且命中率不得下降，并通过95%连续区块Bootstrap",
     "significance": "最新20%按连续20场为区块重采样1,000次；Log Loss和Brier区间上界须小于0，命中率区间下界须不小于0",
-    "fallback": "门禁未通过则生产环境自动使用等权历史占比",
-    "marketsIndependent": true
+    "fallback": "候选无论是否通过都不自动上线；生产默认等权，只有独立批准文件同时确认概率门禁、ROI门禁和参数后才可启用",
+    "marketsIndependent": false
   },
   "searchSpace": {
     "floors": [
@@ -41,22 +52,70 @@
     "spf": {
       "threshold": 0.07,
       "selected": {
-        "id": "floor-0.5-power-3",
+        "id": "floor-0.65-power-2",
         "uniform": false,
         "enabled": true,
-        "floor": 0.5,
-        "power": 3,
+        "floor": 0.65,
+        "power": 2,
         "tuning": {
-          "evaluated": 5715,
-          "accuracy": 0.49711286089238843,
-          "logLoss": 1.3801246978691026,
-          "brier": 0.6153315329925773
+          "evaluated": 6793,
+          "accuracy": 0.49882231709112324,
+          "logLoss": 1.948125386645279,
+          "brier": 0.6315119897669144
         },
         "validation": {
-          "evaluated": 1556,
-          "accuracy": 0.5070694087403599,
-          "logLoss": 1.086870780894361,
-          "brier": 0.6015792995189757
+          "evaluated": 1811,
+          "accuracy": 0.5066261733848703,
+          "logLoss": 1.3448231515430613,
+          "brier": 0.6122954879688436
+        },
+        "strategy": {
+          "status": "uncertain",
+          "reason": "候选相对基线的ROI提升区间包含0",
+          "passed": false,
+          "positiveEdge": false,
+          "evaluated": 1811,
+          "iterations": 1000,
+          "blockSize": 20,
+          "confidence": 0.95,
+          "candidate": {
+            "evaluatedMatches": 1811,
+            "bettingMatches": 1811,
+            "noPredictionMatches": 0,
+            "wins": 918,
+            "multiSelectionMatches": 2,
+            "stakeUnits": 1813,
+            "returnUnits": 1582.0499999999981,
+            "profitUnits": -230.95000000000186,
+            "roi": -0.12738554881412126
+          },
+          "baseline": {
+            "evaluatedMatches": 1811,
+            "bettingMatches": 1809,
+            "noPredictionMatches": 2,
+            "wins": 932,
+            "multiSelectionMatches": 46,
+            "stakeUnits": 1855,
+            "returnUnits": 1612.0599999999984,
+            "profitUnits": -242.94000000000165,
+            "roi": -0.13096495956873405
+          },
+          "roiDelta": 0.003579410754612794,
+          "intervals": {
+            "candidate": {
+              "lower": -0.16928403722107593,
+              "upper": -0.08688090941153678
+            },
+            "baseline": {
+              "lower": -0.1736270793812931,
+              "upper": -0.08876813839733075
+            },
+            "delta": {
+              "lower": -0.007193127361423531,
+              "upper": 0.013120858505787574
+            }
+          },
+          "improvementProbability": 0.754
         },
         "significance": {
           "passed": false,
@@ -76,17 +135,18 @@
         "floor": 1,
         "power": 1,
         "tuning": {
-          "evaluated": 5715,
-          "accuracy": 0.4967629046369204,
-          "logLoss": 1.3805659928110607,
-          "brier": 0.6157436832496533
+          "evaluated": 6793,
+          "accuracy": 0.4976691692428481,
+          "logLoss": 1.9484445837203956,
+          "brier": 0.6315999709008222
         },
         "validation": {
-          "evaluated": 1556,
-          "accuracy": 0.5057840616966581,
-          "logLoss": 1.0853846039752018,
-          "brier": 0.6008238150016392
-        }
+          "evaluated": 1811,
+          "accuracy": 0.504233388551445,
+          "logLoss": 1.343331945993678,
+          "brier": 0.6114421270322027
+        },
+        "strategy": null
       },
       "candidates": [
         {
@@ -96,16 +156,64 @@
           "floor": 0.1,
           "power": 1,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.4990376202974628,
-            "logLoss": 1.3892590484935252,
-            "brier": 0.6198690319664006
+            "evaluated": 6793,
+            "accuracy": 0.4914617989106433,
+            "logLoss": 1.9585876560390283,
+            "brier": 0.6375389452981107
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5134961439588689,
-            "logLoss": 1.0945215341251031,
-            "brier": 0.6055132351422435
+            "evaluated": 1811,
+            "accuracy": 0.5049696300386527,
+            "logLoss": 1.3575049577421021,
+            "brier": 0.6188363456808923
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 915,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1580.6699999999983,
+              "profitUnits": -232.33000000000175,
+              "roi": -0.1281467181467191
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": 0.00281824142201495,
+            "intervals": {
+              "candidate": {
+                "lower": -0.17157616420212196,
+                "upper": -0.08629133940822369
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.019249962717887554,
+                "upper": 0.022456229262911992
+              }
+            },
+            "improvementProbability": 0.604
           }
         },
         {
@@ -115,16 +223,64 @@
           "floor": 0.1,
           "power": 2,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.494838145231846,
-            "logLoss": 1.3919063740834405,
-            "brier": 0.621250517112444
+            "evaluated": 6793,
+            "accuracy": 0.4907257470925953,
+            "logLoss": 1.9646161033457785,
+            "brier": 0.6409857357052834
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5154241645244216,
-            "logLoss": 1.0990938087595912,
-            "brier": 0.6080886756670975
+            "evaluated": 1811,
+            "accuracy": 0.49337382661512974,
+            "logLoss": 1.363508846706435,
+            "brier": 0.6224498819103711
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 894,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1543.3299999999983,
+              "profitUnits": -269.67000000000166,
+              "roi": -0.14874241588527395
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": -0.017777456316539902,
+            "intervals": {
+              "candidate": {
+                "lower": -0.19263712789415618,
+                "upper": -0.10523883607347662
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.043884910959556114,
+                "upper": 0.008055789306396605
+              }
+            },
+            "improvementProbability": 0.087
           }
         },
         {
@@ -134,16 +290,64 @@
           "floor": 0.1,
           "power": 3,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.4927384076990376,
-            "logLoss": 1.3909429084836542,
-            "brier": 0.6209607298638965
+            "evaluated": 6793,
+            "accuracy": 0.4902841160017665,
+            "logLoss": 1.965055789156656,
+            "brier": 0.6415327676208545
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5141388174807198,
-            "logLoss": 1.0995500684956854,
-            "brier": 0.6084452562658236
+            "evaluated": 1811,
+            "accuracy": 0.49337382661512974,
+            "logLoss": 1.3643151085371499,
+            "brier": 0.6233833316213796
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 894,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1552.6599999999983,
+              "profitUnits": -260.34000000000174,
+              "roi": -0.143596249310536
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": -0.012631289741801943,
+            "intervals": {
+              "candidate": {
+                "lower": -0.18765602206593346,
+                "upper": -0.10059409317050712
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.0406192812652459,
+                "upper": 0.016645971021895693
+              }
+            },
+            "improvementProbability": 0.182
           }
         },
         {
@@ -153,16 +357,64 @@
           "floor": 0.2,
           "power": 1,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.49816272965879266,
-            "logLoss": 1.3850486840450613,
-            "brier": 0.6179079848817814
+            "evaluated": 6793,
+            "accuracy": 0.49587810981893127,
+            "logLoss": 1.9535308541123129,
+            "brier": 0.6348459605737499
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5109254498714653,
-            "logLoss": 1.091364053068398,
-            "brier": 0.6039297636182347
+            "evaluated": 1811,
+            "accuracy": 0.5033130866924351,
+            "logLoss": 1.3525767342391497,
+            "brier": 0.6164436985105758
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 912,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1571.0299999999982,
+              "profitUnits": -241.97000000000185,
+              "roi": -0.13346387203530163
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": -0.002498912466567582,
+            "intervals": {
+              "candidate": {
+                "lower": -0.17596007232197083,
+                "upper": -0.09490433250338919
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.01928972597446838,
+                "upper": 0.014670204699363578
+              }
+            },
+            "improvementProbability": 0.368
           }
         },
         {
@@ -172,16 +424,64 @@
           "floor": 0.2,
           "power": 2,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.49763779527559054,
-            "logLoss": 1.3845717685913348,
-            "brier": 0.6175798028581055
+            "evaluated": 6793,
+            "accuracy": 0.49484763727366404,
+            "logLoss": 1.9546546039428478,
+            "brier": 0.6355624832667429
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.512853470437018,
-            "logLoss": 1.092736582650347,
-            "brier": 0.6047447185473541
+            "evaluated": 1811,
+            "accuracy": 0.5016565433462176,
+            "logLoss": 1.3543509327503382,
+            "brier": 0.6176652024930753
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 909,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1567.9199999999983,
+              "profitUnits": -245.08000000000175,
+              "roi": -0.13517926089354756
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": -0.004214301324813513,
+            "intervals": {
+              "candidate": {
+                "lower": -0.17689428032583532,
+                "upper": -0.09588927131686015
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.02581045129407334,
+                "upper": 0.017313603297608407
+              }
+            },
+            "improvementProbability": 0.335
           }
         },
         {
@@ -191,16 +491,64 @@
           "floor": 0.2,
           "power": 3,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.4967629046369204,
-            "logLoss": 1.3831754167517472,
-            "brier": 0.6168250128678142
+            "evaluated": 6793,
+            "accuracy": 0.4930811129103489,
+            "logLoss": 1.9537239755349838,
+            "brier": 0.6350779857011357
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5147814910025706,
-            "logLoss": 1.09203613497436,
-            "brier": 0.6043667300129507
+            "evaluated": 1811,
+            "accuracy": 0.49834345665378244,
+            "logLoss": 1.3536115686213548,
+            "brier": 0.6174225306433614
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 903,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1551.429999999998,
+              "profitUnits": -261.570000000002,
+              "roi": -0.1442746828461125
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": -0.013309723277378449,
+            "intervals": {
+              "candidate": {
+                "lower": -0.18766744583296008,
+                "upper": -0.10399953565895435
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.034011107563004614,
+                "upper": 0.006026866485521047
+              }
+            },
+            "improvementProbability": 0.112
           }
         },
         {
@@ -210,16 +558,64 @@
           "floor": 0.35,
           "power": 1,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.4978127734033246,
-            "logLoss": 1.382272525659196,
-            "brier": 0.6165375910237767
+            "evaluated": 6793,
+            "accuracy": 0.4954364787281025,
+            "logLoss": 1.950148172252057,
+            "brier": 0.6328661188867319
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5083547557840618,
-            "logLoss": 1.0887904003740678,
-            "brier": 0.6025948463977426
+            "evaluated": 1811,
+            "accuracy": 0.503865267807841,
+            "logLoss": 1.3485794402908466,
+            "brier": 0.6143556167854838
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 913,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1569.2499999999982,
+              "profitUnits": -243.75000000000182,
+              "roi": -0.13444567015995687
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": -0.0034807105912228187,
+            "intervals": {
+              "candidate": {
+                "lower": -0.1770800104719612,
+                "upper": -0.09642944903310822
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.018235436514700176,
+                "upper": 0.011303206321098795
+              }
+            },
+            "improvementProbability": 0.328
           }
         },
         {
@@ -229,16 +625,64 @@
           "floor": 0.35,
           "power": 2,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.49711286089238843,
-            "logLoss": 1.3813400394255628,
-            "brier": 0.6159421868547502
+            "evaluated": 6793,
+            "accuracy": 0.49631974090976005,
+            "logLoss": 1.9498846431013255,
+            "brier": 0.632708293657636
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5077120822622108,
-            "logLoss": 1.08895074217093,
-            "brier": 0.6027062031348028
+            "evaluated": 1811,
+            "accuracy": 0.503865267807841,
+            "logLoss": 1.3487318447833823,
+            "brier": 0.6145360004769941
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 913,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1568.859999999998,
+              "profitUnits": -244.14000000000192,
+              "roi": -0.13466078323221287
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": -0.0036958236634788144,
+            "intervals": {
+              "candidate": {
+                "lower": -0.17681455523753317,
+                "upper": -0.09577336852974738
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.01833918076335392,
+                "upper": 0.010612574035041046
+              }
+            },
+            "improvementProbability": 0.321
           }
         },
         {
@@ -248,16 +692,64 @@
           "floor": 0.35,
           "power": 3,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.4967629046369204,
-            "logLoss": 1.380582961236839,
-            "brier": 0.6154975844840536
+            "evaluated": 6793,
+            "accuracy": 0.49720300309141763,
+            "logLoss": 1.9493270054854512,
+            "brier": 0.6323532493411421
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5089974293059126,
-            "logLoss": 1.0883241249999438,
-            "brier": 0.6023513593781563
+            "evaluated": 1811,
+            "accuracy": 0.5027609055770292,
+            "logLoss": 1.3480092612011372,
+            "brier": 0.6141646721717658
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 911,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1563.409999999998,
+              "profitUnits": -249.59000000000196,
+              "roi": -0.13766685052399447
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": -0.0067018909552604145,
+            "intervals": {
+              "candidate": {
+                "lower": -0.18105893002110132,
+                "upper": -0.0980801600441499
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.021366334409886518,
+                "upper": 0.0070422102070619936
+              }
+            },
+            "improvementProbability": 0.182
           }
         },
         {
@@ -267,16 +759,64 @@
           "floor": 0.5,
           "power": 1,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.4974628171478565,
-            "logLoss": 1.3811323568456844,
-            "brier": 0.6159706883099615
+            "evaluated": 6793,
+            "accuracy": 0.499263948181952,
+            "logLoss": 1.948788339679091,
+            "brier": 0.6319972309488778
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5077120822622108,
-            "logLoss": 1.0873603815321224,
-            "brier": 0.6018454453206395
+            "evaluated": 1811,
+            "accuracy": 0.5055218111540585,
+            "logLoss": 1.3463591318278831,
+            "brier": 0.6131453124425691
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 916,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1577.2999999999981,
+              "profitUnits": -235.70000000000186,
+              "roi": -0.13000551571980246
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": 0.000959443848931596,
+            "intervals": {
+              "candidate": {
+                "lower": -0.17210057947019866,
+                "upper": -0.0884339426346886
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.011934960092381264,
+                "upper": 0.012274634716769286
+              }
+            },
+            "improvementProbability": 0.575
           }
         },
         {
@@ -286,16 +826,64 @@
           "floor": 0.5,
           "power": 2,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.49711286089238843,
-            "logLoss": 1.3804788355354813,
-            "brier": 0.6155474586267897
+            "evaluated": 6793,
+            "accuracy": 0.4995583689091712,
+            "logLoss": 1.9484785367892032,
+            "brier": 0.6317890975489088
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5077120822622108,
-            "logLoss": 1.0872766886649783,
-            "brier": 0.6018090291095257
+            "evaluated": 1811,
+            "accuracy": 0.5049696300386527,
+            "logLoss": 1.34619505574359,
+            "brier": 0.6130853613629416
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 915,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1573.4099999999983,
+              "profitUnits": -239.59000000000174,
+              "roi": -0.13215113072256024
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": -0.0011861711538261877,
+            "intervals": {
+              "candidate": {
+                "lower": -0.17450718312341584,
+                "upper": -0.09282004964147915
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.014552809717450214,
+                "upper": 0.010723951544400263
+              }
+            },
+            "improvementProbability": 0.436
           }
         },
         {
@@ -305,16 +893,198 @@
           "floor": 0.5,
           "power": 3,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.49711286089238843,
-            "logLoss": 1.3801246978691026,
-            "brier": 0.6153315329925773
+            "evaluated": 6793,
+            "accuracy": 0.4980862652730752,
+            "logLoss": 1.9482686654783854,
+            "brier": 0.63163191386093
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5070694087403599,
-            "logLoss": 1.086870780894361,
-            "brier": 0.6015792995189757
+            "evaluated": 1811,
+            "accuracy": 0.5060739922694644,
+            "logLoss": 1.3457259964144346,
+            "brier": 0.6128222152234085
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 917,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1579.3599999999983,
+              "profitUnits": -233.6400000000017,
+              "roi": -0.12886927744070695
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": 0.0020956821280271043,
+            "intervals": {
+              "candidate": {
+                "lower": -0.17213433867592579,
+                "upper": -0.08653071438888843
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.010209095124523997,
+                "upper": 0.013178854434030758
+              }
+            },
+            "improvementProbability": 0.64
+          }
+        },
+        {
+          "id": "floor-0.65-power-1",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.65,
+          "power": 1,
+          "tuning": {
+            "evaluated": 6793,
+            "accuracy": 0.499263948181952,
+            "logLoss": 1.9482982554196662,
+            "brier": 0.6316390772760235
+          },
+          "validation": {
+            "evaluated": 1811,
+            "accuracy": 0.5055218111540585,
+            "logLoss": 1.3449944123080149,
+            "brier": 0.6123847578131643
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 916,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1577.6699999999983,
+              "profitUnits": -235.33000000000175,
+              "roi": -0.12980143408714934
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": 0.0011635254815847151,
+            "intervals": {
+              "candidate": {
+                "lower": -0.17151278275298137,
+                "upper": -0.08936139530655296
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.010557831062792743,
+                "upper": 0.011868126335666584
+              }
+            },
+            "improvementProbability": 0.61
+          }
+        },
+        {
+          "id": "floor-0.65-power-2",
+          "uniform": false,
+          "enabled": true,
+          "floor": 0.65,
+          "power": 2,
+          "tuning": {
+            "evaluated": 6793,
+            "accuracy": 0.49882231709112324,
+            "logLoss": 1.948125386645279,
+            "brier": 0.6315119897669144
+          },
+          "validation": {
+            "evaluated": 1811,
+            "accuracy": 0.5066261733848703,
+            "logLoss": 1.3448231515430613,
+            "brier": 0.6122954879688436
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 918,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1582.0499999999981,
+              "profitUnits": -230.95000000000186,
+              "roi": -0.12738554881412126
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": 0.003579410754612794,
+            "intervals": {
+              "candidate": {
+                "lower": -0.16928403722107593,
+                "upper": -0.08688090941153678
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.007193127361423531,
+                "upper": 0.013120858505787574
+              }
+            },
+            "improvementProbability": 0.754
           },
           "significance": {
             "passed": false,
@@ -328,60 +1098,70 @@
           }
         },
         {
-          "id": "floor-0.65-power-1",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.65,
-          "power": 1,
-          "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.49728783902012247,
-            "logLoss": 1.3806694960144508,
-            "brier": 0.6157510679774254
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5044987146529563,
-            "logLoss": 1.086478167795614,
-            "brier": 0.6013847461283263
-          }
-        },
-        {
-          "id": "floor-0.65-power-2",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.65,
-          "power": 2,
-          "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.49728783902012247,
-            "logLoss": 1.380302022809271,
-            "brier": 0.6155085259441617
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5044987146529563,
-            "logLoss": 1.086376068002589,
-            "brier": 0.6013333507026364
-          }
-        },
-        {
           "id": "floor-0.65-power-3",
           "uniform": false,
           "enabled": true,
           "floor": 0.65,
           "power": 3,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.4967629046369204,
-            "logLoss": 1.3801533513553699,
-            "brier": 0.6154145642009171
+            "evaluated": 6793,
+            "accuracy": 0.49690858236419844,
+            "logLoss": 1.9480839916590569,
+            "brier": 0.6314626320387524
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5044987146529563,
-            "logLoss": 1.0861408868052007,
-            "brier": 0.6012011662519096
+            "evaluated": 1811,
+            "accuracy": 0.5055218111540585,
+            "logLoss": 1.344555417019762,
+            "brier": 0.6121381733524214
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 916,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1577.0199999999982,
+              "profitUnits": -235.98000000000184,
+              "roi": -0.1301599558742426
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": 0.0008050036944914629,
+            "intervals": {
+              "candidate": {
+                "lower": -0.1725368620264714,
+                "upper": -0.08980850361444
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.009757174196855562,
+                "upper": 0.01007332475743061
+              }
+            },
+            "improvementProbability": 0.566
           }
         },
         {
@@ -391,16 +1171,64 @@
           "floor": 0.8,
           "power": 1,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.4967629046369204,
-            "logLoss": 1.3805249311187995,
-            "brier": 0.6156963935265748
+            "evaluated": 6793,
+            "accuracy": 0.49867510672751364,
+            "logLoss": 1.9482273172355467,
+            "brier": 0.6315374304063143
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5051413881748072,
-            "logLoss": 1.0858956170982257,
-            "brier": 0.6010836077060115
+            "evaluated": 1811,
+            "accuracy": 0.5066261733848703,
+            "logLoss": 1.344101444547553,
+            "brier": 0.6118805591064066
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 918,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1582.5399999999981,
+              "profitUnits": -230.46000000000186,
+              "roi": -0.127115278543851
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": 0.0038496810248830615,
+            "intervals": {
+              "candidate": {
+                "lower": -0.1691599073323185,
+                "upper": -0.08632226639874264
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.0052790625122112874,
+                "upper": 0.012548694860030154
+              }
+            },
+            "improvementProbability": 0.805
           }
         },
         {
@@ -410,16 +1238,64 @@
           "floor": 0.8,
           "power": 2,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.49711286089238843,
-            "logLoss": 1.3803625593571565,
-            "brier": 0.615586705772146
+            "evaluated": 6793,
+            "accuracy": 0.49852789636390404,
+            "logLoss": 1.948165925723484,
+            "brier": 0.6314851499688344
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5044987146529563,
-            "logLoss": 1.0858317960993642,
-            "brier": 0.6010509125601512
+            "evaluated": 1811,
+            "accuracy": 0.5066261733848703,
+            "logLoss": 1.3439985334399955,
+            "brier": 0.6118216761154701
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 918,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1582.4099999999983,
+              "profitUnits": -230.59000000000174,
+              "roi": -0.12718698290126956
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": 0.003777976667464489,
+            "intervals": {
+              "candidate": {
+                "lower": -0.16928031411020997,
+                "upper": -0.0862235956326407
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.004772024447519019,
+                "upper": 0.01204306329742983
+              }
+            },
+            "improvementProbability": 0.803
           }
         },
         {
@@ -429,16 +1305,64 @@
           "floor": 0.8,
           "power": 3,
           "tuning": {
-            "evaluated": 5715,
-            "accuracy": 0.49728783902012247,
-            "logLoss": 1.380313165659855,
-            "brier": 0.615553893612771
+            "evaluated": 6793,
+            "accuracy": 0.4973502134550272,
+            "logLoss": 1.9481812562671028,
+            "brier": 0.6314802064495884
           },
           "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.5044987146529563,
-            "logLoss": 1.0857191376445716,
-            "brier": 0.6009881032898787
+            "evaluated": 1811,
+            "accuracy": 0.5060739922694644,
+            "logLoss": 1.343872931622819,
+            "brier": 0.61174545072353
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1811,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1811,
+              "noPredictionMatches": 0,
+              "wins": 917,
+              "multiSelectionMatches": 2,
+              "stakeUnits": 1813,
+              "returnUnits": 1580.0299999999982,
+              "profitUnits": -232.97000000000185,
+              "roi": -0.12849972421401096
+            },
+            "baseline": {
+              "evaluatedMatches": 1811,
+              "bettingMatches": 1809,
+              "noPredictionMatches": 2,
+              "wins": 932,
+              "multiSelectionMatches": 46,
+              "stakeUnits": 1855,
+              "returnUnits": 1612.0599999999984,
+              "profitUnits": -242.94000000000165,
+              "roi": -0.13096495956873405
+            },
+            "roiDelta": 0.0024652353547230943,
+            "intervals": {
+              "candidate": {
+                "lower": -0.17104370333758845,
+                "upper": -0.08725130793340807
+              },
+              "baseline": {
+                "lower": -0.1736270793812931,
+                "upper": -0.08876813839733075
+              },
+              "delta": {
+                "lower": -0.0063311078783423605,
+                "upper": 0.010618445101584691
+              }
+            },
+            "improvementProbability": 0.705
           }
         }
       ],
@@ -458,17 +1382,17 @@
       "sources": [
         {
           "sourceFile": "initspfpl.xlsx",
-          "rows": 41,
-          "warmup": 41,
+          "rows": 88,
+          "warmup": 88,
           "tuningCases": 0,
           "validationCases": 0
         },
         {
           "sourceFile": "lsspfpl.xlsx",
-          "rows": 7794,
+          "rows": 9513,
           "warmup": 500,
-          "tuningCases": 5715,
-          "validationCases": 1556
+          "tuningCases": 6793,
+          "validationCases": 1811
         }
       ]
     },
@@ -481,17 +1405,18 @@
         "floor": 1,
         "power": 1,
         "tuning": {
-          "evaluated": 5707,
-          "accuracy": 0.5077974417382162,
-          "logLoss": 1.2352021803501727,
-          "brier": 0.6183494572448834
+          "evaluated": 7056,
+          "accuracy": 0.483418367346939,
+          "logLoss": 2.070253308676781,
+          "brier": 0.6565973225227695
         },
         "validation": {
-          "evaluated": 1554,
-          "accuracy": 0.5205920205920206,
-          "logLoss": 1.0584206306009445,
-          "brier": 0.6060768307501448
-        }
+          "evaluated": 1891,
+          "accuracy": 0.49700334919795536,
+          "logLoss": 1.453844878391869,
+          "brier": 0.6311798031255856
+        },
+        "strategy": null
       },
       "baseline": {
         "id": "uniform",
@@ -500,17 +1425,18 @@
         "floor": 1,
         "power": 1,
         "tuning": {
-          "evaluated": 5707,
-          "accuracy": 0.5077974417382162,
-          "logLoss": 1.2352021803501727,
-          "brier": 0.6183494572448834
+          "evaluated": 7056,
+          "accuracy": 0.483418367346939,
+          "logLoss": 2.070253308676781,
+          "brier": 0.6565973225227695
         },
         "validation": {
-          "evaluated": 1554,
-          "accuracy": 0.5205920205920206,
-          "logLoss": 1.0584206306009445,
-          "brier": 0.6060768307501448
-        }
+          "evaluated": 1891,
+          "accuracy": 0.49700334919795536,
+          "logLoss": 1.453844878391869,
+          "brier": 0.6311798031255856
+        },
+        "strategy": null
       },
       "candidates": [
         {
@@ -520,16 +1446,64 @@
           "floor": 0.1,
           "power": 1,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5035920799018749,
-            "logLoss": 1.2438986875869098,
-            "brier": 0.6228824110429599
+            "evaluated": 7056,
+            "accuracy": 0.4779620181405896,
+            "logLoss": 2.087990430761964,
+            "brier": 0.6656781038502958
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5263835263835264,
-            "logLoss": 1.0610316322739026,
-            "brier": 0.6071864975292331
+            "evaluated": 1891,
+            "accuracy": 0.49338974087784243,
+            "logLoss": 1.4620146770568276,
+            "brier": 0.6343653579016876
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 933,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1715.7400000000005,
+              "profitUnits": -176.25999999999954,
+              "roi": -0.09316067653276931
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.004608987689371402,
+            "intervals": {
+              "candidate": {
+                "lower": -0.13317552515923325,
+                "upper": -0.05549114693446014
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.026035965263319798,
+                "upper": 0.017514723472682143
+              }
+            },
+            "improvementProbability": 0.338
           }
         },
         {
@@ -539,16 +1513,64 @@
           "floor": 0.1,
           "power": 2,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5035920799018749,
-            "logLoss": 1.2501055289639975,
-            "brier": 0.6261868852117782
+            "evaluated": 7056,
+            "accuracy": 0.47406462585034015,
+            "logLoss": 2.0974977114413504,
+            "brier": 0.6710767053657651
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5263835263835264,
-            "logLoss": 1.0625592617698567,
-            "brier": 0.6080003337405596
+            "evaluated": 1891,
+            "accuracy": 0.48863035430988894,
+            "logLoss": 1.4657823712465048,
+            "brier": 0.636452265638174
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 924,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1698.880000000001,
+              "profitUnits": -193.11999999999898,
+              "roi": -0.1020718816067648
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.013520192763366884,
+            "intervals": {
+              "candidate": {
+                "lower": -0.142704189227262,
+                "upper": -0.06408258456659657
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.039733041151299796,
+                "upper": 0.013947113814045514
+              }
+            },
+            "improvementProbability": 0.146
           }
         },
         {
@@ -558,16 +1580,64 @@
           "floor": 0.1,
           "power": 3,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.4999123882950762,
-            "logLoss": 1.251283367008724,
-            "brier": 0.6270496659380104
+            "evaluated": 7056,
+            "accuracy": 0.4742063492063492,
+            "logLoss": 2.0988463090058858,
+            "brier": 0.6721845691791173
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.525096525096525,
-            "logLoss": 1.0626287231035423,
-            "brier": 0.6082267721374688
+            "evaluated": 1891,
+            "accuracy": 0.49127445795875196,
+            "logLoss": 1.4658074958630194,
+            "brier": 0.6367898821645481
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 929,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1711.9500000000007,
+              "profitUnits": -180.04999999999927,
+              "roi": -0.09516384778012646
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.006612158936728549,
+            "intervals": {
+              "candidate": {
+                "lower": -0.13871378521325575,
+                "upper": -0.05438106503150999
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.033961073261123305,
+                "upper": 0.02156477820360213
+              }
+            },
+            "improvementProbability": 0.323
           }
         },
         {
@@ -577,16 +1647,64 @@
           "floor": 0.2,
           "power": 1,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5046434203609602,
-            "logLoss": 1.2401808583431777,
-            "brier": 0.6210184621689643
+            "evaluated": 7056,
+            "accuracy": 0.4769699546485261,
+            "logLoss": 2.0807394677460396,
+            "brier": 0.6621680099016276
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5231660231660231,
-            "logLoss": 1.0594556212646937,
-            "brier": 0.6064691805175682
+            "evaluated": 1891,
+            "accuracy": 0.49338974087784243,
+            "logLoss": 1.4585722504366108,
+            "brier": 0.6329766722730669
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 933,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1709.5100000000004,
+              "profitUnits": -182.48999999999955,
+              "roi": -0.09645348837209279
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.00790179952869488,
+            "intervals": {
+              "candidate": {
+                "lower": -0.1347179964985521,
+                "upper": -0.05767094779935708
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.02799570554505965,
+                "upper": 0.0132650345825698
+              }
+            },
+            "improvementProbability": 0.225
           }
         },
         {
@@ -596,16 +1714,64 @@
           "floor": 0.2,
           "power": 2,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5053443140003504,
-            "logLoss": 1.2420973005514166,
-            "brier": 0.6220926789398783
+            "evaluated": 7056,
+            "accuracy": 0.4769699546485261,
+            "logLoss": 2.083525896425862,
+            "brier": 0.6638572039251422
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5231660231660231,
-            "logLoss": 1.0596770892440657,
-            "brier": 0.6066510976347682
+            "evaluated": 1891,
+            "accuracy": 0.4928609201480698,
+            "logLoss": 1.4592047814152325,
+            "brier": 0.6334175685194214
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 932,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1710.9500000000007,
+              "profitUnits": -181.04999999999927,
+              "roi": -0.09569238900634211
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.0071407001629442,
+            "intervals": {
+              "candidate": {
+                "lower": -0.1378648083220497,
+                "upper": -0.05655458977562948
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.030662346797326732,
+                "upper": 0.014850358359763343
+              }
+            },
+            "improvementProbability": 0.263
           }
         },
         {
@@ -615,16 +1781,64 @@
           "floor": 0.2,
           "power": 3,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5065708778692833,
-            "logLoss": 1.2417663026693402,
-            "brier": 0.6219838218385226
+            "evaluated": 7056,
+            "accuracy": 0.478812358276644,
+            "logLoss": 2.0825460970840926,
+            "brier": 0.6633906503375173
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5238095238095238,
-            "logLoss": 1.0594143316485394,
-            "brier": 0.6066080267412108
+            "evaluated": 1891,
+            "accuracy": 0.49127445795875196,
+            "logLoss": 1.4582368664214904,
+            "brier": 0.633046528869513
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 929,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1702.0600000000006,
+              "profitUnits": -189.93999999999937,
+              "roi": -0.10039112050739925
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.011839431664001338,
+            "intervals": {
+              "candidate": {
+                "lower": -0.1424266325167051,
+                "upper": -0.058818426244042446
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.034034143769413015,
+                "upper": 0.011206454248834215
+              }
+            },
+            "improvementProbability": 0.151
           }
         },
         {
@@ -634,16 +1848,64 @@
           "floor": 0.35,
           "power": 1,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.507096548098826,
-            "logLoss": 1.2375037421803827,
-            "brier": 0.6196144966582531
+            "evaluated": 7056,
+            "accuracy": 0.48093820861678005,
+            "logLoss": 2.0753954463201207,
+            "brier": 0.6593632919248233
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5218790218790219,
-            "logLoss": 1.0585483100883764,
-            "brier": 0.6060495289303303
+            "evaluated": 1891,
+            "accuracy": 0.49603384452670546,
+            "logLoss": 1.456068315746189,
+            "brier": 0.6319372061880705
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 938,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1715.1700000000005,
+              "profitUnits": -176.82999999999947,
+              "roi": -0.09346194503171219
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.0049102561883142826,
+            "intervals": {
+              "candidate": {
+                "lower": -0.13404993823909914,
+                "upper": -0.05491808586676277
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.021757163659460715,
+                "upper": 0.011257421493263177
+              }
+            },
+            "improvementProbability": 0.266
           }
         },
         {
@@ -653,16 +1915,64 @@
           "floor": 0.35,
           "power": 2,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5079726651480638,
-            "logLoss": 1.237934394112371,
-            "brier": 0.6198613915145766
+            "evaluated": 7056,
+            "accuracy": 0.48079648526077096,
+            "logLoss": 2.0757374325535425,
+            "brier": 0.6595850050648964
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5238095238095238,
-            "logLoss": 1.0585031250111236,
-            "brier": 0.6060855214546274
+            "evaluated": 1891,
+            "accuracy": 0.4944473823373876,
+            "logLoss": 1.4557310102341185,
+            "brier": 0.6318225002021614
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 935,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1710.7300000000005,
+              "profitUnits": -181.26999999999953,
+              "roi": -0.09580866807610969
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.007256979232711777,
+            "intervals": {
+              "candidate": {
+                "lower": -0.135413405605499,
+                "upper": -0.0582925248590457
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.024903275804075833,
+                "upper": 0.010282169387712545
+              }
+            },
+            "improvementProbability": 0.2
           }
         },
         {
@@ -672,16 +1982,64 @@
           "floor": 0.35,
           "power": 3,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5091992290169967,
-            "logLoss": 1.2376452655001304,
-            "brier": 0.619709260987758
+            "evaluated": 7056,
+            "accuracy": 0.48107993197278914,
+            "logLoss": 2.0748665123211785,
+            "brier": 0.6590959663030846
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5231660231660231,
-            "logLoss": 1.0583938882906747,
-            "brier": 0.6060750095652234
+            "evaluated": 1891,
+            "accuracy": 0.4949762030671602,
+            "logLoss": 1.4550242043009323,
+            "brier": 0.6315140717846278
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 936,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1713.8800000000006,
+              "profitUnits": -178.11999999999944,
+              "roi": -0.09414376321353035
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.005592074370132441,
+            "intervals": {
+              "candidate": {
+                "lower": -0.13281557377049244,
+                "upper": -0.05663934426229491
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.022224131069916598,
+                "upper": 0.01181778612652476
+              }
+            },
+            "improvementProbability": 0.25
           }
         },
         {
@@ -691,16 +2049,64 @@
           "floor": 0.5,
           "power": 1,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5091992290169967,
-            "logLoss": 1.236262669494118,
-            "brier": 0.6189451873216538
+            "evaluated": 7056,
+            "accuracy": 0.48093820861678005,
+            "logLoss": 2.0727807997639127,
+            "brier": 0.6579453797626902
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5212355212355212,
-            "logLoss": 1.0582685234862979,
-            "brier": 0.6059334198835078
+            "evaluated": 1891,
+            "accuracy": 0.49814912744579587,
+            "logLoss": 1.4548767082425684,
+            "brier": 0.6314637028811237
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 942,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1723.3100000000006,
+              "profitUnits": -168.68999999999937,
+              "roi": -0.0891596194503168
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.0006079306069188828,
+            "intervals": {
+              "candidate": {
+                "lower": -0.12837273252739476,
+                "upper": -0.05235697308848918
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.014259087296068366,
+                "upper": 0.01273961167346853
+              }
+            },
+            "improvementProbability": 0.445
           }
         },
         {
@@ -710,16 +2116,64 @@
           "floor": 0.5,
           "power": 2,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5083231119677589,
-            "logLoss": 1.236395306581952,
-            "brier": 0.6190171486575501
+            "evaluated": 7056,
+            "accuracy": 0.4824971655328798,
+            "logLoss": 2.0726736982944183,
+            "brier": 0.6578873120221224
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5218790218790219,
-            "logLoss": 1.0582474350749205,
-            "brier": 0.6059672229364326
+            "evaluated": 1891,
+            "accuracy": 0.49603384452670546,
+            "logLoss": 1.4544971535142486,
+            "brier": 0.6313038832083525
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 938,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1715.2000000000007,
+              "profitUnits": -176.79999999999927,
+              "roi": -0.09344608879492562
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.0048943999515277115,
+            "intervals": {
+              "candidate": {
+                "lower": -0.1340411158117399,
+                "upper": -0.05648097251585621
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.0187914681464992,
+                "upper": 0.009056815946972404
+              }
+            },
+            "improvementProbability": 0.228
           }
         },
         {
@@ -729,16 +2183,64 @@
           "floor": 0.5,
           "power": 3,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.508673558787454,
-            "logLoss": 1.2362671298316121,
-            "brier": 0.6189401252584541
+            "evaluated": 7056,
+            "accuracy": 0.48278061224489793,
+            "logLoss": 2.0721830675761534,
+            "brier": 0.6576073481055482
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5205920205920206,
-            "logLoss": 1.0582321467987774,
-            "brier": 0.6059860361584882
+            "evaluated": 1891,
+            "accuracy": 0.49603384452670546,
+            "logLoss": 1.4540987734383,
+            "brier": 0.6311334195213785
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 938,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1716.7100000000007,
+              "profitUnits": -175.28999999999928,
+              "roi": -0.09264799154334
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.0040963026999420865,
+            "intervals": {
+              "candidate": {
+                "lower": -0.1335458058482033,
+                "upper": -0.055112057716478174
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.018946049892199727,
+                "upper": 0.009531884996554276
+              }
+            },
+            "improvementProbability": 0.272
           }
         },
         {
@@ -748,16 +2250,64 @@
           "floor": 0.65,
           "power": 1,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5091992290169967,
-            "logLoss": 1.2356515920970077,
-            "brier": 0.6186087291961226
+            "evaluated": 7056,
+            "accuracy": 0.4824971655328798,
+            "logLoss": 2.0714079337518525,
+            "brier": 0.6571996866365956
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5205920205920206,
-            "logLoss": 1.0582262589181335,
-            "brier": 0.6059344187827488
+            "evaluated": 1891,
+            "accuracy": 0.49814912744579587,
+            "logLoss": 1.4542783221573796,
+            "brier": 0.6312528735620324
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 942,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1722.4000000000005,
+              "profitUnits": -169.59999999999945,
+              "roi": -0.08964059196617308
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.0010889031227751672,
+            "intervals": {
+              "candidate": {
+                "lower": -0.12903688524590237,
+                "upper": -0.052004908222211176
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.013376041406603393,
+                "upper": 0.01127723795344441
+              }
+            },
+            "improvementProbability": 0.425
           }
         },
         {
@@ -767,16 +2317,64 @@
           "floor": 0.65,
           "power": 2,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5090240056071491,
-            "logLoss": 1.2357165895751083,
-            "brier": 0.6186401363618239
+            "evaluated": 7056,
+            "accuracy": 0.4824971655328798,
+            "logLoss": 2.0712803262416255,
+            "brier": 0.6571270418827878
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.51994851994852,
-            "logLoss": 1.0582373165480299,
-            "brier": 0.6059701658999865
+            "evaluated": 1891,
+            "accuracy": 0.49762030671602325,
+            "logLoss": 1.4540206078487372,
+            "brier": 0.6311428989806497
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 941,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1720.3600000000006,
+              "profitUnits": -171.63999999999942,
+              "roi": -0.09071881606765297
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.0021671272242550638,
+            "intervals": {
+              "candidate": {
+                "lower": -0.1308011514568282,
+                "upper": -0.05357129529065959
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.014495369817679996,
+                "upper": 0.00974034698423567
+              }
+            },
+            "improvementProbability": 0.359
           }
         },
         {
@@ -786,16 +2384,64 @@
           "floor": 0.65,
           "power": 3,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5093744524268442,
-            "logLoss": 1.2356760209028999,
-            "brier": 0.6186103535130523
+            "evaluated": 7056,
+            "accuracy": 0.48320578231292516,
+            "logLoss": 2.071045219694823,
+            "brier": 0.6569938566335797
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.5193050193050193,
-            "logLoss": 1.0582543056116094,
-            "brier": 0.6059943368039659
+            "evaluated": 1891,
+            "accuracy": 0.49603384452670546,
+            "logLoss": 1.4538203007906778,
+            "brier": 0.6310621336056987
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 938,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1713.6000000000006,
+              "profitUnits": -178.3999999999994,
+              "roi": -0.09429175475687072
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.005740065913472814,
+            "intervals": {
+              "candidate": {
+                "lower": -0.13439013749338904,
+                "upper": -0.056041890814859836
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.01854709149374459,
+                "upper": 0.006629647064052519
+              }
+            },
+            "improvementProbability": 0.182
           }
         },
         {
@@ -805,16 +2451,64 @@
           "floor": 0.8,
           "power": 1,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5095496758366918,
-            "logLoss": 1.2353533628281512,
-            "brier": 0.618440269716788
+            "evaluated": 7056,
+            "accuracy": 0.4830640589569161,
+            "logLoss": 2.070682022046508,
+            "brier": 0.6568127111330134
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.51994851994852,
-            "logLoss": 1.0582835543793452,
-            "brier": 0.6059836655533934
+            "evaluated": 1891,
+            "accuracy": 0.49762030671602325,
+            "logLoss": 1.4539853862931669,
+            "brier": 0.6311760759256728
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 941,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1718.4900000000005,
+              "profitUnits": -173.50999999999954,
+              "roi": -0.09170718816067629
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.0031554993172783763,
+            "intervals": {
+              "candidate": {
+                "lower": -0.13058615587556732,
+                "upper": -0.05444695699299513
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.014664481163424059,
+                "upper": 0.008008537332856175
+              }
+            },
+            "improvementProbability": 0.294
           }
         },
         {
@@ -824,16 +2518,64 @@
           "floor": 0.8,
           "power": 2,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5093744524268442,
-            "logLoss": 1.2353919388088639,
-            "brier": 0.618457794778922
+            "evaluated": 7056,
+            "accuracy": 0.4837726757369615,
+            "logLoss": 2.0706153897712567,
+            "brier": 0.6567756320386678
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.51994851994852,
-            "logLoss": 1.0583029661174725,
-            "brier": 0.6060100247474705
+            "evaluated": 1891,
+            "accuracy": 0.49709148598625064,
+            "logLoss": 1.4538561947903417,
+            "brier": 0.6311221377218637
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 940,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1716.4500000000005,
+              "profitUnits": -175.5499999999995,
+              "roi": -0.09278541226215618
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.004233723418758273,
+            "intervals": {
+              "candidate": {
+                "lower": -0.13317772154809068,
+                "upper": -0.05553739429175451
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.015586341868980046,
+                "upper": 0.006983873054184288
+              }
+            },
+            "improvementProbability": 0.222
           }
         },
         {
@@ -843,16 +2585,64 @@
           "floor": 0.8,
           "power": 3,
           "tuning": {
-            "evaluated": 5707,
-            "accuracy": 0.5097248992465393,
-            "logLoss": 1.235387177751858,
-            "brier": 0.6184502883742624
+            "evaluated": 7056,
+            "accuracy": 0.4839143990929705,
+            "logLoss": 2.070526594942707,
+            "brier": 0.6567262972531006
           },
           "validation": {
-            "evaluated": 1554,
-            "accuracy": 0.51994851994852,
-            "logLoss": 1.0583214993409573,
-            "brier": 0.6060271491814931
+            "evaluated": 1891,
+            "accuracy": 0.49603384452670546,
+            "logLoss": 1.453773754226937,
+            "brier": 0.6310918302732376
+          },
+          "strategy": {
+            "status": "uncertain",
+            "reason": "候选相对基线的ROI提升区间包含0",
+            "passed": false,
+            "positiveEdge": false,
+            "evaluated": 1891,
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "candidate": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1891,
+              "noPredictionMatches": 0,
+              "wins": 938,
+              "multiSelectionMatches": 1,
+              "stakeUnits": 1892,
+              "returnUnits": 1712.1200000000006,
+              "profitUnits": -179.87999999999943,
+              "roi": -0.09507399577166989
+            },
+            "baseline": {
+              "evaluatedMatches": 1891,
+              "bettingMatches": 1884,
+              "noPredictionMatches": 7,
+              "wins": 965,
+              "multiSelectionMatches": 70,
+              "stakeUnits": 1954,
+              "returnUnits": 1780.9700000000005,
+              "profitUnits": -173.02999999999952,
+              "roi": -0.08855168884339791
+            },
+            "roiDelta": -0.006522306928271979,
+            "intervals": {
+              "candidate": {
+                "lower": -0.13516909042834419,
+                "upper": -0.05769991297078519
+              },
+              "baseline": {
+                "lower": -0.1256611655318381,
+                "upper": -0.052095678977620526
+              },
+              "delta": {
+                "lower": -0.018689059912606224,
+                "upper": 0.004994143332388949
+              }
+            },
+            "improvementProbability": 0.134
           }
         }
       ],
@@ -872,433 +2662,39 @@
       "sources": [
         {
           "sourceFile": "initspfpl.xlsx",
-          "rows": 41,
-          "warmup": 41,
+          "rows": 88,
+          "warmup": 88,
           "tuningCases": 0,
           "validationCases": 0
         },
         {
           "sourceFile": "lsspfpl.xlsx",
-          "rows": 7794,
+          "rows": 9513,
           "warmup": 500,
-          "tuningCases": 5707,
-          "validationCases": 1554
+          "tuningCases": 7056,
+          "validationCases": 1891
         }
       ]
     },
     "goals": {
       "threshold": 0.015,
-      "selected": {
-        "id": "uniform",
-        "uniform": true,
-        "enabled": false,
-        "floor": 1,
-        "power": 1,
-        "tuning": {
-          "evaluated": 5728,
-          "accuracy": 0.24231843575418993,
-          "logLoss": 1.8358556496038183,
-          "brier": 0.8193776816803133
-        },
-        "validation": {
-          "evaluated": 1556,
-          "accuracy": 0.2583547557840617,
-          "logLoss": 1.801947295127213,
-          "brier": 0.8141947891517209
-        }
-      },
-      "baseline": {
-        "id": "uniform",
-        "uniform": true,
-        "enabled": false,
-        "floor": 1,
-        "power": 1,
-        "tuning": {
-          "evaluated": 5728,
-          "accuracy": 0.24231843575418993,
-          "logLoss": 1.8358556496038183,
-          "brier": 0.8193776816803133
-        },
-        "validation": {
-          "evaluated": 1556,
-          "accuracy": 0.2583547557840617,
-          "logLoss": 1.801947295127213,
-          "brier": 0.8141947891517209
-        }
-      },
-      "candidates": [
-        {
-          "id": "floor-0.1-power-1",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.1,
-          "power": 1,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.23935055865921787,
-            "logLoss": 1.8370632856000588,
-            "brier": 0.819913449708334
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2615681233933162,
-            "logLoss": 1.8030915335414852,
-            "brier": 0.8145918580135302
-          }
-        },
-        {
-          "id": "floor-0.1-power-2",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.1,
-          "power": 2,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.23935055865921787,
-            "logLoss": 1.837910461059927,
-            "brier": 0.8201549428439111
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.262853470437018,
-            "logLoss": 1.8034507095728365,
-            "brier": 0.8148105126930997
-          }
-        },
-        {
-          "id": "floor-0.1-power-3",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.1,
-          "power": 3,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.2409217877094972,
-            "logLoss": 1.8380414506402676,
-            "brier": 0.820153918762266
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.262853470437018,
-            "logLoss": 1.8031136898495257,
-            "brier": 0.8147712063525664
-          }
-        },
-        {
-          "id": "floor-0.2-power-1",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.2,
-          "power": 1,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.23935055865921787,
-            "logLoss": 1.8364853651292226,
-            "brier": 0.8197030525195571
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2596401028277635,
-            "logLoss": 1.8026511908806322,
-            "brier": 0.8144545120641432
-          }
-        },
-        {
-          "id": "floor-0.2-power-2",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.2,
-          "power": 2,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.23935055865921787,
-            "logLoss": 1.8367148425129067,
-            "brier": 0.8197507438264416
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2577120822622108,
-            "logLoss": 1.8026415414467933,
-            "brier": 0.8145242339914286
-          }
-        },
-        {
-          "id": "floor-0.2-power-3",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.2,
-          "power": 3,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.23830307262569833,
-            "logLoss": 1.8366500711550942,
-            "brier": 0.8196977515517847
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2596401028277635,
-            "logLoss": 1.8023896136460236,
-            "brier": 0.8144689243452299
-          }
-        },
-        {
-          "id": "floor-0.35-power-1",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.35,
-          "power": 1,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.24039804469273743,
-            "logLoss": 1.8360785079076383,
-            "brier": 0.8195379334048873
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2577120822622108,
-            "logLoss": 1.8023131838302004,
-            "brier": 0.8143426416849314
-          }
-        },
-        {
-          "id": "floor-0.35-power-2",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.35,
-          "power": 2,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.24057262569832402,
-            "logLoss": 1.8361196249652685,
-            "brier": 0.8195285677925668
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2589974293059126,
-            "logLoss": 1.802231979095255,
-            "brier": 0.814357546733761
-          }
-        },
-        {
-          "id": "floor-0.35-power-3",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.35,
-          "power": 3,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.2410963687150838,
-            "logLoss": 1.8360952871483467,
-            "brier": 0.8194977103914146
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2577120822622108,
-            "logLoss": 1.8021036175299434,
-            "brier": 0.8143215440082437
-          }
-        },
-        {
-          "id": "floor-0.5-power-1",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.5,
-          "power": 1,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.24022346368715083,
-            "logLoss": 1.835909782358721,
-            "brier": 0.8194559339560716
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2544987146529563,
-            "logLoss": 1.8021417174107561,
-            "brier": 0.8142806849705382
-          }
-        },
-        {
-          "id": "floor-0.5-power-2",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.5,
-          "power": 2,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.2409217877094972,
-            "logLoss": 1.8359284807245868,
-            "brier": 0.8194442920749548
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2544987146529563,
-            "logLoss": 1.8020789599177676,
-            "brier": 0.8142831526574504
-          }
-        },
-        {
-          "id": "floor-0.5-power-3",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.5,
-          "power": 3,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.24231843575418993,
-            "logLoss": 1.8359354190430062,
-            "brier": 0.8194306734958547
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.25578406169665807,
-            "logLoss": 1.8020138843573938,
-            "brier": 0.8142619025199219
-          }
-        },
-        {
-          "id": "floor-0.65-power-1",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.65,
-          "power": 1,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.24162011173184358,
-            "logLoss": 1.8358464469752256,
-            "brier": 0.8194131573398367
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.256426735218509,
-            "logLoss": 1.802046121505844,
-            "brier": 0.814242456313895
-          }
-        },
-        {
-          "id": "floor-0.65-power-2",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.65,
-          "power": 2,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.24196927374301677,
-            "logLoss": 1.8358642463933421,
-            "brier": 0.8194066884432338
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.256426735218509,
-            "logLoss": 1.8020085242986807,
-            "brier": 0.8142421483614236
-          }
-        },
-        {
-          "id": "floor-0.65-power-3",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.65,
-          "power": 3,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.2430167597765363,
-            "logLoss": 1.8358798166211094,
-            "brier": 0.819401695093358
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2570694087403599,
-            "logLoss": 1.8019766717970997,
-            "brier": 0.8142303811990317
-          }
-        },
-        {
-          "id": "floor-0.8-power-1",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.8,
-          "power": 1,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.24231843575418993,
-            "logLoss": 1.8358341921066839,
-            "brier": 0.819390794925411
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2583547557840617,
-            "logLoss": 1.8019897812485581,
-            "brier": 0.8142171376134887
-          }
-        },
-        {
-          "id": "floor-0.8-power-2",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.8,
-          "power": 2,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.24214385474860337,
-            "logLoss": 1.8358481644786273,
-            "brier": 0.8193885135509957
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2583547557840617,
-            "logLoss": 1.8019721075024395,
-            "brier": 0.8142166017635314
-          }
-        },
-        {
-          "id": "floor-0.8-power-3",
-          "uniform": false,
-          "enabled": true,
-          "floor": 0.8,
-          "power": 3,
-          "tuning": {
-            "evaluated": 5728,
-            "accuracy": 0.24179469273743018,
-            "logLoss": 1.8358604487204715,
-            "brier": 0.8193872740883296
-          },
-          "validation": {
-            "evaluated": 1556,
-            "accuracy": 0.2583547557840617,
-            "logLoss": 1.8019587687877185,
-            "brier": 0.8142111097772003
-          }
-        }
-      ],
+      "selected": null,
+      "baseline": null,
+      "candidates": [],
+      "productionManaged": true,
+      "matchingVersion": "goal-zero-composite-v1",
       "production": {
         "enabled": false,
-        "floor": 1,
-        "power": 1,
-        "coreRatio": 0.5
+        "managedBy": "goal-zero-composite-v1"
       },
       "gate": {
         "passed": false,
         "tuningPassed": false,
         "validationPassed": false,
         "significancePassed": false,
-        "reason": "较早调参段没有权重方案同时改善 Log Loss、Brier 且保持命中率"
+        "reason": "总进球生产模型已经固定按综合距离指数衰减；旧floor/power距离权重不再适用，也不会覆盖生产权重"
       },
-      "sources": [
-        {
-          "sourceFile": "lottery_goals_data_df1cda93.xlsx",
-          "rows": 47,
-          "warmup": 47,
-          "tuningCases": 0,
-          "validationCases": 0
-        },
-        {
-          "sourceFile": "历史进球数.xlsx",
-          "rows": 7788,
-          "warmup": 500,
-          "tuningCases": 5728,
-          "validationCases": 1556
-        }
-      ]
+      "sources": []
     }
   }
 }

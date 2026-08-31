@@ -1,0 +1,734 @@
+{
+  "version": 1,
+  "generatedAt": "2026-08-07T10:37:56.361Z",
+  "data": {
+    "database": "betwin.db",
+    "sourceUpdatedAt": "2026-08-07T05:49:57+00:00",
+    "spfHistory": 8923,
+    "hhadHistory": 9318,
+    "pairedHistory": 8923,
+    "events": 9318
+  },
+  "methodology": {
+    "matchingVersion": "spf-hhad-joint-v1",
+    "ordering": "按 source_file 分组、source_row 递增；每个目标只读取更早行",
+    "warmup": 500,
+    "validationFraction": 0.2,
+    "current": "生产匹配器：SPF 10% / HHAD 10% 联合优先，联合零样本时独立回退，样本等权",
+    "currentSmoothed": "生产匹配池保持不变，套用与V35相同的动态贝叶斯平滑；用于剥离V35优势中仅由平滑产生的部分",
+    "v35Original": "V35 独立市场、同盘口、联赛/联赛档、胜负赔15%预筛、概率结构+胜负走势距离、Top20、时间衰减、动态贝叶斯平滑；保留原代码目标RTP修正/历史普通去水的不对称口径",
+    "v35Symmetric": "与 V35 原版相同，但当前和历史赔率统一使用对应市场的RTP修正，用于诊断转换不对称的影响",
+    "comparison": "覆盖率按各自全部目标计算；差值仅在双方均有预测的共同样本上计算；最新20%另做连续20场区块Bootstrap",
+    "calibration": "10档最高预测概率 ECE"
+  },
+  "thresholds": {
+    "spf": 0.1,
+    "hhad": 0.1
+  },
+  "v35Parameters": {
+    "minimumSamples": 16,
+    "topN": 20,
+    "probabilityScale": 0.1,
+    "trendScale": 0.03,
+    "trendWeight": 2,
+    "timeTau": 600
+  },
+  "sources": [
+    {
+      "sourceFile": "initspfpl.xlsx",
+      "rows": 86,
+      "warmup": 86,
+      "validationStart": 501
+    },
+    {
+      "sourceFile": "lsspfpl.xlsx",
+      "rows": 9232,
+      "warmup": 500,
+      "validationStart": 7385
+    }
+  ],
+  "periods": {
+    "tuning": {
+      "spf": {
+        "methods": {
+          "current": {
+            "targets": 6607,
+            "evaluated": 6600,
+            "coverage": 0.9989405176328137,
+            "accuracy": 0.513459595959596,
+            "logLoss": 1.3630745273359128,
+            "brier": 0.6090320001073835,
+            "calibrationError": 0.033996098000659586,
+            "medianSamples": 78,
+            "medianEffectiveSamples": 78
+          },
+          "currentSmoothed": {
+            "targets": 6607,
+            "evaluated": 6600,
+            "coverage": 0.9989405176328137,
+            "accuracy": 0.515,
+            "logLoss": 1.0133237737268717,
+            "brier": 0.6036136258461227,
+            "calibrationError": 0.01735381606219667,
+            "medianSamples": 78,
+            "medianEffectiveSamples": 78
+          },
+          "v35Original": {
+            "targets": 6607,
+            "evaluated": 2907,
+            "coverage": 0.4399878916300893,
+            "accuracy": 0.4430684554523564,
+            "logLoss": 1.0708369649588623,
+            "brier": 0.64634997399083,
+            "calibrationError": 0.018554586913101134,
+            "medianSamples": 20,
+            "medianEffectiveSamples": 4.637678025314104
+          },
+          "v35Symmetric": {
+            "targets": 6607,
+            "evaluated": 2907,
+            "coverage": 0.4399878916300893,
+            "accuracy": 0.4399724802201582,
+            "logLoss": 1.0710209886051194,
+            "brier": 0.6465504972996534,
+            "calibrationError": 0.019268634952578367,
+            "medianSamples": 20,
+            "medianEffectiveSamples": 4.636062023335516
+          }
+        },
+        "comparisons": {
+          "currentSmoothedVsCurrent": {
+            "evaluated": 6600,
+            "delta": {
+              "accuracy": 0.0015404040404040408,
+              "logLoss": -0.3497507536090393,
+              "brier": -0.005418374261264917
+            },
+            "significance": null
+          },
+          "v35OriginalVsCurrent": {
+            "evaluated": 2906,
+            "delta": {
+              "accuracy": -0.05092911218169305,
+              "logLoss": -0.00475703618785947,
+              "brier": 0.021223757671380374
+            },
+            "significance": null
+          },
+          "v35SymmetricVsCurrent": {
+            "evaluated": 2906,
+            "delta": {
+              "accuracy": -0.054026152787336544,
+              "logLoss": -0.004572608280655393,
+              "brier": 0.02142458727645337
+            },
+            "significance": null
+          },
+          "v35OriginalVsCurrentSmoothed": {
+            "evaluated": 2906,
+            "delta": {
+              "accuracy": -0.049896765313145214,
+              "logLoss": 0.03064446099777912,
+              "brier": 0.022235406332592203
+            },
+            "significance": null
+          },
+          "v35SymmetricVsCurrentSmoothed": {
+            "evaluated": 2906,
+            "delta": {
+              "accuracy": -0.05299380591878871,
+              "logLoss": 0.030828888904983174,
+              "brier": 0.02243623593766525
+            },
+            "significance": null
+          }
+        },
+        "currentModes": {
+          "joint": 6569,
+          "standalone-fallback": 31
+        }
+      },
+      "hhad": {
+        "methods": {
+          "current": {
+            "targets": 6885,
+            "evaluated": 6850,
+            "coverage": 0.9949164851125636,
+            "accuracy": 0.494793187347932,
+            "logLoss": 1.452402193319366,
+            "brier": 0.6328784127794009,
+            "calibrationError": 0.03644186106518092,
+            "medianSamples": 75,
+            "medianEffectiveSamples": 75
+          },
+          "currentSmoothed": {
+            "targets": 6885,
+            "evaluated": 6850,
+            "coverage": 0.9949164851125636,
+            "accuracy": 0.5012408759124087,
+            "logLoss": 1.0339958457314082,
+            "brier": 0.6183056936775949,
+            "calibrationError": 0.01852439995993491,
+            "medianSamples": 75,
+            "medianEffectiveSamples": 75
+          },
+          "v35Original": {
+            "targets": 6885,
+            "evaluated": 2953,
+            "coverage": 0.4289034132171387,
+            "accuracy": 0.5096512021672875,
+            "logLoss": 1.025607785495526,
+            "brier": 0.6146252560435507,
+            "calibrationError": 0.0315303815772205,
+            "medianSamples": 20,
+            "medianEffectiveSamples": 4.567454520503039
+          },
+          "v35Symmetric": {
+            "targets": 6885,
+            "evaluated": 2953,
+            "coverage": 0.4289034132171387,
+            "accuracy": 0.5082966474771419,
+            "logLoss": 1.0254607111049965,
+            "brier": 0.6145836918319175,
+            "calibrationError": 0.029146151468097247,
+            "medianSamples": 20,
+            "medianEffectiveSamples": 4.567454520503039
+          }
+        },
+        "comparisons": {
+          "currentSmoothedVsCurrent": {
+            "evaluated": 6850,
+            "delta": {
+              "accuracy": 0.006447688564476883,
+              "logLoss": -0.4184063475879564,
+              "brier": -0.014572719101811179
+            },
+            "significance": null
+          },
+          "v35OriginalVsCurrent": {
+            "evaluated": 2953,
+            "delta": {
+              "accuracy": 0.0024833502652669604,
+              "logLoss": -0.04125101985658884,
+              "brier": -0.00001031567672811166
+            },
+            "significance": null
+          },
+          "v35SymmetricVsCurrent": {
+            "evaluated": 2953,
+            "delta": {
+              "accuracy": 0.0011287955751213457,
+              "logLoss": -0.04139809424711928,
+              "brier": -0.000051879888361596026
+            },
+            "significance": null
+          },
+          "v35OriginalVsCurrentSmoothed": {
+            "evaluated": 2953,
+            "delta": {
+              "accuracy": 0.0016931933626820183,
+              "logLoss": 0.002184526794320588,
+              "brier": 0.0011251701398240727
+            },
+            "significance": null
+          },
+          "v35SymmetricVsCurrentSmoothed": {
+            "evaluated": 2953,
+            "delta": {
+              "accuracy": 0.0003386386725364037,
+              "logLoss": 0.0020374524037900903,
+              "brier": 0.001083605928190588
+            },
+            "significance": null
+          }
+        },
+        "currentModes": {
+          "standalone": 255,
+          "joint": 6569,
+          "standalone-fallback": 26
+        }
+      }
+    },
+    "validation": {
+      "spf": {
+        "methods": {
+          "current": {
+            "targets": 1757,
+            "evaluated": 1754,
+            "coverage": 0.9982925441092771,
+            "accuracy": 0.5047510452299506,
+            "logLoss": 1.0837457323859208,
+            "brier": 0.6051108552224218,
+            "calibrationError": 0.02463304816492309,
+            "medianSamples": 190,
+            "medianEffectiveSamples": 190
+          },
+          "currentSmoothed": {
+            "targets": 1757,
+            "evaluated": 1754,
+            "coverage": 0.9982925441092771,
+            "accuracy": 0.5051311288483467,
+            "logLoss": 1.0137195665618692,
+            "brier": 0.604051750212678,
+            "calibrationError": 0.021107093866390456,
+            "medianSamples": 190,
+            "medianEffectiveSamples": 190
+          },
+          "v35Original": {
+            "targets": 1757,
+            "evaluated": 1200,
+            "coverage": 0.6829823562891292,
+            "accuracy": 0.425,
+            "logLoss": 1.0800796384279565,
+            "brier": 0.6531704057882699,
+            "calibrationError": 0.01049385385496319,
+            "medianSamples": 20,
+            "medianEffectiveSamples": 3.3487671996067494
+          },
+          "v35Symmetric": {
+            "targets": 1757,
+            "evaluated": 1200,
+            "coverage": 0.6829823562891292,
+            "accuracy": 0.4241666666666667,
+            "logLoss": 1.0798268273018734,
+            "brier": 0.6529778527396481,
+            "calibrationError": 0.011922694385426985,
+            "medianSamples": 20,
+            "medianEffectiveSamples": 3.344904589530973
+          }
+        },
+        "comparisons": {
+          "currentSmoothedVsCurrent": {
+            "evaluated": 1754,
+            "delta": {
+              "accuracy": 0.0003800836183960472,
+              "logLoss": -0.07002616582405075,
+              "brier": -0.0010591050097439863
+            },
+            "significance": {
+              "passed": false,
+              "status": "uncertain",
+              "reason": "指标均值虽可能改善，但95%区间仍包含无改善或命中率下降的情况",
+              "iterations": 1000,
+              "blockSize": 20,
+              "confidence": 0.95,
+              "evaluated": 1754,
+              "metrics": {
+                "accuracy": {
+                  "delta": 0.0003800836183960472,
+                  "lower": -0.0019954389965792475,
+                  "upper": 0.0029456480425693655,
+                  "improvementProbability": 0.64
+                },
+                "logLoss": {
+                  "delta": -0.07002616582405075,
+                  "lower": -0.141424172073006,
+                  "upper": -0.01235179911613968,
+                  "improvementProbability": 0.991
+                },
+                "brier": {
+                  "delta": -0.0010591050097439863,
+                  "lower": -0.004155078408907152,
+                  "upper": 0.0017378283108415871,
+                  "improvementProbability": 0.736
+                }
+              }
+            }
+          },
+          "v35OriginalVsCurrent": {
+            "evaluated": 1199,
+            "delta": {
+              "accuracy": -0.05296080066722268,
+              "logLoss": 0.01639709388461671,
+              "brier": 0.027277035905178694
+            },
+            "significance": {
+              "passed": false,
+              "status": "uncertain",
+              "reason": "指标均值虽可能改善，但95%区间仍包含无改善或命中率下降的情况",
+              "iterations": 1000,
+              "blockSize": 20,
+              "confidence": 0.95,
+              "evaluated": 1199,
+              "metrics": {
+                "accuracy": {
+                  "delta": -0.05296080066722268,
+                  "lower": -0.07924311926605504,
+                  "upper": -0.024593411175979994,
+                  "improvementProbability": 0
+                },
+                "logLoss": {
+                  "delta": 0.01639709388461671,
+                  "lower": -0.03673684196061928,
+                  "upper": 0.05557733099957894,
+                  "improvementProbability": 0.238
+                },
+                "brier": {
+                  "delta": 0.027277035905178694,
+                  "lower": 0.011435247924971803,
+                  "upper": 0.041622757998159225,
+                  "improvementProbability": 0
+                }
+              }
+            }
+          },
+          "v35SymmetricVsCurrent": {
+            "evaluated": 1199,
+            "delta": {
+              "accuracy": -0.05379482902418682,
+              "logLoss": 0.016143913417387138,
+              "brier": 0.02708420207585517
+            },
+            "significance": {
+              "passed": false,
+              "status": "uncertain",
+              "reason": "指标均值虽可能改善，但95%区间仍包含无改善或命中率下降的情况",
+              "iterations": 1000,
+              "blockSize": 20,
+              "confidence": 0.95,
+              "evaluated": 1199,
+              "metrics": {
+                "accuracy": {
+                  "delta": -0.05379482902418682,
+                  "lower": -0.08090075062552127,
+                  "upper": -0.025020850708924104,
+                  "improvementProbability": 0
+                },
+                "logLoss": {
+                  "delta": 0.016143913417387138,
+                  "lower": -0.03710619308570023,
+                  "upper": 0.0556689894216589,
+                  "improvementProbability": 0.24
+                },
+                "brier": {
+                  "delta": 0.02708420207585517,
+                  "lower": 0.01174511885640549,
+                  "upper": 0.04143215326521644,
+                  "improvementProbability": 0
+                }
+              }
+            }
+          },
+          "v35OriginalVsCurrentSmoothed": {
+            "evaluated": 1199,
+            "delta": {
+              "accuracy": -0.05337781484570475,
+              "logLoss": 0.03832793162078362,
+              "brier": 0.028106736283445243
+            },
+            "significance": {
+              "passed": false,
+              "status": "uncertain",
+              "reason": "指标均值虽可能改善，但95%区间仍包含无改善或命中率下降的情况",
+              "iterations": 1000,
+              "blockSize": 20,
+              "confidence": 0.95,
+              "evaluated": 1199,
+              "metrics": {
+                "accuracy": {
+                  "delta": -0.05337781484570475,
+                  "lower": -0.07925354462051708,
+                  "upper": -0.02585487906588824,
+                  "improvementProbability": 0
+                },
+                "logLoss": {
+                  "delta": 0.03832793162078362,
+                  "lower": 0.01577581456154886,
+                  "upper": 0.059490288646621585,
+                  "improvementProbability": 0
+                },
+                "brier": {
+                  "delta": 0.028106736283445243,
+                  "lower": 0.012804855338153228,
+                  "upper": 0.041886534302081335,
+                  "improvementProbability": 0
+                }
+              }
+            }
+          },
+          "v35SymmetricVsCurrentSmoothed": {
+            "evaluated": 1199,
+            "delta": {
+              "accuracy": -0.05421184320266889,
+              "logLoss": 0.03807475115355405,
+              "brier": 0.02791390245412169
+            },
+            "significance": {
+              "passed": false,
+              "status": "uncertain",
+              "reason": "指标均值虽可能改善，但95%区间仍包含无改善或命中率下降的情况",
+              "iterations": 1000,
+              "blockSize": 20,
+              "confidence": 0.95,
+              "evaluated": 1199,
+              "metrics": {
+                "accuracy": {
+                  "delta": -0.05421184320266889,
+                  "lower": -0.08090075062552127,
+                  "upper": -0.026688907422852376,
+                  "improvementProbability": 0
+                },
+                "logLoss": {
+                  "delta": 0.03807475115355405,
+                  "lower": 0.015723507530273635,
+                  "upper": 0.05959310060253238,
+                  "improvementProbability": 0
+                },
+                "brier": {
+                  "delta": 0.02791390245412169,
+                  "lower": 0.012789963472077632,
+                  "upper": 0.041967095521745476,
+                  "improvementProbability": 0
+                }
+              }
+            }
+          }
+        },
+        "currentModes": {
+          "joint": 1750,
+          "standalone-fallback": 4
+        }
+      },
+      "hhad": {
+        "methods": {
+          "current": {
+            "targets": 1847,
+            "evaluated": 1842,
+            "coverage": 0.9972929074174337,
+            "accuracy": 0.5093195801664858,
+            "logLoss": 1.1692679624247604,
+            "brier": 0.6124974813714242,
+            "calibrationError": 0.024849574574143392,
+            "medianSamples": 183,
+            "medianEffectiveSamples": 183
+          },
+          "currentSmoothed": {
+            "targets": 1847,
+            "evaluated": 1842,
+            "coverage": 0.9972929074174337,
+            "accuracy": 0.511943539630836,
+            "logLoss": 1.0148439163742469,
+            "brier": 0.6072245391346652,
+            "calibrationError": 0.01608216712021558,
+            "medianSamples": 183,
+            "medianEffectiveSamples": 183
+          },
+          "v35Original": {
+            "targets": 1847,
+            "evaluated": 1218,
+            "coverage": 0.6594477531131565,
+            "accuracy": 0.5246305418719212,
+            "logLoss": 1.0003002118851312,
+            "brier": 0.5971507468617014,
+            "calibrationError": 0.024589146893743766,
+            "medianSamples": 20,
+            "medianEffectiveSamples": 3.257531784928786
+          },
+          "v35Symmetric": {
+            "targets": 1847,
+            "evaluated": 1218,
+            "coverage": 0.6594477531131565,
+            "accuracy": 0.5246305418719212,
+            "logLoss": 1.0010119439716108,
+            "brier": 0.5975734275976347,
+            "calibrationError": 0.027192867776291183,
+            "medianSamples": 20,
+            "medianEffectiveSamples": 3.24788935832335
+          }
+        },
+        "comparisons": {
+          "currentSmoothedVsCurrent": {
+            "evaluated": 1842,
+            "delta": {
+              "accuracy": 0.0026239594643503437,
+              "logLoss": -0.15442404605051768,
+              "brier": -0.005272942236757458
+            },
+            "significance": {
+              "passed": false,
+              "status": "uncertain",
+              "reason": "指标均值虽可能改善，但95%区间仍包含无改善或命中率下降的情况",
+              "iterations": 1000,
+              "blockSize": 20,
+              "confidence": 0.95,
+              "evaluated": 1842,
+              "metrics": {
+                "accuracy": {
+                  "delta": 0.0026239594643503437,
+                  "lower": -0.0012667390517553383,
+                  "upper": 0.0066956207021353605,
+                  "improvementProbability": 0.901
+                },
+                "logLoss": {
+                  "delta": -0.15442404605051768,
+                  "lower": -0.264887338253784,
+                  "upper": -0.06833597463975202,
+                  "improvementProbability": 1
+                },
+                "brier": {
+                  "delta": -0.005272942236757458,
+                  "lower": -0.009709051813033274,
+                  "upper": -0.001726034781330367,
+                  "improvementProbability": 1
+                }
+              }
+            }
+          },
+          "v35OriginalVsCurrent": {
+            "evaluated": 1218,
+            "delta": {
+              "accuracy": -0.009852216748768473,
+              "logLoss": 0.005599527750772455,
+              "brier": 0.0024014490240601
+            },
+            "significance": {
+              "passed": false,
+              "status": "uncertain",
+              "reason": "指标均值虽可能改善，但95%区间仍包含无改善或命中率下降的情况",
+              "iterations": 1000,
+              "blockSize": 20,
+              "confidence": 0.95,
+              "evaluated": 1218,
+              "metrics": {
+                "accuracy": {
+                  "delta": -0.009852216748768473,
+                  "lower": -0.021767241379310336,
+                  "upper": 0.0028735632183908046,
+                  "improvementProbability": 0.061
+                },
+                "logLoss": {
+                  "delta": 0.005599527750772455,
+                  "lower": -0.0035182420771925154,
+                  "upper": 0.014792497269226473,
+                  "improvementProbability": 0.123
+                },
+                "brier": {
+                  "delta": 0.0024014490240601,
+                  "lower": -0.0033137211760890318,
+                  "upper": 0.008011420864140193,
+                  "improvementProbability": 0.204
+                }
+              }
+            }
+          },
+          "v35SymmetricVsCurrent": {
+            "evaluated": 1218,
+            "delta": {
+              "accuracy": -0.009852216748768473,
+              "logLoss": 0.006311259837253381,
+              "brier": 0.0028241297599932024
+            },
+            "significance": {
+              "passed": false,
+              "status": "uncertain",
+              "reason": "指标均值虽可能改善，但95%区间仍包含无改善或命中率下降的情况",
+              "iterations": 1000,
+              "blockSize": 20,
+              "confidence": 0.95,
+              "evaluated": 1218,
+              "metrics": {
+                "accuracy": {
+                  "delta": -0.009852216748768473,
+                  "lower": -0.022177750410509022,
+                  "upper": 0.0028735632183908046,
+                  "improvementProbability": 0.068
+                },
+                "logLoss": {
+                  "delta": 0.006311259837253381,
+                  "lower": -0.00286342184289366,
+                  "upper": 0.015649723129983268,
+                  "improvementProbability": 0.095
+                },
+                "brier": {
+                  "delta": 0.0028241297599932024,
+                  "lower": -0.003009116837035197,
+                  "upper": 0.008478872824161052,
+                  "improvementProbability": 0.174
+                }
+              }
+            }
+          },
+          "v35OriginalVsCurrentSmoothed": {
+            "evaluated": 1218,
+            "delta": {
+              "accuracy": -0.010673234811165846,
+              "logLoss": 0.005514181127791547,
+              "brier": 0.002416986225081983
+            },
+            "significance": {
+              "passed": false,
+              "status": "uncertain",
+              "reason": "指标均值虽可能改善，但95%区间仍包含无改善或命中率下降的情况",
+              "iterations": 1000,
+              "blockSize": 20,
+              "confidence": 0.95,
+              "evaluated": 1218,
+              "metrics": {
+                "accuracy": {
+                  "delta": -0.010673234811165846,
+                  "lower": -0.02218801313628898,
+                  "upper": 0.0016420361247947454,
+                  "improvementProbability": 0.056
+                },
+                "logLoss": {
+                  "delta": 0.005514181127791547,
+                  "lower": -0.0034982626753202657,
+                  "upper": 0.014512157441380126,
+                  "improvementProbability": 0.124
+                },
+                "brier": {
+                  "delta": 0.002416986225081983,
+                  "lower": -0.003221987342047289,
+                  "upper": 0.007906247080054139,
+                  "improvementProbability": 0.2
+                }
+              }
+            }
+          },
+          "v35SymmetricVsCurrentSmoothed": {
+            "evaluated": 1218,
+            "delta": {
+              "accuracy": -0.010673234811165846,
+              "logLoss": 0.0062259132142724665,
+              "brier": 0.002839666961015086
+            },
+            "significance": {
+              "passed": false,
+              "status": "uncertain",
+              "reason": "指标均值虽可能改善，但95%区间仍包含无改善或命中率下降的情况",
+              "iterations": 1000,
+              "blockSize": 20,
+              "confidence": 0.95,
+              "evaluated": 1218,
+              "metrics": {
+                "accuracy": {
+                  "delta": -0.010673234811165846,
+                  "lower": -0.022988505747126436,
+                  "upper": 0.0024630541871921183,
+                  "improvementProbability": 0.062
+                },
+                "logLoss": {
+                  "delta": 0.0062259132142724665,
+                  "lower": -0.002820557718985521,
+                  "upper": 0.015411698775425905,
+                  "improvementProbability": 0.097
+                },
+                "brier": {
+                  "delta": 0.002839666961015086,
+                  "lower": -0.002865010038512546,
+                  "upper": 0.008526069156071651,
+                  "improvementProbability": 0.168
+                }
+              }
+            }
+          }
+        },
+        "currentModes": {
+          "joint": 1750,
+          "standalone": 86,
+          "standalone-fallback": 6
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "runtimeEnabled": false,
+  "approvedAt": null,
+  "approvedArtifact": null,
+  "markets": {
+    "spf": {
+      "enabled": false,
+      "strength": 0
+    },
+    "hhad": {
+      "enabled": false,
+      "strength": 0
+    },
+    "goals": {
+      "enabled": false,
+      "strength": 0
+    }
+  }
+}

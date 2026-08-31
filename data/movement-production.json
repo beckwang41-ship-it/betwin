@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "runtimeEnabled": false,
+  "approvedAt": null,
+  "approvedArtifact": null,
+  "note": "走势修正（movement）生产批准文件。data/movement-config.json 只保存候选，不控制生产。启用需同时满足：概率门禁通过、投注ROI门禁 passed=true、候选数据水位与版本一致、本文件权重与候选权重逐位相同、runtimeEnabled 与对应玩法 enabled 均为 true。",
+  "markets": {
+    "spf": {
+      "enabled": false,
+      "weight": 0
+    },
+    "hhad": {
+      "enabled": false,
+      "weight": 0
+    },
+    "goals": {
+      "enabled": false,
+      "weight": 0
+    }
+  }
+}

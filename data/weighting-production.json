@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "runtimeEnabled": false,
+  "approvedAt": null,
+  "approvedArtifact": null,
+  "note": "距离权重（weighting）生产批准文件。data/weighting-config.json 只保存候选，不控制生产。启用需同时满足：概率门禁通过、投注ROI门禁 passed=true、候选内容与数据水位一致、本文件参数与候选参数逐位相同、runtimeEnabled 与对应玩法 enabled 均为 true。",
+  "markets": {
+    "spf": {
+      "enabled": false,
+      "floor": 1,
+      "power": 1,
+      "coreRatio": 0.5
+    },
+    "hhad": {
+      "enabled": false,
+      "floor": 1,
+      "power": 1,
+      "coreRatio": 0.5
+    },
+    "goals": {
+      "enabled": false,
+      "floor": 1,
+      "power": 1,
+      "coreRatio": 0.5
+    }
+  }
+}

@@ -1,15 +1,18 @@
 {
   "version": 2,
-  "generatedAt": "2026-07-30T07:04:26.901Z",
+  "generatedAt": "2026-08-28T05:21:06.130Z",
   "strategy": "top-two-historical-results",
   "data": {
-    "sourceUpdatedAt": "2026-07-30T06:37:10+00:00",
-    "evaluated": 7328,
+    "sourceUpdatedAt": "2026-08-28T05:00:08+00:00",
+    "goalHistory": 8816,
+    "goalMatchingVersion": "goal-zero-composite-v1",
+    "evaluated": 8255,
     "split": "较早60%选择 / 中间20%校准 / 最新20%测试",
     "discipline": "每场仅使用同来源中更早的历史行；规则只在较早60%选择"
   },
   "settings": {
-    "goalTolerance": 0.015,
+    "goalMatching": "0球赔率±2.00＋综合距离指数加权",
+    "goalMatchingVersion": "goal-zero-composite-v1",
     "warmup": 500,
     "minimumAccuracy": 0.52,
     "minimumLift": 0.02,
@@ -17,58 +20,58 @@
   },
   "baseline": {
     "training": {
-      "available": 4396,
-      "selected": 4396,
+      "available": 4953,
+      "selected": 4953,
       "coverage": 1,
-      "correct": 2047,
-      "accuracy": 0.4656505914467698,
-      "averagePairProbability": 0.47623697845439317
+      "correct": 2230,
+      "accuracy": 0.45023218251564706,
+      "averagePairProbability": 0.4622740289873378
     },
     "calibration": {
-      "available": 1466,
-      "selected": 1466,
+      "available": 1651,
+      "selected": 1651,
       "coverage": 1,
-      "correct": 686,
-      "accuracy": 0.4679399727148704,
-      "averagePairProbability": 0.4711262883265446
+      "correct": 751,
+      "accuracy": 0.45487583282858873,
+      "averagePairProbability": 0.4606183716741563
     },
     "test": {
-      "available": 1466,
-      "selected": 1466,
+      "available": 1651,
+      "selected": 1651,
       "coverage": 1,
-      "correct": 707,
-      "accuracy": 0.48226466575716237,
-      "averagePairProbability": 0.4694728800764948
+      "correct": 781,
+      "accuracy": 0.4730466384009691,
+      "averagePairProbability": 0.4581849979844585
     }
   },
   "selected": {
     "rule": {
-      "minPairProbability": 0.52,
-      "minSamples": 100
+      "minPairProbability": 0.49,
+      "minSamples": 500
     },
     "training": {
-      "available": 4396,
-      "selected": 211,
-      "coverage": 0.04799818016378526,
-      "correct": 108,
-      "accuracy": 0.5118483412322274,
-      "averagePairProbability": 0.5342018051980143
+      "available": 4953,
+      "selected": 497,
+      "coverage": 0.1003432263274783,
+      "correct": 245,
+      "accuracy": 0.49295774647887325,
+      "averagePairProbability": 0.5050582801401328
     },
     "calibration": {
-      "available": 1466,
-      "selected": 18,
-      "coverage": 0.01227830832196453,
-      "correct": 8,
-      "accuracy": 0.4444444444444444,
-      "averagePairProbability": 0.5466672099069382
+      "available": 1651,
+      "selected": 108,
+      "coverage": 0.06541490006056935,
+      "correct": 47,
+      "accuracy": 0.4351851851851852,
+      "averagePairProbability": 0.49582873940800026
     },
     "test": {
-      "available": 1466,
-      "selected": 1,
-      "coverage": 0.0006821282401091405,
-      "correct": 0,
-      "accuracy": 0,
-      "averagePairProbability": 0.5606060606060606
+      "available": 1651,
+      "selected": 21,
+      "coverage": 0.012719563900666263,
+      "correct": 13,
+      "accuracy": 0.6190476190476191,
+      "averagePairProbability": 0.49277019871047173
     }
   },
   "gate": {
@@ -80,602 +83,602 @@
   "candidates": [
     {
       "rule": {
-        "minPairProbability": 0.52,
-        "minSamples": 100
-      },
-      "training": {
-        "available": 4396,
-        "selected": 211,
-        "coverage": 0.04799818016378526,
-        "correct": 108,
-        "accuracy": 0.5118483412322274,
-        "averagePairProbability": 0.5342018051980143
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 18,
-        "coverage": 0.01227830832196453,
-        "correct": 8,
-        "accuracy": 0.4444444444444444,
-        "averagePairProbability": 0.5466672099069382
-      },
-      "test": {
-        "available": 1466,
-        "selected": 1,
-        "coverage": 0.0006821282401091405,
-        "correct": 0,
-        "accuracy": 0,
-        "averagePairProbability": 0.5606060606060606
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.51,
-        "minSamples": 100
-      },
-      "training": {
-        "available": 4396,
-        "selected": 331,
-        "coverage": 0.07529572338489536,
-        "correct": 169,
-        "accuracy": 0.5105740181268882,
-        "averagePairProbability": 0.526990594999862
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 42,
-        "coverage": 0.0286493860845839,
-        "correct": 14,
-        "accuracy": 0.3333333333333333,
-        "averagePairProbability": 0.5283061786147565
-      },
-      "test": {
-        "available": 1466,
-        "selected": 6,
-        "coverage": 0.004092769440654843,
-        "correct": 1,
-        "accuracy": 0.16666666666666666,
-        "averagePairProbability": 0.5209020938733483
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.51,
-        "minSamples": 200
-      },
-      "training": {
-        "available": 4396,
-        "selected": 238,
-        "coverage": 0.054140127388535034,
-        "correct": 121,
-        "accuracy": 0.5084033613445378,
-        "averagePairProbability": 0.5242594551251127
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 32,
-        "coverage": 0.021828103683492497,
-        "correct": 9,
-        "accuracy": 0.28125,
-        "averagePairProbability": 0.5171538623636871
-      },
-      "test": {
-        "available": 1466,
-        "selected": 3,
-        "coverage": 0.0020463847203274215,
-        "correct": 1,
-        "accuracy": 0.3333333333333333,
-        "averagePairProbability": 0.5123658714524971
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.51,
-        "minSamples": 50
-      },
-      "training": {
-        "available": 4396,
-        "selected": 372,
-        "coverage": 0.08462238398544131,
-        "correct": 188,
-        "accuracy": 0.5053763440860215,
-        "averagePairProbability": 0.5287612269465309
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 47,
-        "coverage": 0.032060027285129605,
-        "correct": 15,
-        "accuracy": 0.3191489361702128,
-        "averagePairProbability": 0.5285144359920672
-      },
-      "test": {
-        "available": 1466,
-        "selected": 8,
-        "coverage": 0.005457025920873124,
-        "correct": 1,
-        "accuracy": 0.125,
-        "averagePairProbability": 0.518651094481159
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.51,
-        "minSamples": 1
-      },
-      "training": {
-        "available": 4396,
-        "selected": 412,
-        "coverage": 0.09372156505914468,
-        "correct": 207,
-        "accuracy": 0.5024271844660194,
-        "averagePairProbability": 0.5378916764365217
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 55,
-        "coverage": 0.03751705320600273,
-        "correct": 20,
-        "accuracy": 0.36363636363636365,
-        "averagePairProbability": 0.5456706575917046
-      },
-      "test": {
-        "available": 1466,
-        "selected": 11,
-        "coverage": 0.007503410641200546,
-        "correct": 1,
-        "accuracy": 0.09090909090909091,
-        "averagePairProbability": 0.5261964082172038
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.52,
-        "minSamples": 50
-      },
-      "training": {
-        "available": 4396,
-        "selected": 241,
-        "coverage": 0.054822565969062785,
-        "correct": 120,
-        "accuracy": 0.4979253112033195,
-        "averagePairProbability": 0.536561161737406
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 21,
-        "coverage": 0.01432469304229195,
-        "correct": 9,
-        "accuracy": 0.42857142857142855,
-        "averagePairProbability": 0.545648736728388
-      },
-      "test": {
-        "available": 1466,
-        "selected": 1,
-        "coverage": 0.0006821282401091405,
-        "correct": 0,
-        "accuracy": 0,
-        "averagePairProbability": 0.5606060606060606
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.52,
-        "minSamples": 1
-      },
-      "training": {
-        "available": 4396,
-        "selected": 280,
-        "coverage": 0.06369426751592357,
-        "correct": 139,
-        "accuracy": 0.49642857142857144,
-        "averagePairProbability": 0.5489581526117884
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 29,
-        "coverage": 0.019781718963165076,
-        "correct": 14,
-        "accuracy": 0.4827586206896552,
-        "averagePairProbability": 0.5734596947314742
-      },
-      "test": {
-        "available": 1466,
-        "selected": 4,
-        "coverage": 0.002728512960436562,
-        "correct": 0,
-        "accuracy": 0,
-        "averagePairProbability": 0.5498894487865076
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.5,
-        "minSamples": 50
-      },
-      "training": {
-        "available": 4396,
-        "selected": 710,
-        "coverage": 0.16151046405823477,
-        "correct": 351,
-        "accuracy": 0.4943661971830986,
-        "averagePairProbability": 0.5171075293069273
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 86,
-        "coverage": 0.058663028649386086,
-        "correct": 31,
-        "accuracy": 0.36046511627906974,
-        "averagePairProbability": 0.5177495625853564
-      },
-      "test": {
-        "available": 1466,
-        "selected": 26,
-        "coverage": 0.017735334242837655,
-        "correct": 12,
-        "accuracy": 0.46153846153846156,
-        "averagePairProbability": 0.5077778467150202
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.5,
-        "minSamples": 1
-      },
-      "training": {
-        "available": 4396,
-        "selected": 753,
-        "coverage": 0.17129208371246588,
-        "correct": 372,
-        "accuracy": 0.4940239043824701,
-        "averagePairProbability": 0.52265410368613
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 94,
-        "coverage": 0.06412005457025921,
-        "correct": 36,
-        "accuracy": 0.3829787234042553,
-        "averagePairProbability": 0.5287039367899709
-      },
-      "test": {
-        "available": 1466,
-        "selected": 30,
-        "coverage": 0.020463847203274217,
-        "correct": 13,
-        "accuracy": 0.43333333333333335,
-        "averagePairProbability": 0.5113725249710165
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.5,
-        "minSamples": 100
-      },
-      "training": {
-        "available": 4396,
-        "selected": 662,
-        "coverage": 0.15059144676979072,
-        "correct": 327,
-        "accuracy": 0.49395770392749244,
-        "averagePairProbability": 0.51564321647896
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 81,
-        "coverage": 0.05525238744884038,
-        "correct": 30,
-        "accuracy": 0.37037037037037035,
-        "averagePairProbability": 0.5169770789201638
-      },
-      "test": {
-        "available": 1466,
-        "selected": 24,
-        "coverage": 0.01637107776261937,
-        "correct": 12,
-        "accuracy": 0.5,
-        "averagePairProbability": 0.5074344925825559
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.5,
-        "minSamples": 200
-      },
-      "training": {
-        "available": 4396,
-        "selected": 530,
-        "coverage": 0.1205641492265696,
-        "correct": 261,
-        "accuracy": 0.49245283018867925,
-        "averagePairProbability": 0.5131393927519743
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 71,
-        "coverage": 0.048431105047748974,
-        "correct": 25,
-        "accuracy": 0.352112676056338,
-        "averagePairProbability": 0.5103550350190351
-      },
-      "test": {
-        "available": 1466,
-        "selected": 21,
-        "coverage": 0.01432469304229195,
-        "correct": 12,
-        "accuracy": 0.5714285714285714,
-        "averagePairProbability": 0.5042910891951783
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.49,
-        "minSamples": 200
-      },
-      "training": {
-        "available": 4396,
-        "selected": 977,
-        "coverage": 0.22224749772520472,
-        "correct": 480,
-        "accuracy": 0.49129989764585463,
-        "averagePairProbability": 0.5044836248638591
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 134,
-        "coverage": 0.09140518417462483,
-        "correct": 48,
-        "accuracy": 0.3582089552238806,
-        "averagePairProbability": 0.5025541396211892
-      },
-      "test": {
-        "available": 1466,
-        "selected": 87,
-        "coverage": 0.059345156889495224,
-        "correct": 41,
-        "accuracy": 0.47126436781609193,
-        "averagePairProbability": 0.4958899890224094
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.49,
-        "minSamples": 100
-      },
-      "training": {
-        "available": 4396,
-        "selected": 1123,
-        "coverage": 0.255459508644222,
-        "correct": 551,
-        "accuracy": 0.4906500445235975,
-        "averagePairProbability": 0.5068444766998661
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 145,
-        "coverage": 0.09890859481582538,
-        "correct": 54,
-        "accuracy": 0.3724137931034483,
-        "averagePairProbability": 0.506738897312901
-      },
-      "test": {
-        "available": 1466,
-        "selected": 91,
-        "coverage": 0.06207366984993179,
-        "correct": 41,
-        "accuracy": 0.45054945054945056,
-        "averagePairProbability": 0.4969412426894648
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.49,
-        "minSamples": 50
-      },
-      "training": {
-        "available": 4396,
-        "selected": 1172,
-        "coverage": 0.26660600545950863,
-        "correct": 575,
-        "accuracy": 0.4906143344709898,
-        "averagePairProbability": 0.5080816801993359
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 151,
-        "coverage": 0.10300136425648022,
-        "correct": 55,
-        "accuracy": 0.36423841059602646,
-        "averagePairProbability": 0.5074252498236186
-      },
-      "test": {
-        "available": 1466,
-        "selected": 93,
-        "coverage": 0.06343792633015007,
-        "correct": 41,
-        "accuracy": 0.44086021505376344,
-        "averagePairProbability": 0.4972628954553815
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.49,
-        "minSamples": 1
-      },
-      "training": {
-        "available": 4396,
-        "selected": 1215,
-        "coverage": 0.27638762511373977,
-        "correct": 596,
-        "accuracy": 0.4905349794238683,
-        "averagePairProbability": 0.5118386201328059
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 159,
-        "coverage": 0.10845839017735334,
-        "correct": 60,
-        "accuracy": 0.37735849056603776,
-        "averagePairProbability": 0.5144208830143588
-      },
-      "test": {
-        "available": 1466,
-        "selected": 97,
-        "coverage": 0.06616643929058663,
-        "correct": 42,
-        "accuracy": 0.4329896907216495,
-        "averagePairProbability": 0.49880825785454075
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.48,
-        "minSamples": 200
-      },
-      "training": {
-        "available": 4396,
-        "selected": 1537,
-        "coverage": 0.34963603275705185,
-        "correct": 744,
-        "accuracy": 0.4840598568640208,
-        "averagePairProbability": 0.4973816952441196
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 394,
-        "coverage": 0.26875852660300137,
-        "correct": 169,
-        "accuracy": 0.4289340101522843,
-        "averagePairProbability": 0.48980309823918816
-      },
-      "test": {
-        "available": 1466,
-        "selected": 562,
-        "coverage": 0.38335607094133695,
-        "correct": 277,
-        "accuracy": 0.4928825622775801,
-        "averagePairProbability": 0.48642082133162295
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.48,
-        "minSamples": 50
-      },
-      "training": {
-        "available": 4396,
-        "selected": 1758,
-        "coverage": 0.39990900818926295,
-        "correct": 848,
-        "accuracy": 0.48236632536973834,
-        "averagePairProbability": 0.5003883854157601
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 412,
-        "coverage": 0.2810368349249659,
-        "correct": 176,
-        "accuracy": 0.42718446601941745,
-        "averagePairProbability": 0.49210646894867416
-      },
-      "test": {
-        "available": 1466,
-        "selected": 569,
-        "coverage": 0.38813096862210095,
-        "correct": 278,
-        "accuracy": 0.48857644991212656,
-        "averagePairProbability": 0.48674518155933094
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.48,
-        "minSamples": 1
-      },
-      "training": {
-        "available": 4396,
-        "selected": 1802,
-        "coverage": 0.4099181073703367,
-        "correct": 869,
-        "accuracy": 0.48224195338512765,
-        "averagePairProbability": 0.5030969423498103
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 420,
-        "coverage": 0.286493860845839,
-        "correct": 181,
-        "accuracy": 0.430952380952381,
-        "averagePairProbability": 0.49504660210183404
-      },
-      "test": {
-        "available": 1466,
-        "selected": 573,
-        "coverage": 0.3908594815825375,
-        "correct": 279,
-        "accuracy": 0.4869109947643979,
-        "averagePairProbability": 0.48708020949703196
-      }
-    },
-    {
-      "rule": {
-        "minPairProbability": 0.48,
-        "minSamples": 100
-      },
-      "training": {
-        "available": 4396,
-        "selected": 1707,
-        "coverage": 0.3883075523202912,
-        "correct": 823,
-        "accuracy": 0.48213239601640306,
-        "averagePairProbability": 0.4993730848515441
-      },
-      "calibration": {
-        "available": 1466,
-        "selected": 406,
-        "coverage": 0.27694406548431105,
-        "correct": 175,
-        "accuracy": 0.43103448275862066,
-        "averagePairProbability": 0.4916349571277291
-      },
-      "test": {
-        "available": 1466,
-        "selected": 567,
-        "coverage": 0.3867667121418827,
-        "correct": 278,
-        "accuracy": 0.49029982363315694,
-        "averagePairProbability": 0.4866564587559969
-      }
-    },
-    {
-      "rule": {
         "minPairProbability": 0.49,
         "minSamples": 500
       },
       "training": {
-        "available": 4396,
-        "selected": 553,
-        "coverage": 0.12579617834394904,
-        "correct": 257,
-        "accuracy": 0.46473779385171793,
-        "averagePairProbability": 0.5003035898658111
+        "available": 4953,
+        "selected": 497,
+        "coverage": 0.1003432263274783,
+        "correct": 245,
+        "accuracy": 0.49295774647887325,
+        "averagePairProbability": 0.5050582801401328
       },
       "calibration": {
-        "available": 1466,
-        "selected": 103,
-        "coverage": 0.07025920873124147,
-        "correct": 35,
-        "accuracy": 0.33980582524271846,
-        "averagePairProbability": 0.49995912283794297
+        "available": 1651,
+        "selected": 108,
+        "coverage": 0.06541490006056935,
+        "correct": 47,
+        "accuracy": 0.4351851851851852,
+        "averagePairProbability": 0.49582873940800026
       },
       "test": {
-        "available": 1466,
-        "selected": 70,
-        "coverage": 0.047748976807639835,
-        "correct": 30,
-        "accuracy": 0.42857142857142855,
-        "averagePairProbability": 0.4951732175519859
+        "available": 1651,
+        "selected": 21,
+        "coverage": 0.012719563900666263,
+        "correct": 13,
+        "accuracy": 0.6190476190476191,
+        "averagePairProbability": 0.49277019871047173
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.49,
+        "minSamples": 100
+      },
+      "training": {
+        "available": 4953,
+        "selected": 915,
+        "coverage": 0.18473652331920049,
+        "correct": 446,
+        "accuracy": 0.48743169398907105,
+        "averagePairProbability": 0.5071782210452163
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 124,
+        "coverage": 0.07510599636583888,
+        "correct": 56,
+        "accuracy": 0.45161290322580644,
+        "averagePairProbability": 0.4970368786122599
+      },
+      "test": {
+        "available": 1651,
+        "selected": 26,
+        "coverage": 0.015748031496062992,
+        "correct": 15,
+        "accuracy": 0.5769230769230769,
+        "averagePairProbability": 0.49482040788014725
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.49,
+        "minSamples": 200
+      },
+      "training": {
+        "available": 4953,
+        "selected": 771,
+        "coverage": 0.1556632344033919,
+        "correct": 375,
+        "accuracy": 0.48638132295719844,
+        "averagePairProbability": 0.5060950627584375
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 123,
+        "coverage": 0.07450030284675954,
+        "correct": 55,
+        "accuracy": 0.44715447154471544,
+        "averagePairProbability": 0.49675378422710753
+      },
+      "test": {
+        "available": 1651,
+        "selected": 25,
+        "coverage": 0.015142337976983646,
+        "correct": 15,
+        "accuracy": 0.6,
+        "averagePairProbability": 0.4935222396762584
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.49,
+        "minSamples": 50
+      },
+      "training": {
+        "available": 4953,
+        "selected": 952,
+        "coverage": 0.19220674338784574,
+        "correct": 463,
+        "accuracy": 0.48634453781512604,
+        "averagePairProbability": 0.5079413832027496
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 126,
+        "coverage": 0.07631738340399757,
+        "correct": 57,
+        "accuracy": 0.4523809523809524,
+        "averagePairProbability": 0.4981386477708353
+      },
+      "test": {
+        "available": 1651,
+        "selected": 26,
+        "coverage": 0.015748031496062992,
+        "correct": 15,
+        "accuracy": 0.5769230769230769,
+        "averagePairProbability": 0.49482040788014725
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.5,
+        "minSamples": 100
+      },
+      "training": {
+        "available": 4953,
+        "selected": 576,
+        "coverage": 0.11629315566323441,
+        "correct": 278,
+        "accuracy": 0.4826388888888889,
+        "averagePairProbability": 0.5145207513590593
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 24,
+        "coverage": 0.014536644457904301,
+        "correct": 9,
+        "accuracy": 0.375,
+        "averagePairProbability": 0.5067999983654844
+      },
+      "test": {
+        "available": 1651,
+        "selected": 4,
+        "coverage": 0.0024227740763173833,
+        "correct": 3,
+        "accuracy": 0.75,
+        "averagePairProbability": 0.5100581304193267
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.5,
+        "minSamples": 500
+      },
+      "training": {
+        "available": 4953,
+        "selected": 276,
+        "coverage": 0.05572380375529982,
+        "correct": 133,
+        "accuracy": 0.48188405797101447,
+        "averagePairProbability": 0.513290515396498
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 18,
+        "coverage": 0.010902483343428226,
+        "correct": 6,
+        "accuracy": 0.3333333333333333,
+        "averagePairProbability": 0.5024933125673815
+      },
+      "test": {
+        "available": 1651,
+        "selected": 2,
+        "coverage": 0.0012113870381586917,
+        "correct": 2,
+        "accuracy": 1,
+        "averagePairProbability": 0.5003169558782474
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.49,
+        "minSamples": 1
+      },
+      "training": {
+        "available": 4953,
+        "selected": 997,
+        "coverage": 0.20129214617403593,
+        "correct": 478,
+        "accuracy": 0.4794383149448345,
+        "averagePairProbability": 0.5090284925274797
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 141,
+        "coverage": 0.08540278619018776,
+        "correct": 63,
+        "accuracy": 0.44680851063829785,
+        "averagePairProbability": 0.5008825706743469
+      },
+      "test": {
+        "available": 1651,
+        "selected": 31,
+        "coverage": 0.01877649909145972,
+        "correct": 16,
+        "accuracy": 0.5161290322580645,
+        "averagePairProbability": 0.4991526652797587
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.48,
+        "minSamples": 100
+      },
+      "training": {
+        "available": 4953,
+        "selected": 1473,
+        "coverage": 0.2973955178679588,
+        "correct": 706,
+        "accuracy": 0.4792939579090292,
+        "averagePairProbability": 0.49863547327949
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 414,
+        "coverage": 0.25075711689884916,
+        "correct": 185,
+        "accuracy": 0.4468599033816425,
+        "averagePairProbability": 0.48785671066999053
+      },
+      "test": {
+        "available": 1651,
+        "selected": 355,
+        "coverage": 0.2150211992731678,
+        "correct": 172,
+        "accuracy": 0.48450704225352115,
+        "averagePairProbability": 0.48455273878229815
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.47,
+        "minSamples": 100
+      },
+      "training": {
+        "available": 4953,
+        "selected": 2026,
+        "coverage": 0.4090450232182516,
+        "correct": 969,
+        "accuracy": 0.47828232971372164,
+        "averagePairProbability": 0.49222627202047703
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 709,
+        "coverage": 0.4294367050272562,
+        "correct": 344,
+        "accuracy": 0.48519040902679833,
+        "averagePairProbability": 0.4826142877512419
+      },
+      "test": {
+        "available": 1651,
+        "selected": 705,
+        "coverage": 0.4270139309509388,
+        "correct": 349,
+        "accuracy": 0.4950354609929078,
+        "averagePairProbability": 0.48037755694735074
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.5,
+        "minSamples": 50
+      },
+      "training": {
+        "available": 4953,
+        "selected": 607,
+        "coverage": 0.12255198869372098,
+        "correct": 290,
+        "accuracy": 0.47775947281713343,
+        "averagePairProbability": 0.5154664714288925
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 26,
+        "coverage": 0.015748031496062992,
+        "correct": 10,
+        "accuracy": 0.38461538461538464,
+        "averagePairProbability": 0.5113883319991014
+      },
+      "test": {
+        "available": 1651,
+        "selected": 4,
+        "coverage": 0.0024227740763173833,
+        "correct": 3,
+        "accuracy": 0.75,
+        "averagePairProbability": 0.5100581304193267
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.48,
+        "minSamples": 50
+      },
+      "training": {
+        "available": 4953,
+        "selected": 1520,
+        "coverage": 0.30688471633353526,
+        "correct": 726,
+        "accuracy": 0.4776315789473684,
+        "averagePairProbability": 0.49923076131228133
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 416,
+        "coverage": 0.25196850393700787,
+        "correct": 186,
+        "accuracy": 0.44711538461538464,
+        "averagePairProbability": 0.4882345550206276
+      },
+      "test": {
+        "available": 1651,
+        "selected": 355,
+        "coverage": 0.2150211992731678,
+        "correct": 172,
+        "accuracy": 0.48450704225352115,
+        "averagePairProbability": 0.48455273878229815
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.5,
+        "minSamples": 200
+      },
+      "training": {
+        "available": 4953,
+        "selected": 465,
+        "coverage": 0.09388249545729861,
+        "correct": 222,
+        "accuracy": 0.4774193548387097,
+        "averagePairProbability": 0.5135822808856911
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 23,
+        "coverage": 0.013930950938824955,
+        "correct": 8,
+        "accuracy": 0.34782608695652173,
+        "averagePairProbability": 0.5057105422950273
+      },
+      "test": {
+        "available": 1651,
+        "selected": 3,
+        "coverage": 0.0018170805572380376,
+        "correct": 3,
+        "accuracy": 1,
+        "averagePairProbability": 0.5043193028999792
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.47,
+        "minSamples": 50
+      },
+      "training": {
+        "available": 4953,
+        "selected": 2080,
+        "coverage": 0.4199475065616798,
+        "correct": 993,
+        "accuracy": 0.4774038461538462,
+        "averagePairProbability": 0.4927495140106936
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 711,
+        "coverage": 0.4306480920654149,
+        "correct": 345,
+        "accuracy": 0.48523206751054854,
+        "averagePairProbability": 0.4828501078577152
+      },
+      "test": {
+        "available": 1651,
+        "selected": 705,
+        "coverage": 0.4270139309509388,
+        "correct": 349,
+        "accuracy": 0.4950354609929078,
+        "averagePairProbability": 0.48037755694735074
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.47,
+        "minSamples": 200
+      },
+      "training": {
+        "available": 4953,
+        "selected": 1819,
+        "coverage": 0.3672521704017767,
+        "correct": 864,
+        "accuracy": 0.4749862561847169,
+        "averagePairProbability": 0.4909970117728798
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 708,
+        "coverage": 0.4288310115081769,
+        "correct": 343,
+        "accuracy": 0.4844632768361582,
+        "averagePairProbability": 0.48254473520853736
+      },
+      "test": {
+        "available": 1651,
+        "selected": 702,
+        "coverage": 0.4251968503937008,
+        "correct": 347,
+        "accuracy": 0.4943019943019943,
+        "averagePairProbability": 0.48033082473552374
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.48,
+        "minSamples": 200
+      },
+      "training": {
+        "available": 4953,
+        "selected": 1297,
+        "coverage": 0.2618614980819705,
+        "correct": 616,
+        "accuracy": 0.47494217424826524,
+        "averagePairProbability": 0.497370716431581
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 413,
+        "coverage": 0.2501514233797698,
+        "correct": 184,
+        "accuracy": 0.44552058111380144,
+        "averagePairProbability": 0.48775017125760306
+      },
+      "test": {
+        "available": 1651,
+        "selected": 354,
+        "coverage": 0.21441550575408844,
+        "correct": 172,
+        "accuracy": 0.4858757062146893,
+        "averagePairProbability": 0.4844320555218601
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.47,
+        "minSamples": 500
+      },
+      "training": {
+        "available": 4953,
+        "selected": 1329,
+        "coverage": 0.2683222289521502,
+        "correct": 631,
+        "accuracy": 0.4747930775018811,
+        "averagePairProbability": 0.4893387327348574
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 690,
+        "coverage": 0.4179285281647486,
+        "correct": 334,
+        "accuracy": 0.48405797101449277,
+        "averagePairProbability": 0.48207764473346704
+      },
+      "test": {
+        "available": 1651,
+        "selected": 692,
+        "coverage": 0.41913991520290733,
+        "correct": 343,
+        "accuracy": 0.4956647398843931,
+        "averagePairProbability": 0.48022450603312505
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.48,
+        "minSamples": 500
+      },
+      "training": {
+        "available": 4953,
+        "selected": 924,
+        "coverage": 0.18655360387643852,
+        "correct": 438,
+        "accuracy": 0.474025974025974,
+        "averagePairProbability": 0.4955188631097184
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 395,
+        "coverage": 0.23924894003634162,
+        "correct": 175,
+        "accuracy": 0.4430379746835443,
+        "averagePairProbability": 0.48717145080465285
+      },
+      "test": {
+        "available": 1651,
+        "selected": 346,
+        "coverage": 0.20956995760145367,
+        "correct": 168,
+        "accuracy": 0.48554913294797686,
+        "averagePairProbability": 0.4842966460103757
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.51,
+        "minSamples": 100
+      },
+      "training": {
+        "available": 4953,
+        "selected": 351,
+        "coverage": 0.07086614173228346,
+        "correct": 166,
+        "accuracy": 0.47293447293447294,
+        "averagePairProbability": 0.5207253664825557
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 3,
+        "coverage": 0.0018170805572380376,
+        "correct": 1,
+        "accuracy": 0.3333333333333333,
+        "averagePairProbability": 0.5342748652929216
+      },
+      "test": {
+        "available": 1651,
+        "selected": 2,
+        "coverage": 0.0012113870381586917,
+        "correct": 1,
+        "accuracy": 0.5,
+        "averagePairProbability": 0.519799304960406
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.47,
+        "minSamples": 1
+      },
+      "training": {
+        "available": 4953,
+        "selected": 2145,
+        "coverage": 0.4330708661417323,
+        "correct": 1014,
+        "accuracy": 0.4727272727272727,
+        "averagePairProbability": 0.4934358075909172
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 733,
+        "coverage": 0.4439733494851605,
+        "correct": 353,
+        "accuracy": 0.4815825375170532,
+        "averagePairProbability": 0.483647200187476
+      },
+      "test": {
+        "available": 1651,
+        "selected": 711,
+        "coverage": 0.4306480920654149,
+        "correct": 350,
+        "accuracy": 0.49226441631504925,
+        "averagePairProbability": 0.48065836325218303
+      }
+    },
+    {
+      "rule": {
+        "minPairProbability": 0.48,
+        "minSamples": 1
+      },
+      "training": {
+        "available": 4953,
+        "selected": 1572,
+        "coverage": 0.31738340399757725,
+        "correct": 743,
+        "accuracy": 0.47264631043257,
+        "averagePairProbability": 0.5000997682694397
+      },
+      "calibration": {
+        "available": 1651,
+        "selected": 434,
+        "coverage": 0.2628709872804361,
+        "correct": 193,
+        "accuracy": 0.4447004608294931,
+        "averagePairProbability": 0.4894356218002213
+      },
+      "test": {
+        "available": 1651,
+        "selected": 360,
+        "coverage": 0.2180496668685645,
+        "correct": 173,
+        "accuracy": 0.48055555555555557,
+        "averagePairProbability": 0.485068400795846
       }
     }
   ]

@@ -1,0 +1,5139 @@
+{
+  "version": 1,
+  "generatedAt": "2026-08-28T05:13:51.467Z",
+  "data": {
+    "database": "betwin.db",
+    "verifiedMatches": 9021,
+    "sourceUpdatedAt": "2026-08-28T05:00:08+00:00",
+    "events": 9601
+  },
+  "methodology": {
+    "ordering": "按来源文件和source_row递增，每场只读取此前记录",
+    "warmup": 500,
+    "validationFraction": 0.2,
+    "matching": "沿用生产的胜平负＋让球联合优先、单市场回退和10%终赔入池规则",
+    "scopes": "全部联赛与严格同联赛分别调参、分别验证，不跨范围回退",
+    "candidates": "相似样本等权基线；终赔距离；终赔＋初赔＋走势综合距离；再与当前终赔去水概率按0%～75%混合，至少保留25%的所选联赛范围历史信号",
+    "selection": "仅较早段选择候选；最新20%要求命中率提高，LogLoss最多恶化0.005、Brier最多恶化0.003，区块Bootstrap命中改善概率≥75%"
+  },
+  "thresholds": {
+    "spf": 0.1,
+    "hhad": 0.1
+  },
+  "searchSpace": {
+    "featureProfiles": [
+      {
+        "id": "final",
+        "finalWeight": 1,
+        "initialWeight": 0,
+        "movementWeight": 0
+      },
+      {
+        "id": "final70-initial15-movement15",
+        "finalWeight": 0.7,
+        "initialWeight": 0.15,
+        "movementWeight": 0.15
+      },
+      {
+        "id": "final60-initial20-movement20",
+        "finalWeight": 0.6,
+        "initialWeight": 0.2,
+        "movementWeight": 0.2
+      }
+    ],
+    "decays": [
+      0.5,
+      1,
+      2,
+      3
+    ],
+    "marketWeights": [
+      0,
+      0.1,
+      0.2,
+      0.3,
+      0.5,
+      0.75
+    ]
+  },
+  "sources": [
+    {
+      "sourceFile": "initspfpl.xlsx",
+      "rows": 88,
+      "validationStart": 501
+    },
+    {
+      "sourceFile": "lsspfpl.xlsx",
+      "rows": 9513,
+      "validationStart": 7610
+    }
+  ],
+  "selections": {
+    "all": {
+      "spf": {
+        "selected": {
+          "id": "final-decay3-market0.75",
+          "profile": {
+            "id": "final",
+            "finalWeight": 1,
+            "initialWeight": 0,
+            "movementWeight": 0
+          },
+          "decay": 3,
+          "marketWeight": 0.75
+        },
+        "gate": {
+          "passed": false,
+          "reason": "候选未同时通过较早段、最新20%、概率质量和Bootstrap稳定性门槛",
+          "delta": {
+            "tuningAccuracy": 0.012717045732452803,
+            "validationAccuracy": 0.002391464311993996,
+            "validationLogLoss": -0.06572929299781605,
+            "validationBrier": -0.006696747368988287
+          },
+          "significance": {
+            "passed": false,
+            "status": "uncertain",
+            "reason": "指标均值虽可能改善，但95%区间仍包含无改善或命中率超出不退步要求的情况",
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "evaluated": 1812,
+            "accuracyMargin": 0,
+            "accuracyPassed": false,
+            "metrics": {
+              "accuracy": {
+                "delta": 0.0023914643119941135,
+                "lower": -0.005061166298749078,
+                "upper": 0.010117733627667404,
+                "improvementProbability": 0.706
+              },
+              "logLoss": {
+                "delta": -0.06572929299781367,
+                "lower": -0.12346554474978745,
+                "upper": -0.019198800702159357,
+                "improvementProbability": 1
+              },
+              "brier": {
+                "delta": -0.006696747368988503,
+                "lower": -0.010581379503766654,
+                "upper": -0.0029985892659313155,
+                "improvementProbability": 1
+              }
+            }
+          }
+        },
+        "baseline": {
+          "tuning": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5132550745903645,
+            "logLoss": 1.3557663780792637,
+            "brier": 0.6089141168515196
+          },
+          "validation": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5108535688005887,
+            "logLoss": 1.0588432361841786,
+            "brier": 0.5997739016355604
+          }
+        },
+        "candidate": {
+          "tuning": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5259721203228173,
+            "logLoss": 0.9886491720116697,
+            "brier": 0.5896294243638728
+          },
+          "validation": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5132450331125827,
+            "logLoss": 0.9931139431863626,
+            "brier": 0.5930771542665721
+          }
+        }
+      },
+      "hhad": {
+        "selected": {
+          "id": "final70-initial15-movement15-decay0.5-market0.75",
+          "profile": {
+            "id": "final70-initial15-movement15",
+            "finalWeight": 0.7,
+            "initialWeight": 0.15,
+            "movementWeight": 0.15
+          },
+          "decay": 0.5,
+          "marketWeight": 0.75
+        },
+        "gate": {
+          "passed": true,
+          "reason": "较早段与最新20%命中率均提高，概率质量未明显下降，且区块Bootstrap命中改善概率不低于75%",
+          "delta": {
+            "tuningAccuracy": 0.014982332155476952,
+            "validationAccuracy": 0.007112750263435053,
+            "validationLogLoss": -0.15924253741259764,
+            "validationBrier": -0.010749651357287782
+          },
+          "significance": {
+            "passed": false,
+            "status": "uncertain",
+            "reason": "指标均值虽可能改善，但95%区间仍包含无改善或命中率超出不退步要求的情况",
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "evaluated": 1898,
+            "accuracyMargin": 0,
+            "accuracyPassed": false,
+            "metrics": {
+              "accuracy": {
+                "delta": 0.007112750263435195,
+                "lower": -0.0027265542676501546,
+                "upper": 0.016952054794520544,
+                "improvementProbability": 0.936
+              },
+              "logLoss": {
+                "delta": -0.1592425374126017,
+                "lower": -0.25866483070535023,
+                "upper": -0.07654600935465608,
+                "improvementProbability": 1
+              },
+              "brier": {
+                "delta": -0.01074965135728717,
+                "lower": -0.015679409843294842,
+                "upper": -0.006112400108357729,
+                "improvementProbability": 1
+              }
+            }
+          }
+        },
+        "baseline": {
+          "tuning": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49554770318021213,
+            "logLoss": 1.4421651724814544,
+            "brier": 0.6321693977942417
+          },
+          "validation": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5044783983140149,
+            "logLoss": 1.1693991596479814,
+            "brier": 0.6154316672323403
+          }
+        },
+        "candidate": {
+          "tuning": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5105300353356891,
+            "logLoss": 1.0156178845349897,
+            "brier": 0.608191430650993
+          },
+          "validation": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5115911485774499,
+            "logLoss": 1.0101566222353837,
+            "brier": 0.6046820158750525
+          }
+        }
+      }
+    },
+    "sameLeague": {
+      "spf": {
+        "selected": {
+          "id": "final70-initial15-movement15-decay1-market0.75",
+          "profile": {
+            "id": "final70-initial15-movement15",
+            "finalWeight": 0.7,
+            "initialWeight": 0.15,
+            "movementWeight": 0.15
+          },
+          "decay": 1,
+          "marketWeight": 0.75
+        },
+        "gate": {
+          "passed": true,
+          "reason": "较早段与最新20%命中率均提高，概率质量未明显下降，且区块Bootstrap命中改善概率不低于75%",
+          "delta": {
+            "tuningAccuracy": 0.06736535181823189,
+            "validationAccuracy": 0.055522798742138335,
+            "validationLogLoss": -3.886016354260966,
+            "validationBrier": -0.14623026368255154
+          },
+          "significance": {
+            "passed": true,
+            "status": "significant",
+            "reason": "95%区间确认 Log Loss、Brier 均改善，且命中率没有下降",
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "evaluated": 1696,
+            "accuracyMargin": 0,
+            "accuracyPassed": true,
+            "metrics": {
+              "accuracy": {
+                "delta": 0.05552279874213837,
+                "lower": 0.038028203616352174,
+                "upper": 0.07164160770440256,
+                "improvementProbability": 1
+              },
+              "logLoss": {
+                "delta": -3.8860163542609394,
+                "lower": -4.488434152588392,
+                "upper": -3.2759046662466393,
+                "improvementProbability": 1
+              },
+              "brier": {
+                "delta": -0.1462302636825523,
+                "lower": -0.17021876752779538,
+                "upper": -0.12425340531528252,
+                "improvementProbability": 1
+              }
+            }
+          }
+        },
+        "baseline": {
+          "tuning": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.44245475050888483,
+            "logLoss": 6.26647492264043,
+            "brier": 0.7853839794196898
+          },
+          "validation": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4397602201257862,
+            "logLoss": 4.904078500851392,
+            "brier": 0.7567585145491896
+          }
+        },
+        "candidate": {
+          "tuning": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.5098201023271167,
+            "logLoss": 1.0094869304502956,
+            "brier": 0.603791060113234
+          },
+          "validation": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.49528301886792453,
+            "logLoss": 1.0180621465904254,
+            "brier": 0.6105282508666381
+          }
+        }
+      },
+      "hhad": {
+        "selected": {
+          "id": "final-decay0.5-market0.75",
+          "profile": {
+            "id": "final",
+            "finalWeight": 1,
+            "initialWeight": 0,
+            "movementWeight": 0
+          },
+          "decay": 0.5,
+          "marketWeight": 0.75
+        },
+        "gate": {
+          "passed": true,
+          "reason": "较早段与最新20%命中率均提高，概率质量未明显下降，且区块Bootstrap命中改善概率不低于75%",
+          "delta": {
+            "tuningAccuracy": 0.05687241489023198,
+            "validationAccuracy": 0.0541334850208568,
+            "validationLogLoss": -4.585331012883131,
+            "validationBrier": -0.16296350271758875
+          },
+          "significance": {
+            "passed": true,
+            "status": "significant",
+            "reason": "95%区间确认 Log Loss、Brier 均改善，且命中率没有下降",
+            "iterations": 1000,
+            "blockSize": 20,
+            "confidence": 0.95,
+            "evaluated": 1758,
+            "accuracyMargin": 0,
+            "accuracyPassed": true,
+            "metrics": {
+              "accuracy": {
+                "delta": 0.05413348502085707,
+                "lower": 0.03886518771331059,
+                "upper": 0.06865756541524463,
+                "improvementProbability": 1
+              },
+              "logLoss": {
+                "delta": -4.585331012883087,
+                "lower": -5.301672137066089,
+                "upper": -3.931777612565257,
+                "improvementProbability": 1
+              },
+              "brier": {
+                "delta": -0.1629635027175888,
+                "lower": -0.19017518654635995,
+                "upper": -0.13902510737578463,
+                "improvementProbability": 1
+              }
+            }
+          }
+        },
+        "baseline": {
+          "tuning": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4358097359210948,
+            "logLoss": 6.900296466752495,
+            "brier": 0.8194930204893396
+          },
+          "validation": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4407470610542285,
+            "logLoss": 5.615849800130894,
+            "brier": 0.7817705496307772
+          }
+        },
+        "candidate": {
+          "tuning": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.49268215081132677,
+            "logLoss": 1.0292582954764962,
+            "brier": 0.6177153224872994
+          },
+          "validation": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4948805460750853,
+            "logLoss": 1.0305187872477628,
+            "brier": 0.6188070469131884
+          }
+        }
+      }
+    }
+  },
+  "periods": {
+    "tuning": {
+      "all": {
+        "spf": {
+          "uniform": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5132550745903645,
+            "logLoss": 1.3557663780792637,
+            "brier": 0.6089141168515196
+          },
+          "final-decay0.5-market0": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5137931034482759,
+            "logLoss": 1.3555482606926073,
+            "brier": 0.6087960115059962
+          },
+          "final-decay0.5-market0.1": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5171680117388114,
+            "logLoss": 1.0247951090153973,
+            "brier": 0.6050129645495342
+          },
+          "final-decay0.5-market0.2": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5201027146001468,
+            "logLoss": 1.012614601102992,
+            "brier": 0.6016035342557334
+          },
+          "final-decay0.5-market0.3": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5198092443140132,
+            "logLoss": 1.004955372959483,
+            "brier": 0.598567720624603
+          },
+          "final-decay0.5-market0.5": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5227439471753484,
+            "logLoss": 0.9951902403888934,
+            "brier": 0.5936169433503381
+          },
+          "final-decay0.5-market0.75": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5227439471753484,
+            "logLoss": 0.9885464014006619,
+            "brier": 0.5895300654850097
+          },
+          "final-decay1-market0": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5145267791636097,
+            "logLoss": 1.3561295694784223,
+            "brier": 0.6090942946191955
+          },
+          "final-decay1-market0.1": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5170212765957447,
+            "logLoss": 1.0251669690342335,
+            "brier": 0.605230520156748
+          },
+          "final-decay1-market0.2": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5193690388848129,
+            "logLoss": 1.0128368055463133,
+            "brier": 0.6017516732891145
+          },
+          "final-decay1-market0.3": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5215700660308143,
+            "logLoss": 1.0050679097816977,
+            "brier": 0.598657754016293
+          },
+          "final-decay1-market0.5": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5228906823184153,
+            "logLoss": 0.9951688286804011,
+            "brier": 0.5936246982550947
+          },
+          "final-decay1-market0.75": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.522450476889215,
+            "logLoss": 0.9884782850410502,
+            "brier": 0.5894985962744259
+          },
+          "final-decay2-market0": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5123257520176082,
+            "logLoss": 1.3599824059420982,
+            "brier": 0.611061275690046
+          },
+          "final-decay2-market0.1": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5137931034482759,
+            "logLoss": 1.0279135080026545,
+            "brier": 0.6067700382908499
+          },
+          "final-decay2-market0.2": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5158473954512106,
+            "logLoss": 1.014781496804943,
+            "brier": 0.6029150095597304
+          },
+          "final-decay2-market0.3": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5201027146001468,
+            "logLoss": 1.0064003252570608,
+            "brier": 0.5994961894966778
+          },
+          "final-decay2-market0.5": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.522450476889215,
+            "logLoss": 0.995665999801555,
+            "brier": 0.593967175374796
+          },
+          "final-decay2-market0.75": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5240645634629494,
+            "logLoss": 0.9884702484437525,
+            "brier": 0.5895095814803485
+          },
+          "final-decay3-market0": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5064563462949376,
+            "logLoss": 1.3678705120212251,
+            "brier": 0.614995848289367
+          },
+          "final-decay3-market0.1": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.509391049156273,
+            "logLoss": 1.033559022274685,
+            "brier": 0.6098965295024169
+          },
+          "final-decay3-market0.2": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5127659574468085,
+            "logLoss": 1.0188727687383778,
+            "brier": 0.6053255580786085
+          },
+          "final-decay3-market0.3": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5161408657373441,
+            "logLoss": 1.0093096455509734,
+            "brier": 0.6012829340179443
+          },
+          "final-decay3-market0.5": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5221570066030814,
+            "logLoss": 0.9969324465068741,
+            "brier": 0.5947827279860498
+          },
+          "final-decay3-market0.75": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5259721203228173,
+            "logLoss": 0.9886491720116697,
+            "brier": 0.5896294243638728
+          },
+          "final70-initial15-movement15-decay0.5-market0": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5129860601614087,
+            "logLoss": 1.355765711755998,
+            "brier": 0.6089211019708599
+          },
+          "final70-initial15-movement15-decay0.5-market0.1": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5162142333088775,
+            "logLoss": 1.0249167301030113,
+            "brier": 0.6051009530130622
+          },
+          "final70-initial15-movement15-decay0.5-market0.2": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5185619955979457,
+            "logLoss": 1.0126761302999594,
+            "brier": 0.6016598858190052
+          },
+          "final70-initial15-movement15-decay0.5-market0.3": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.520909757887014,
+            "logLoss": 1.0049752865134725,
+            "brier": 0.5985979003886929
+          },
+          "final70-initial15-movement15-decay0.5-market0.5": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5226705796038151,
+            "logLoss": 0.995161684219875,
+            "brier": 0.5936111748193023
+          },
+          "final70-initial15-movement15-decay0.5-market0.75": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5220836390315481,
+            "logLoss": 0.9885054020426447,
+            "brier": 0.5895101027786235
+          },
+          "final70-initial15-movement15-decay1-market0": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5132795304475422,
+            "logLoss": 1.3567192691652257,
+            "brier": 0.6094339151527198
+          },
+          "final70-initial15-movement15-decay1-market0.1": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5148936170212766,
+            "logLoss": 1.0255313438962674,
+            "brier": 0.6054856556969441
+          },
+          "final70-initial15-movement15-decay1-market0.2": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5198826118855466,
+            "logLoss": 1.0130628260764274,
+            "brier": 0.6019335511559787
+          },
+          "final70-initial15-movement15-decay1-market0.3": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.521496698459281,
+            "logLoss": 1.005195762310356,
+            "brier": 0.5987776015298196
+          },
+          "final70-initial15-movement15-decay1-market0.5": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5231107850330154,
+            "logLoss": 0.995172900264295,
+            "brier": 0.5936541670219277
+          },
+          "final70-initial15-movement15-decay1-market0.75": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5225238444607484,
+            "logLoss": 0.9884262143143208,
+            "brier": 0.5894782452828641
+          },
+          "final70-initial15-movement15-decay2-market0": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5097578870139399,
+            "logLoss": 1.3616251566899003,
+            "brier": 0.611987652315743
+          },
+          "final70-initial15-movement15-decay2-market0.1": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5126925898752751,
+            "logLoss": 1.02896917028815,
+            "brier": 0.6075003007249055
+          },
+          "final70-initial15-movement15-decay2-market0.2": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5157740278796772,
+            "logLoss": 1.0155128704847673,
+            "brier": 0.6034721525863781
+          },
+          "final70-initial15-movement15-decay2-market0.3": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5200293470286134,
+            "logLoss": 1.0068968986247941,
+            "brier": 0.5999032079001633
+          },
+          "final70-initial15-movement15-decay2-market0.5": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5228173147468819,
+            "logLoss": 0.9958429399663058,
+            "brier": 0.5941429288846625
+          },
+          "final70-initial15-movement15-decay2-market0.75": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5242846661775495,
+            "logLoss": 0.9884486723413839,
+            "brier": 0.5895255995345338
+          },
+          "final70-initial15-movement15-decay3-market0": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5053558327219368,
+            "logLoss": 1.371074698423428,
+            "brier": 0.6167308264474473
+          },
+          "final70-initial15-movement15-decay3-market0.1": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5097578870139399,
+            "logLoss": 1.0356163537506256,
+            "brier": 0.611290077046508
+          },
+          "final70-initial15-movement15-decay3-market0.2": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5131327953044754,
+            "logLoss": 1.0203619129695825,
+            "brier": 0.6064149934083114
+          },
+          "final70-initial15-movement15-decay3-market0.3": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5163609684519442,
+            "logLoss": 1.0103779777333748,
+            "brier": 0.6021055755328494
+          },
+          "final70-initial15-movement15-decay3-market0.5": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5201760821716801,
+            "logLoss": 0.9974027074996464,
+            "brier": 0.5951837370701533
+          },
+          "final70-initial15-movement15-decay3-market0.75": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5251650770359501,
+            "logLoss": 0.9887027965842727,
+            "brier": 0.5897133089071903
+          },
+          "final60-initial20-movement20-decay0.5-market0": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5126925898752751,
+            "logLoss": 1.3559439048869577,
+            "brier": 0.6090206115303988
+          },
+          "final60-initial20-movement20-decay0.5-market0.1": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5159207630227439,
+            "logLoss": 1.0250397688208415,
+            "brier": 0.6051787071286718
+          },
+          "final60-initial20-movement20-decay0.5-market0.2": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5185619955979457,
+            "logLoss": 1.0127624915719127,
+            "brier": 0.6017185077102376
+          },
+          "final60-initial20-movement20-decay0.5-market0.3": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5206162876008804,
+            "logLoss": 1.0050342542373192,
+            "brier": 0.5986400132750984
+          },
+          "final60-initial20-movement20-decay0.5-market0.5": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5226705796038151,
+            "logLoss": 0.9951833532886503,
+            "brier": 0.593628139354702
+          },
+          "final60-initial20-movement20-decay0.5-market0.75": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5220836390315481,
+            "logLoss": 0.9885041592162153,
+            "brier": 0.5895103874852332
+          },
+          "final60-initial20-movement20-decay1-market0": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5126925898752751,
+            "logLoss": 1.3572802023054014,
+            "brier": 0.6097409959359406
+          },
+          "final60-initial20-movement20-decay1-market0.1": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5151870873074101,
+            "logLoss": 1.0259302817712272,
+            "brier": 0.6057327614553784
+          },
+          "final60-initial20-movement20-decay1-market0.2": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.519589141599413,
+            "logLoss": 1.0133578551367866,
+            "brier": 0.6021271856555046
+          },
+          "final60-initial20-movement20-decay1-market0.3": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5223771093176816,
+            "logLoss": 1.005411905673511,
+            "brier": 0.5989242685363199
+          },
+          "final60-initial20-movement20-decay1-market0.5": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5235509904622156,
+            "logLoss": 0.9952765457104668,
+            "brier": 0.5937264103400252
+          },
+          "final60-initial20-movement20-decay1-market0.75": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5229640498899486,
+            "logLoss": 0.9884490583801062,
+            "brier": 0.5894940426735313
+          },
+          "final60-initial20-movement20-decay2-market0": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5097578870139399,
+            "logLoss": 1.3633637568019161,
+            "brier": 0.6128760588935073
+          },
+          "final60-initial20-movement20-decay2-market0.1": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5121056493030081,
+            "logLoss": 1.0301719956767594,
+            "brier": 0.6082242972994183
+          },
+          "final60-initial20-movement20-decay2-market0.2": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5153338224504769,
+            "logLoss": 1.0164157829474227,
+            "brier": 0.604048532345524
+          },
+          "final60-initial20-movement20-decay2-market0.3": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5191489361702127,
+            "logLoss": 1.0075736548047771,
+            "brier": 0.6003487640318267
+          },
+          "final60-initial20-movement20-decay2-market0.5": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5235509904622156,
+            "logLoss": 0.99619336222903,
+            "brier": 0.5943772173250076
+          },
+          "final60-initial20-movement20-decay2-market0.75": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5248716067498166,
+            "logLoss": 0.9885509456705384,
+            "brier": 0.5895902650425744
+          },
+          "final60-initial20-movement20-decay3-market0": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5031548055759354,
+            "logLoss": 1.3744298335113971,
+            "brier": 0.6182835938315728
+          },
+          "final60-initial20-movement20-decay3-market0.1": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5077035950110051,
+            "logLoss": 1.0378057151827365,
+            "brier": 0.6125579449982296
+          },
+          "final60-initial20-movement20-decay3-market0.2": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.514013206162876,
+            "logLoss": 1.0219916278787216,
+            "brier": 0.6074267669707344
+          },
+          "final60-initial20-movement20-decay3-market0.3": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5163609684519442,
+            "logLoss": 1.0115964977158702,
+            "brier": 0.6028900597490915
+          },
+          "final60-initial20-movement20-decay3-market0.5": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5191489361702127,
+            "logLoss": 0.9980375416887053,
+            "brier": 0.5956000577233457
+          },
+          "final60-initial20-movement20-decay3-market0.75": {
+            "targets": 6822,
+            "evaluated": 6815,
+            "coverage": 0.9989739079448842,
+            "accuracy": 0.5242846661775495,
+            "logLoss": 0.9888957390033621,
+            "brier": 0.58983145347407
+          }
+        },
+        "hhad": {
+          "uniform": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49554770318021213,
+            "logLoss": 1.4421651724814544,
+            "brier": 0.6321693977942417
+          },
+          "final-decay0.5-market0": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4958303886925795,
+            "logLoss": 1.4422448821565215,
+            "brier": 0.6322415430710747
+          },
+          "final-decay0.5-market0.1": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4973851590106007,
+            "logLoss": 1.0567831197846091,
+            "brier": 0.6274679281557134
+          },
+          "final-decay0.5-market0.2": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49992932862190814,
+            "logLoss": 1.0429452448489511,
+            "brier": 0.6231772990023449
+          },
+          "final-decay0.5-market0.3": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5007773851590106,
+            "logLoss": 1.034254629069245,
+            "brier": 0.6193696556109651
+          },
+          "final-decay0.5-market0.5": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5047349823321555,
+            "logLoss": 1.0231736443177197,
+            "brier": 0.6132033261141749
+          },
+          "final-decay0.5-market0.75": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5103886925795053,
+            "logLoss": 1.0156331085187433,
+            "brier": 0.6082122091543807
+          },
+          "final-decay1-market0": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4948409893992933,
+            "logLoss": 1.443258468458977,
+            "brier": 0.6328477864821979
+          },
+          "final-decay1-market0.1": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4979505300353357,
+            "logLoss": 1.0575386903761803,
+            "brier": 0.6279474144162545
+          },
+          "final-decay1-market0.2": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4975265017667845,
+            "logLoss": 1.0435000199890265,
+            "brier": 0.6235447242921852
+          },
+          "final-decay1-market0.3": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49879858657243814,
+            "logLoss": 1.0346488305764359,
+            "brier": 0.6196397161099838
+          },
+          "final-decay1-market0.5": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5041696113074204,
+            "logLoss": 1.0233373824166772,
+            "brier": 0.613322745571204
+          },
+          "final-decay1-market0.75": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5105300353356891,
+            "logLoss": 1.0156452148038158,
+            "brier": 0.6082259933207647
+          },
+          "final-decay2-market0": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4910247349823322,
+            "logLoss": 1.4483058558860007,
+            "brier": 0.6357250694187931
+          },
+          "final-decay2-market0.1": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49342756183745584,
+            "logLoss": 1.0613431564304818,
+            "brier": 0.6302583510633907
+          },
+          "final-decay2-market0.2": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49625441696113076,
+            "logLoss": 1.0463481995467518,
+            "brier": 0.6253512297600362
+          },
+          "final-decay2-market0.3": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49809187279151945,
+            "logLoss": 1.03673282316332,
+            "brier": 0.6210037055087311
+          },
+          "final-decay2-market0.5": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5027561837455831,
+            "logLoss": 1.0243109383586015,
+            "brier": 0.613987448162283
+          },
+          "final-decay2-market0.75": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5102473498233215,
+            "logLoss": 1.0158359062983073,
+            "brier": 0.6083648598969947
+          },
+          "final-decay3-market0": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4859363957597173,
+            "logLoss": 1.4576935240363003,
+            "brier": 0.6407806400738723
+          },
+          "final-decay3-market0.1": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.48819787985865726,
+            "logLoss": 1.0683191402353418,
+            "brier": 0.6343404635548773
+          },
+          "final-decay3-market0.2": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4921554770318021,
+            "logLoss": 1.0515516350394973,
+            "brier": 0.6285638621097268
+          },
+          "final-decay3-market0.3": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49568904593639573,
+            "logLoss": 1.040548905409174,
+            "brier": 0.623450835738427
+          },
+          "final-decay3-market0.5": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5002120141342756,
+            "logLoss": 1.0261366884228238,
+            "brier": 0.6152155082173676
+          },
+          "final-decay3-market0.75": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5085512367491166,
+            "logLoss": 1.0162474574898934,
+            "brier": 0.6086539586064257
+          },
+          "final70-initial15-movement15-decay0.5-market0": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49498233215547704,
+            "logLoss": 1.4426011280754805,
+            "brier": 0.6324236037507213
+          },
+          "final70-initial15-movement15-decay0.5-market0.1": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4979505300353357,
+            "logLoss": 1.0570450884996794,
+            "brier": 0.6275999618042128
+          },
+          "final70-initial15-movement15-decay0.5-market0.2": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49936395759717317,
+            "logLoss": 1.043129954084476,
+            "brier": 0.6232663769448467
+          },
+          "final70-initial15-movement15-decay0.5-market0.3": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5000706713780919,
+            "logLoss": 1.0343768343101556,
+            "brier": 0.6194228491726238
+          },
+          "final70-initial15-movement15-decay0.5-market0.5": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5047349823321555,
+            "logLoss": 1.0232081583829755,
+            "brier": 0.6132059648896002
+          },
+          "final70-initial15-movement15-decay0.5-market0.75": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5105300353356891,
+            "logLoss": 1.0156178845349897,
+            "brier": 0.608191430650993
+          },
+          "final70-initial15-movement15-decay1-market0": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4921554770318021,
+            "logLoss": 1.4441290030398917,
+            "brier": 0.6332918682259792
+          },
+          "final70-initial15-movement15-decay1-market0.1": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4941342756183746,
+            "logLoss": 1.0581655277763857,
+            "brier": 0.6282801935590311
+          },
+          "final70-initial15-movement15-decay1-market0.2": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49667844522968196,
+            "logLoss": 1.0439396775409768,
+            "brier": 0.6237810662620956
+          },
+          "final70-initial15-movement15-decay1-market0.3": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49851590106007065,
+            "logLoss": 1.0349425608858216,
+            "brier": 0.6197944863351736
+          },
+          "final70-initial15-movement15-decay1-market0.5": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5041696113074204,
+            "logLoss": 1.023432012598773,
+            "brier": 0.6133589685913597
+          },
+          "final70-initial15-movement15-decay1-market0.75": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5099646643109541,
+            "logLoss": 1.0156259972369277,
+            "brier": 0.6081976503679081
+          },
+          "final70-initial15-movement15-decay2-market0": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4860777385159011,
+            "logLoss": 1.450497215176125,
+            "brier": 0.6367668950762426
+          },
+          "final70-initial15-movement15-decay2-market0.1": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4896113074204947,
+            "logLoss": 1.0628134470094794,
+            "brier": 0.6310538558692015
+          },
+          "final70-initial15-movement15-decay2-market0.2": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49371024734982333,
+            "logLoss": 1.0473413000019471,
+            "brier": 0.6259319999999676
+          },
+          "final70-initial15-movement15-decay2-market0.3": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49653710247349825,
+            "logLoss": 1.0373812952953871,
+            "brier": 0.621401327468537
+          },
+          "final70-initial15-movement15-decay2-market0.5": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5013427561837456,
+            "logLoss": 1.0245181895186413,
+            "brier": 0.6141135324190863
+          },
+          "final70-initial15-movement15-decay2-market0.75": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5089752650176679,
+            "logLoss": 1.0158043545531072,
+            "brier": 0.6083291948824181
+          },
+          "final70-initial15-movement15-decay3-market0": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4846643109540636,
+            "logLoss": 1.4617204207809527,
+            "brier": 0.6425855304604285
+          },
+          "final70-initial15-movement15-decay3-market0.1": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4842402826855124,
+            "logLoss": 1.0707989788468062,
+            "brier": 0.6357257563229181
+          },
+          "final70-initial15-movement15-decay3-market0.2": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4880565371024735,
+            "logLoss": 1.0531714967413055,
+            "brier": 0.6295826924992196
+          },
+          "final70-initial15-movement15-decay3-market0.3": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49229681978798584,
+            "logLoss": 1.0415822557942993,
+            "brier": 0.6241563389893415
+          },
+          "final70-initial15-movement15-decay3-market0.5": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4995053003533569,
+            "logLoss": 1.0264488411413641,
+            "brier": 0.6154537629110286
+          },
+          "final70-initial15-movement15-decay3-market0.75": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5078445229681979,
+            "logLoss": 1.0161860969810226,
+            "brier": 0.6086070383283481
+          },
+          "final60-initial20-movement20-decay0.5-market0": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4941342756183746,
+            "logLoss": 1.4428384510886771,
+            "brier": 0.6325504337144765
+          },
+          "final60-initial20-movement20-decay0.5-market0.1": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4971024734982332,
+            "logLoss": 1.057223315916552,
+            "brier": 0.6276992653611615
+          },
+          "final60-initial20-movement20-decay0.5-market0.2": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4989399293286219,
+            "logLoss": 1.043261539774206,
+            "brier": 0.6233414526306452
+          },
+          "final60-initial20-movement20-decay0.5-market0.3": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4990812720848056,
+            "logLoss": 1.0344710361948122,
+            "brier": 0.6194769955229159
+          },
+          "final60-initial20-movement20-decay0.5-market0.5": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5048763250883392,
+            "logLoss": 1.0232487330974662,
+            "brier": 0.6132281481758418
+          },
+          "final60-initial20-movement20-decay0.5-market0.75": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5105300353356891,
+            "logLoss": 1.015622658193906,
+            "brier": 0.6081922143702047
+          },
+          "final60-initial20-movement20-decay1-market0": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4911660777385159,
+            "logLoss": 1.4448329195093,
+            "brier": 0.633653040110055
+          },
+          "final60-initial20-movement20-decay1-market0.1": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49356890459363956,
+            "logLoss": 1.0586826818300172,
+            "brier": 0.6285687016789956
+          },
+          "final60-initial20-movement20-decay1-market0.2": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.496113074204947,
+            "logLoss": 1.044319564301596,
+            "brier": 0.6240050320792122
+          },
+          "final60-initial20-movement20-decay1-market0.3": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4979505300353357,
+            "logLoss": 1.0352163322446517,
+            "brier": 0.6199620313107098
+          },
+          "final60-initial20-movement20-decay1-market0.5": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5040282685512367,
+            "logLoss": 1.023556910387945,
+            "brier": 0.6134380362675455
+          },
+          "final60-initial20-movement20-decay1-market0.75": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5098233215547703,
+            "logLoss": 1.0156498998150436,
+            "brier": 0.6082118046395361
+          },
+          "final60-initial20-movement20-decay2-market0": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4862190812720848,
+            "logLoss": 1.4526122245514503,
+            "brier": 0.6377301329010353
+          },
+          "final60-initial20-movement20-decay2-market0.1": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.48890459363957595,
+            "logLoss": 1.0642549579087497,
+            "brier": 0.631827811723458
+          },
+          "final60-initial20-movement20-decay2-market0.2": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49342756183745584,
+            "logLoss": 1.0483704462865089,
+            "brier": 0.6265373312588075
+          },
+          "final60-initial20-movement20-decay2-market0.3": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49498233215547704,
+            "logLoss": 1.0381125595395453,
+            "brier": 0.621858691507091
+          },
+          "final60-initial20-movement20-decay2-market0.5": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5014840989399293,
+            "logLoss": 1.0248498997015203,
+            "brier": 0.6143369341424345
+          },
+          "final60-initial20-movement20-decay2-market0.75": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5093992932862191,
+            "logLoss": 1.0158716727648789,
+            "brier": 0.6083763414468281
+          },
+          "final60-initial20-movement20-decay3-market0": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4818374558303887,
+            "logLoss": 1.4657855543624885,
+            "brier": 0.644224256617494
+          },
+          "final60-initial20-movement20-decay3-market0.1": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.4843816254416961,
+            "logLoss": 1.0733164778161879,
+            "brier": 0.6370413462843344
+          },
+          "final60-initial20-movement20-decay3-market0.2": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.48678445229681977,
+            "logLoss": 1.0549246689090748,
+            "brier": 0.6306105381716458
+          },
+          "final60-initial20-movement20-decay3-market0.3": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49017667844522966,
+            "logLoss": 1.0428102211660468,
+            "brier": 0.6249318322794278
+          },
+          "final60-initial20-movement20-decay3-market0.5": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.49936395759717317,
+            "logLoss": 1.0269946644702235,
+            "brier": 0.6158307271563946
+          },
+          "final60-initial20-movement20-decay3-market0.75": {
+            "targets": 7110,
+            "evaluated": 7075,
+            "coverage": 0.9950773558368495,
+            "accuracy": 0.5074204946996467,
+            "logLoss": 1.0162919841549412,
+            "brier": 0.6086849207427459
+          }
+        }
+      },
+      "sameLeague": {
+        "spf": {
+          "uniform": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.44245475050888483,
+            "logLoss": 6.26647492264043,
+            "brier": 0.7853839794196898
+          },
+          "final-decay0.5-market0": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4401441381966221,
+            "logLoss": 6.267607047793962,
+            "brier": 0.7860931757950247
+          },
+          "final-decay0.5-market0.1": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.45420036309622047,
+            "logLoss": 1.3703357308337096,
+            "brier": 0.7484053787923078
+          },
+          "final-decay0.5-market0.2": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.46096715629641855,
+            "logLoss": 1.2317343958499374,
+            "brier": 0.7148235154254464
+          },
+          "final-decay0.5-market0.3": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.46542333718435386,
+            "logLoss": 1.15351614363354,
+            "brier": 0.68534758569444
+          },
+          "final-decay0.5-market0.5": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4763162237993068,
+            "logLoss": 1.0635117470399695,
+            "brier": 0.6387135271399892
+          },
+          "final-decay0.5-market0.75": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.5093249711173461,
+            "logLoss": 1.0091694157758073,
+            "brier": 0.6035168306486047
+          },
+          "final-decay1-market0": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4390713539087859,
+            "logLoss": 6.271516556798704,
+            "brier": 0.7886405718841892
+          },
+          "final-decay1-market0.1": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.44759861363261266,
+            "logLoss": 1.3732824304125222,
+            "brier": 0.7504529940084915
+          },
+          "final-decay1-market0.2": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.45585080046212245,
+            "logLoss": 1.2339492731922481,
+            "brier": 0.716425803382882
+          },
+          "final-decay1-market0.3": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.46542333718435386,
+            "logLoss": 1.155152315540024,
+            "brier": 0.6865590000073678
+          },
+          "final-decay1-market0.5": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4759861363261264,
+            "logLoss": 1.0643081496149327,
+            "brier": 0.6393065550066113
+          },
+          "final-decay1-market0.75": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.5094900148539363,
+            "logLoss": 1.0093514409124438,
+            "brier": 0.6036431770374266
+          },
+          "final-decay2-market0": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.43535786983550645,
+            "logLoss": 6.287797489626221,
+            "brier": 0.7988169454806541
+          },
+          "final-decay2-market0.1": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4436375639544479,
+            "logLoss": 1.3853924854427184,
+            "brier": 0.7586444167064138
+          },
+          "final-decay2-market0.2": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.449579138471695,
+            "logLoss": 1.242994875913968,
+            "brier": 0.7228472337464588
+          },
+          "final-decay2-market0.3": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.457996369037795,
+            "logLoss": 1.161816351116139,
+            "brier": 0.6914253966007989
+          },
+          "final-decay2-market0.5": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4741706552236343,
+            "logLoss": 1.0675586778608794,
+            "brier": 0.6417077597523451
+          },
+          "final-decay2-market0.75": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.5089948836441657,
+            "logLoss": 1.0101140846442902,
+            "brier": 0.6041720338971708
+          },
+          "final-decay3-market0": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.43461517302085056,
+            "logLoss": 6.315229618864539,
+            "brier": 0.8143205891762677
+          },
+          "final-decay3-market0.1": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.44231721406172636,
+            "logLoss": 1.4050288209057027,
+            "brier": 0.7711324997911025
+          },
+          "final-decay3-market0.2": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.44825878857897344,
+            "logLoss": 1.257369780002013,
+            "brier": 0.7326453553849698
+          },
+          "final-decay3-market0.3": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.45337514441326954,
+            "logLoss": 1.1722738476542414,
+            "brier": 0.698859155957882
+          },
+          "final-decay3-market0.5": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4647631622379931,
+            "logLoss": 1.072592240065002,
+            "brier": 0.645389592040812
+          },
+          "final-decay3-market0.75": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.5051988777025912,
+            "logLoss": 1.011297420117968,
+            "brier": 0.6049954526515707
+          },
+          "final70-initial15-movement15-decay0.5-market0": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.44124442977389006,
+            "logLoss": 6.268295678005266,
+            "brier": 0.7866600699986744
+          },
+          "final70-initial15-movement15-decay0.5-market0.1": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.45254992573031855,
+            "logLoss": 1.3708604808077856,
+            "brier": 0.7488717097370552
+          },
+          "final70-initial15-movement15-decay0.5-market0.2": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.459646806403697,
+            "logLoss": 1.2321311432740014,
+            "brier": 0.7151990328531839
+          },
+          "final70-initial15-movement15-decay0.5-market0.3": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.46558838092094407,
+            "logLoss": 1.1538113028294736,
+            "brier": 0.6856420393470668
+          },
+          "final70-initial15-movement15-decay0.5-market0.5": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.47582109258953625,
+            "logLoss": 1.0636603363907358,
+            "brier": 0.6388751024680914
+          },
+          "final70-initial15-movement15-decay0.5-market0.75": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.508334708697805,
+            "logLoss": 1.009210098446636,
+            "brier": 0.6035671503692258
+          },
+          "final70-initial15-movement15-decay1-market0": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.44223469219343126,
+            "logLoss": 6.273744206734846,
+            "brier": 0.7903847329001361
+          },
+          "final70-initial15-movement15-decay1-market0.1": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.451229575837597,
+            "logLoss": 1.3749496540018133,
+            "brier": 0.7518844234773184
+          },
+          "final70-initial15-movement15-decay1-market0.2": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.45766628156461464,
+            "logLoss": 1.2351999587890556,
+            "brier": 0.7175752380702625
+          },
+          "final70-initial15-movement15-decay1-market0.3": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4629476811355009,
+            "logLoss": 1.1560813071914482,
+            "brier": 0.6874571766789708
+          },
+          "final70-initial15-movement15-decay1-market0.5": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4751609176431754,
+            "logLoss": 1.064780948621896,
+            "brier": 0.6397944259436766
+          },
+          "final70-initial15-movement15-decay1-market0.75": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.5098201023271167,
+            "logLoss": 1.0094869304502956,
+            "brier": 0.603791060113234
+          },
+          "final70-initial15-movement15-decay2-market0": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.43794355504208615,
+            "logLoss": 6.2949164806928986,
+            "brier": 0.8033748383759508
+          },
+          "final70-initial15-movement15-decay2-market0.1": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.44198712658854594,
+            "logLoss": 1.3902769298582913,
+            "brier": 0.762379442528985
+          },
+          "final70-initial15-movement15-decay2-market0.2": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4494140947351048,
+            "logLoss": 1.2464986860323763,
+            "brier": 0.7258409653370174
+          },
+          "final70-initial15-movement15-decay2-market0.3": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.457171150354844,
+            "logLoss": 1.1643476786888562,
+            "brier": 0.6937594068000551
+          },
+          "final70-initial15-movement15-decay2-market0.5": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.46987951807228917,
+            "logLoss": 1.0688092618668965,
+            "brier": 0.6429670456911252
+          },
+          "final70-initial15-movement15-decay2-market0.75": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.5076745337514441,
+            "logLoss": 1.0104702962587617,
+            "brier": 0.6045467617393427
+          },
+          "final70-initial15-movement15-decay3-market0": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4357979864664136,
+            "logLoss": 6.3287075069576275,
+            "brier": 0.8210613813068128
+          },
+          "final70-initial15-movement15-decay3-market0.1": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.439511470539693,
+            "logLoss": 1.41304231998996,
+            "brier": 0.7766525477504633
+          },
+          "final70-initial15-movement15-decay3-market0.2": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4446278263739891,
+            "logLoss": 1.2628115667145685,
+            "brier": 0.7370661402749545
+          },
+          "final70-initial15-movement15-decay3-market0.3": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.45321010067667933,
+            "logLoss": 1.176082347211235,
+            "brier": 0.7023021588802942
+          },
+          "final70-initial15-movement15-decay3-market0.5": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4675689057600264,
+            "logLoss": 1.0744096279632858,
+            "brier": 0.6472414743335062
+          },
+          "final70-initial15-movement15-decay3-market0.75": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.5086647961709853,
+            "logLoss": 1.0118074278393656,
+            "brier": 0.6055417653547707
+          },
+          "final60-initial20-movement20-decay0.5-market0": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4416570391153656,
+            "logLoss": 6.268978662529086,
+            "brier": 0.7871606549622016
+          },
+          "final60-initial20-movement20-decay0.5-market0.1": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.45238488199372834,
+            "logLoss": 1.3713751324103545,
+            "brier": 0.7492794323642806
+          },
+          "final60-initial20-movement20-decay0.5-market0.2": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4594817626671068,
+            "logLoss": 1.2325185826414409,
+            "brier": 0.7155234051085445
+          },
+          "final60-initial20-movement20-decay0.5-market0.3": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4639379435550421,
+            "logLoss": 1.1540989897767653,
+            "brier": 0.6858925731949934
+          },
+          "final60-initial20-movement20-decay0.5-market0.5": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4751609176431754,
+            "logLoss": 1.0638044754895708,
+            "brier": 0.6390064953944469
+          },
+          "final60-initial20-movement20-decay0.5-market0.75": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.508334708697805,
+            "logLoss": 1.009248171586737,
+            "brier": 0.6036031219435506
+          },
+          "final60-initial20-movement20-decay1-market0": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4418220828519558,
+            "logLoss": 6.276161346669891,
+            "brier": 0.79198708316918
+          },
+          "final60-initial20-movement20-decay1-market0.1": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.44990922594487537,
+            "logLoss": 1.3767132239743574,
+            "brier": 0.7531873817068858
+          },
+          "final60-initial20-movement20-decay1-market0.2": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.45750123782802443,
+            "logLoss": 1.2365046235169153,
+            "brier": 0.7186097280409183
+          },
+          "final60-initial20-movement20-decay1-market0.3": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4622875061891401,
+            "logLoss": 1.1570397784669313,
+            "brier": 0.6882541221712939
+          },
+          "final60-initial20-movement20-decay1-market0.5": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.47483083016999506,
+            "logLoss": 1.065255919324165,
+            "brier": 0.6402090538210474
+          },
+          "final60-initial20-movement20-decay1-market0.75": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.5093249711173461,
+            "logLoss": 1.0096120447708634,
+            "brier": 0.6039017372376314
+          },
+          "final60-initial20-movement20-decay2-market0": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.43720085822743027,
+            "logLoss": 6.303056324724987,
+            "brier": 0.8075052436667935
+          },
+          "final60-initial20-movement20-decay2-market0.1": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.44314243274467735,
+            "logLoss": 1.3955822415684442,
+            "brier": 0.7657313987136023
+          },
+          "final60-initial20-movement20-decay2-market0.2": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.44710348242284204,
+            "logLoss": 1.2502383758549136,
+            "brier": 0.7284956743214384
+          },
+          "final60-initial20-movement20-decay2-market0.3": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4543654068328107,
+            "logLoss": 1.1670133371993172,
+            "brier": 0.6957980704903158
+          },
+          "final60-initial20-movement20-decay2-market0.5": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4678989932332068,
+            "logLoss": 1.0700807623732724,
+            "brier": 0.644017224511152
+          },
+          "final60-initial20-movement20-decay2-market0.75": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.5076745337514441,
+            "logLoss": 1.0107940857183022,
+            "brier": 0.6048180951930093
+          },
+          "final60-initial20-movement20-decay3-market0": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4348902459151675,
+            "logLoss": 6.344498338517559,
+            "brier": 0.8272151300053017
+          },
+          "final60-initial20-movement20-decay3-market0.1": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.43852120812015183,
+            "logLoss": 1.4218554894373094,
+            "brier": 0.7816432895008764
+          },
+          "final60-initial20-movement20-decay3-market0.2": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.4452880013203499,
+            "logLoss": 1.2687627622840687,
+            "brier": 0.7410155710946734
+          },
+          "final60-initial20-movement20-decay3-market0.3": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.45238488199372834,
+            "logLoss": 1.1802276905023967,
+            "brier": 0.7053319747867041
+          },
+          "final60-initial20-movement20-decay3-market0.5": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.46542333718435386,
+            "logLoss": 1.0763411117938197,
+            "brier": 0.6487971484654506
+          },
+          "final60-initial20-movement20-decay3-market0.75": {
+            "targets": 6822,
+            "evaluated": 6059,
+            "coverage": 0.8881559659923776,
+            "accuracy": 0.5061891401221323,
+            "logLoss": 1.0122958502392871,
+            "brier": 0.6059393023664162
+          }
+        },
+        "hhad": {
+          "uniform": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4358097359210948,
+            "logLoss": 6.900296466752495,
+            "brier": 0.8194930204893396
+          },
+          "final-decay0.5-market0": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4359423056527733,
+            "logLoss": 6.900631271478675,
+            "brier": 0.8198846474219038
+          },
+          "final-decay0.5-market0.1": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4447979637289214,
+            "logLoss": 1.427152862579112,
+            "brier": 0.778310226903899
+          },
+          "final-decay0.5-market0.2": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.45259306395163856,
+            "logLoss": 1.273798811401336,
+            "brier": 0.7412338096248928
+          },
+          "final-decay0.5-market0.3": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.46150174992045817,
+            "logLoss": 1.1875936474400008,
+            "brier": 0.7086553955848703
+          },
+          "final-decay0.5-market0.5": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.47056951956729237,
+            "logLoss": 1.0887634818164944,
+            "brier": 0.6569925772218046
+          },
+          "final-decay0.5-market0.75": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.49268215081132677,
+            "logLoss": 1.0292582954764962,
+            "brier": 0.6177153224872994
+          },
+          "final-decay1-market0": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4340333015165977,
+            "logLoss": 6.903875744908691,
+            "brier": 0.8221978558316908
+          },
+          "final-decay1-market0.1": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.44129812281259945,
+            "logLoss": 1.4295136814826075,
+            "brier": 0.7801199498336618
+          },
+          "final-decay1-market0.2": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4478205536111995,
+            "logLoss": 1.275502660613485,
+            "brier": 0.742600528105517
+          },
+          "final-decay1-market0.3": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.45529748647788737,
+            "logLoss": 1.188789414264506,
+            "brier": 0.7096395906472656
+          },
+          "final-decay1-market0.5": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4704104358892778,
+            "logLoss": 1.089249180519822,
+            "brier": 0.65739316854044
+          },
+          "final-decay1-market0.75": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4918867324212536,
+            "logLoss": 1.0292795308919025,
+            "brier": 0.6177266149250525
+          },
+          "final-decay2-market0": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.430851627956305,
+            "logLoss": 6.919082436494248,
+            "brier": 0.8319532977260348
+          },
+          "final-decay2-market0.1": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4368437798281896,
+            "logLoss": 1.440583845416862,
+            "brier": 0.7878750121767453
+          },
+          "final-decay2-market0.2": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.44177537384664334,
+            "logLoss": 1.283597444913127,
+            "brier": 0.7485829520888588
+          },
+          "final-decay2-market0.3": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.45116131084950684,
+            "logLoss": 1.1946104600437994,
+            "brier": 0.7140771174623864
+          },
+          "final-decay2-market0.5": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.46675151129494113,
+            "logLoss": 1.0918873720332434,
+            "brier": 0.6594241245936604
+          },
+          "final-decay2-market0.75": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4893413935730194,
+            "logLoss": 1.029724414457833,
+            "brier": 0.6180304017281749
+          },
+          "final-decay3-market0": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.42798812175204154,
+            "logLoss": 6.945530782464604,
+            "brier": 0.8468395952730453
+          },
+          "final-decay3-market0.1": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.43382118994591157,
+            "logLoss": 1.4591167674560164,
+            "brier": 0.7997681175754175
+          },
+          "final-decay3-market0.2": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.43970728603245307,
+            "logLoss": 1.2969301286417172,
+            "brier": 0.7578172125377834
+          },
+          "final-decay3-market0.3": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4465478841870824,
+            "logLoss": 1.2041358124381076,
+            "brier": 0.7209868801601383
+          },
+          "final-decay3-market0.5": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4599109131403118,
+            "logLoss": 1.0962486094359376,
+            "brier": 0.6626879333848417
+          },
+          "final-decay3-market0.75": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.48854597518294623,
+            "logLoss": 1.0305732546343187,
+            "brier": 0.6186174711281862
+          },
+          "final70-initial15-movement15-decay0.5-market0": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4379573655742921,
+            "logLoss": 6.901264561262746,
+            "brier": 0.8204572878941409
+          },
+          "final70-initial15-movement15-decay0.5-market0.1": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4430480432707604,
+            "logLoss": 1.427644356854131,
+            "brier": 0.7787812424939774
+          },
+          "final70-initial15-movement15-decay0.5-market0.2": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.45116131084950684,
+            "logLoss": 1.27417799493701,
+            "brier": 0.7416130582961237
+          },
+          "final70-initial15-movement15-decay0.5-market0.3": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4581609926821508,
+            "logLoss": 1.1878805146415559,
+            "brier": 0.708952735300583
+          },
+          "final70-initial15-movement15-decay0.5-market0.5": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.46897868278714605,
+            "logLoss": 1.0889094758917457,
+            "brier": 0.6571556729164324
+          },
+          "final70-initial15-movement15-decay0.5-market0.75": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.49236398345529747,
+            "logLoss": 1.0292939195451871,
+            "brier": 0.6177660641992455
+          },
+          "final70-initial15-movement15-decay1-market0": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.43557111040407254,
+            "logLoss": 6.905953877845382,
+            "brier": 0.8238147683513525
+          },
+          "final70-initial15-movement15-decay1-market0.1": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4389118676423799,
+            "logLoss": 1.4310837623962818,
+            "brier": 0.78144064581021
+          },
+          "final70-initial15-movement15-decay1-market0.2": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.44527521476296533,
+            "logLoss": 1.2766910856469569,
+            "brier": 0.7436549020480988
+          },
+          "final70-initial15-movement15-decay1-market0.3": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4513203945275215,
+            "logLoss": 1.1896748646403374,
+            "brier": 0.7104575370650249
+          },
+          "final70-initial15-movement15-decay1-market0.5": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4665924276169265,
+            "logLoss": 1.089688585478526,
+            "brier": 0.6578279434359837
+          },
+          "final70-initial15-movement15-decay1-market0.75": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4910913140311804,
+            "logLoss": 1.0293830272635003,
+            "brier": 0.6178505820317507
+          },
+          "final70-initial15-movement15-decay2-market0": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.43318485523385303,
+            "logLoss": 6.925678162683382,
+            "brier": 0.8357979793813355
+          },
+          "final70-initial15-movement15-decay2-market0.1": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4354120267260579,
+            "logLoss": 1.4451586963957475,
+            "brier": 0.790999498180175
+          },
+          "final70-initial15-movement15-decay2-market0.2": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.44097995545657015,
+            "logLoss": 1.2869003515874133,
+            "brier": 0.7510618485484998
+          },
+          "final70-initial15-movement15-decay2-market0.3": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.44718421889914095,
+            "logLoss": 1.1969898093509457,
+            "brier": 0.7159850304863072
+          },
+          "final70-initial15-movement15-decay2-market0.5": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4616608335984728,
+            "logLoss": 1.0930093021342155,
+            "brier": 0.6604138890703708
+          },
+          "final70-initial15-movement15-decay2-market0.75": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.48822780782691694,
+            "logLoss": 1.0299704907523193,
+            "brier": 0.6182921398787959
+          },
+          "final70-initial15-movement15-decay3-market0": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4309576837416481,
+            "logLoss": 6.9579864212162486,
+            "brier": 0.8523071102624636
+          },
+          "final70-initial15-movement15-decay3-market0.1": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.43382118994591157,
+            "logLoss": 1.4666779603025437,
+            "brier": 0.8041992054651382
+          },
+          "final70-initial15-movement15-decay3-market0.2": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4371619471842189,
+            "logLoss": 1.302127272541294,
+            "brier": 0.7613206901279784
+          },
+          "final70-initial15-movement15-decay3-market0.3": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.44320712694877507,
+            "logLoss": 1.2077698104640169,
+            "brier": 0.7236715642509827
+          },
+          "final70-initial15-movement15-decay3-market0.5": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4545020680878142,
+            "logLoss": 1.0978940575814737,
+            "brier": 0.6640614808774653
+          },
+          "final70-initial15-movement15-decay3-market0.75": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4867960547247852,
+            "logLoss": 1.0309118432480864,
+            "brier": 0.6189641923739762
+          },
+          "final60-initial20-movement20-decay0.5-market0": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.438434616608336,
+            "logLoss": 6.901944279543374,
+            "brier": 0.8209645570904919
+          },
+          "final60-initial20-movement20-decay0.5-market0.1": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.44368437798281896,
+            "logLoss": 1.4281609661096777,
+            "brier": 0.7791941998807539
+          },
+          "final60-initial20-movement20-decay0.5-market0.2": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4489341393573019,
+            "logLoss": 1.2745706578131801,
+            "brier": 0.7419413894044202
+          },
+          "final60-initial20-movement20-decay0.5-market0.3": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4559338211899459,
+            "logLoss": 1.1881744355571908,
+            "brier": 0.709206125661496
+          },
+          "final60-initial20-movement20-decay0.5-market0.5": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4680241807190582,
+            "logLoss": 1.0890577330575135,
+            "brier": 0.6572882383758821
+          },
+          "final60-initial20-movement20-decay0.5-market0.75": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4914094813872097,
+            "logLoss": 1.0293316063629852,
+            "brier": 0.6178020796442827
+          },
+          "final60-initial20-movement20-decay1-market0": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4354120267260579,
+            "logLoss": 6.908365118619068,
+            "brier": 0.825383746108066
+          },
+          "final60-initial20-movement20-decay1-market0.1": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4411390391345848,
+            "logLoss": 1.43285854169961,
+            "brier": 0.7827143163132037
+          },
+          "final60-initial20-movement20-decay1-market0.2": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.44527521476296533,
+            "logLoss": 1.2780128783826132,
+            "brier": 0.7446640229591583
+          },
+          "final60-initial20-movement20-decay1-market0.3": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4500477251034044,
+            "logLoss": 1.1906495931637404,
+            "brier": 0.7112328660459409
+          },
+          "final60-initial20-movement20-decay1-market0.5": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4664333439389119,
+            "logLoss": 1.0901700049915788,
+            "brier": 0.6582279615419802
+          },
+          "final60-initial20-movement20-decay1-market0.75": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4887050588609609,
+            "logLoss": 1.0295036671473778,
+            "brier": 0.6179544733916621
+          },
+          "final60-initial20-movement20-decay2-market0": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4336621062678969,
+            "logLoss": 6.933767458384973,
+            "brier": 0.8398032744035648
+          },
+          "final60-initial20-movement20-decay2-market0.1": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.43732103086223356,
+            "logLoss": 1.4505006712079564,
+            "brier": 0.7942434839300052
+          },
+          "final60-initial20-movement20-decay2-market0.2": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.441934457524658,
+            "logLoss": 1.290686439011267,
+            "brier": 0.7536246983081843
+          },
+          "final60-initial20-movement20-decay2-market0.3": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4465478841870824,
+            "logLoss": 1.1996954200599317,
+            "brier": 0.7179469175381129
+          },
+          "final60-initial20-movement20-decay2-market0.5": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.45975182946229715,
+            "logLoss": 1.0942938237555662,
+            "brier": 0.6614143705532057
+          },
+          "final60-initial20-movement20-decay2-market0.75": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.48806872414890234,
+            "logLoss": 1.030282162240699,
+            "brier": 0.6185418391131442
+          },
+          "final60-initial20-movement20-decay3-market0": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4304804327076042,
+            "logLoss": 6.973657337732928,
+            "brier": 0.8583441487281295
+          },
+          "final60-initial20-movement20-decay3-market0.1": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.43398027362392616,
+            "logLoss": 1.4755732907924208,
+            "brier": 0.8090886181028206
+          },
+          "final60-initial20-movement20-decay3-market0.2": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4379573655742921,
+            "logLoss": 1.3081879342376002,
+            "brier": 0.7651833484891022
+          },
+          "final60-initial20-movement20-decay3-market0.3": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.44400254533884825,
+            "logLoss": 1.2120143909677776,
+            "brier": 0.7266283398869678
+          },
+          "final60-initial20-movement20-decay3-market0.5": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4551384027998727,
+            "logLoss": 1.0998729139680332,
+            "brier": 0.6655691057174702
+          },
+          "final60-initial20-movement20-decay3-market0.75": {
+            "targets": 7110,
+            "evaluated": 6286,
+            "coverage": 0.8841068917018284,
+            "accuracy": 0.4866369710467706,
+            "logLoss": 1.031393472344024,
+            "brier": 0.6193402811957733
+          }
+        }
+      }
+    },
+    "validation": {
+      "all": {
+        "spf": {
+          "uniform": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5108535688005887,
+            "logLoss": 1.0588432361841786,
+            "brier": 0.5997739016355604
+          },
+          "final-decay0.5-market0": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5115894039735099,
+            "logLoss": 1.0594043426165258,
+            "brier": 0.6001947045904272
+          },
+          "final-decay0.5-market0.1": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5115894039735099,
+            "logLoss": 1.00450549190203,
+            "brier": 0.5986328785315513
+          },
+          "final-decay0.5-market0.2": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5126931567328918,
+            "logLoss": 1.001044313357032,
+            "brier": 0.5972283932166668
+          },
+          "final-decay0.5-market0.3": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5149006622516556,
+            "logLoss": 0.9985035698165399,
+            "brier": 0.5959812486457772
+          },
+          "final-decay0.5-market0.5": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5121412803532008,
+            "logLoss": 0.9948323653872835,
+            "brier": 0.59395898173597
+          },
+          "final-decay0.5-market0.75": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5171081677704195,
+            "logLoss": 0.992021149551232,
+            "brier": 0.5923161897836647
+          },
+          "final-decay1-market0": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5121412803532008,
+            "logLoss": 1.0603840615223612,
+            "brier": 0.6008670337081762
+          },
+          "final-decay1-market0.1": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5132450331125827,
+            "logLoss": 1.0053242889327905,
+            "brier": 0.5992087838715011
+          },
+          "final-decay1-market0.2": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5149006622516556,
+            "logLoss": 1.0017234783920081,
+            "brier": 0.5977143616379369
+          },
+          "final-decay1-market0.3": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5160044150110376,
+            "logLoss": 0.9990591156973236,
+            "brier": 0.5963837670074804
+          },
+          "final-decay1-market0.5": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5143487858719646,
+            "logLoss": 0.9951783644704687,
+            "brier": 0.5942140605558903
+          },
+          "final-decay1-market0.75": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5160044150110376,
+            "logLoss": 0.9921634723385294,
+            "brier": 0.5924234577588869
+          },
+          "final-decay2-market0": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.510485651214128,
+            "logLoss": 1.0637939221372734,
+            "brier": 0.6030216021843608
+          },
+          "final-decay2-market0.1": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5110375275938189,
+            "logLoss": 1.0080957196877929,
+            "brier": 0.6010259900538922
+          },
+          "final-decay2-market0.2": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5121412803532008,
+            "logLoss": 1.0039654751943186,
+            "brier": 0.599221295625681
+          },
+          "final-decay2-market0.3": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5132450331125827,
+            "logLoss": 1.0008486952910896,
+            "brier": 0.5976075188997302
+          },
+          "final-decay2-market0.5": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5149006622516556,
+            "logLoss": 0.9962364393042521,
+            "brier": 0.594952718554601
+          },
+          "final-decay2-market0.75": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5171081677704195,
+            "logLoss": 0.9925643017191755,
+            "brier": 0.5927081301983973
+          },
+          "final-decay3-market0": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5060706401766004,
+            "logLoss": 1.06943086060272,
+            "brier": 0.6062738440433248
+          },
+          "final-decay3-market0.1": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5093818984547461,
+            "logLoss": 1.0125430030175937,
+            "brier": 0.603739870256607
+          },
+          "final-decay3-market0.2": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5115894039735099,
+            "logLoss": 1.0074811125434466,
+            "brier": 0.6014441780544492
+          },
+          "final-decay3-market0.3": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5115894039735099,
+            "logLoss": 1.0035969426673121,
+            "brier": 0.5993867674368497
+          },
+          "final-decay3-market0.5": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5149006622516556,
+            "logLoss": 0.9977936547930765,
+            "brier": 0.5959867909553304
+          },
+          "final-decay3-market0.75": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5132450331125827,
+            "logLoss": 0.9931139431863626,
+            "brier": 0.5930771542665721
+          },
+          "final70-initial15-movement15-decay0.5-market0": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5115894039735099,
+            "logLoss": 1.059728616568711,
+            "brier": 0.6003219085433004
+          },
+          "final70-initial15-movement15-decay0.5-market0.1": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5110375275938189,
+            "logLoss": 1.0047812721804068,
+            "brier": 0.5987415324457217
+          },
+          "final70-initial15-movement15-decay0.5-market0.2": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5143487858719646,
+            "logLoss": 1.0012739672211877,
+            "brier": 0.5973197925684494
+          },
+          "final70-initial15-movement15-decay0.5-market0.3": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5160044150110376,
+            "logLoss": 0.9986905046798684,
+            "brier": 0.5960566889114842
+          },
+          "final70-initial15-movement15-decay0.5-market0.5": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5126931567328918,
+            "logLoss": 0.9949449937560328,
+            "brier": 0.5940063902584732
+          },
+          "final70-initial15-movement15-decay0.5-market0.75": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5165562913907285,
+            "logLoss": 0.9920626633848788,
+            "brier": 0.5923358456814327
+          },
+          "final70-initial15-movement15-decay1-market0": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.510485651214128,
+            "logLoss": 1.0610689574755787,
+            "brier": 0.6011348387667163
+          },
+          "final70-initial15-movement15-decay1-market0.1": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5132450331125827,
+            "logLoss": 1.0059004321804477,
+            "brier": 0.5994364936325168
+          },
+          "final70-initial15-movement15-decay1-market0.2": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5149006622516556,
+            "logLoss": 1.0021985809280332,
+            "brier": 0.5979049349440213
+          },
+          "final70-initial15-movement15-decay1-market0.3": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5160044150110376,
+            "logLoss": 0.9994421662471884,
+            "brier": 0.5965401627012245
+          },
+          "final70-initial15-movement15-decay1-market0.5": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5132450331125827,
+            "logLoss": 0.9954042936110955,
+            "brier": 0.5943109775527401
+          },
+          "final70-initial15-movement15-decay1-market0.75": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5165562913907285,
+            "logLoss": 0.9922432595757983,
+            "brier": 0.5924626698742066
+          },
+          "final70-initial15-movement15-decay2-market0": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.510485651214128,
+            "logLoss": 1.065265660745393,
+            "brier": 0.6035820258985949
+          },
+          "final70-initial15-movement15-decay2-market0.1": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5110375275938189,
+            "logLoss": 1.0093073077919241,
+            "brier": 0.6015005909516962
+          },
+          "final70-initial15-movement15-decay2-market0.2": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5137969094922737,
+            "logLoss": 1.0049465493499357,
+            "brier": 0.5996166915837233
+          },
+          "final70-initial15-movement15-decay2-market0.3": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5137969094922737,
+            "logLoss": 1.0016264480702057,
+            "brier": 0.5979303277946774
+          },
+          "final70-initial15-movement15-decay2-market0.5": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5154525386313465,
+            "logLoss": 0.9966783158715347,
+            "brier": 0.5951502069533692
+          },
+          "final70-initial15-movement15-decay2-market0.75": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5154525386313465,
+            "logLoss": 0.9927070735805362,
+            "brier": 0.5927861935331948
+          },
+          "final70-initial15-movement15-decay3-market0": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5055187637969095,
+            "logLoss": 1.0719922575882337,
+            "brier": 0.6072919800776897
+          },
+          "final70-initial15-movement15-decay3-market0.1": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5082781456953642,
+            "logLoss": 1.0145976248824042,
+            "brier": 0.6045998446286606
+          },
+          "final70-initial15-movement15-decay3-market0.2": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5099337748344371,
+            "logLoss": 1.009116270449799,
+            "brier": 0.602158512555052
+          },
+          "final70-initial15-movement15-decay3-market0.3": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5110375275938189,
+            "logLoss": 1.0048764338802696,
+            "brier": 0.5999679838568648
+          },
+          "final70-initial15-movement15-decay3-market0.5": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5121412803532008,
+            "logLoss": 0.9985041320264318,
+            "brier": 0.5963393365867485
+          },
+          "final70-initial15-movement15-decay3-market0.75": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5126931567328918,
+            "logLoss": 0.9933316838991986,
+            "brier": 0.5932142964858425
+          },
+          "final60-initial20-movement20-decay0.5-market0": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5110375275938189,
+            "logLoss": 1.0598805071770803,
+            "brier": 0.6003844535825655
+          },
+          "final60-initial20-movement20-decay0.5-market0.1": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5110375275938189,
+            "logLoss": 1.0049070468742118,
+            "brier": 0.5987940042686334
+          },
+          "final60-initial20-movement20-decay0.5-market0.2": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5132450331125827,
+            "logLoss": 1.0013765847060079,
+            "brier": 0.5973630397777687
+          },
+          "final60-initial20-movement20-decay0.5-market0.3": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5160044150110376,
+            "logLoss": 0.9987725679201938,
+            "brier": 0.5960915601099738
+          },
+          "final60-initial20-movement20-decay0.5-market0.5": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5121412803532008,
+            "logLoss": 0.9949928368394902,
+            "brier": 0.5940270552435858
+          },
+          "final60-initial20-movement20-decay0.5-market0.75": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5171081677704195,
+            "logLoss": 0.992079560327852,
+            "brier": 0.5923435262903605
+          },
+          "final60-initial20-movement20-decay1-market0": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5110375275938189,
+            "logLoss": 1.0614528674861727,
+            "brier": 0.6012900512275696
+          },
+          "final60-initial20-movement20-decay1-market0.1": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5126931567328918,
+            "logLoss": 1.006210997970183,
+            "brier": 0.5995648076663166
+          },
+          "final60-initial20-movement20-decay1-market0.2": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5160044150110376,
+            "logLoss": 1.002447037853766,
+            "brier": 0.5980088788132025
+          },
+          "final60-initial20-movement20-decay1-market0.3": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5143487858719646,
+            "logLoss": 0.9996371554350263,
+            "brier": 0.5966222646682274
+          },
+          "final60-initial20-movement20-decay1-market0.5": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5126931567328918,
+            "logLoss": 0.9955133004335981,
+            "brier": 0.5943569805026973
+          },
+          "final60-initial20-movement20-decay1-market0.75": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5165562913907285,
+            "logLoss": 0.9922786909973249,
+            "brier": 0.5924777705290686
+          },
+          "final60-initial20-movement20-decay2-market0": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5082781456953642,
+            "logLoss": 1.0663671057937292,
+            "brier": 0.6039966404108111
+          },
+          "final60-initial20-movement20-decay2-market0.1": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5110375275938189,
+            "logLoss": 1.0101654220380498,
+            "brier": 0.6018359749490348
+          },
+          "final60-initial20-movement20-decay2-market0.2": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.510485651214128,
+            "logLoss": 1.0056142178966472,
+            "brier": 0.5998812381914432
+          },
+          "final60-initial20-movement20-decay2-market0.3": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5137969094922737,
+            "logLoss": 1.0021375038168523,
+            "brier": 0.5981324301380355
+          },
+          "final60-initial20-movement20-decay2-market0.5": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5149006622516556,
+            "logLoss": 0.9969483342190043,
+            "brier": 0.5952526001437682
+          },
+          "final60-initial20-movement20-decay2-market0.75": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5154525386313465,
+            "logLoss": 0.9927832383991935,
+            "brier": 0.5928111616119655
+          },
+          "final60-initial20-movement20-decay3-market0": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5033112582781457,
+            "logLoss": 1.0742739395324643,
+            "brier": 0.6081429931373531
+          },
+          "final60-initial20-movement20-decay3-market0.1": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5049668874172185,
+            "logLoss": 1.016298877044661,
+            "brier": 0.6052829183665894
+          },
+          "final60-initial20-movement20-decay3-market0.2": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5093818984547461,
+            "logLoss": 1.0104111209822675,
+            "brier": 0.6026920554191948
+          },
+          "final60-initial20-movement20-decay3-market0.3": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5093818984547461,
+            "logLoss": 1.0058534567158048,
+            "brier": 0.6003704042951686
+          },
+          "final60-initial20-movement20-decay3-market0.5": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5093818984547461,
+            "logLoss": 0.9990099222473057,
+            "brier": 0.5965347375172221
+          },
+          "final60-initial20-movement20-decay3-market0.75": {
+            "targets": 1815,
+            "evaluated": 1812,
+            "coverage": 0.9983471074380166,
+            "accuracy": 0.5121412803532008,
+            "logLoss": 0.9934693814936314,
+            "brier": 0.5932544705512385
+          }
+        },
+        "hhad": {
+          "uniform": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5044783983140149,
+            "logLoss": 1.1693991596479814,
+            "brier": 0.6154316672323403
+          },
+          "final-decay0.5-market0": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5063224446786091,
+            "logLoss": 1.1690885382455163,
+            "brier": 0.6153420889577824
+          },
+          "final-decay0.5-market0.1": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5068493150684932,
+            "logLoss": 1.0272925116039624,
+            "brier": 0.6132205621052331
+          },
+          "final-decay0.5-market0.2": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5079030558482613,
+            "logLoss": 1.0217305017333171,
+            "brier": 0.6113184061315197
+          },
+          "final-decay0.5-market0.3": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5079030558482613,
+            "logLoss": 1.0181265750214168,
+            "brier": 0.6096356210366365
+          },
+          "final-decay0.5-market0.5": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5073761854583773,
+            "logLoss": 1.0134432506844286,
+            "brier": 0.6069281634833609
+          },
+          "final-decay0.5-market0.75": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5110642781875658,
+            "logLoss": 1.0102926195009365,
+            "brier": 0.6047778027351951
+          },
+          "final-decay1-market0": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5042149631190727,
+            "logLoss": 1.1691913412647401,
+            "brier": 0.6155087037459731
+          },
+          "final-decay1-market0.1": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5068493150684932,
+            "logLoss": 1.0273507302008047,
+            "brier": 0.6133502069218381
+          },
+          "final-decay1-market0.2": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5073761854583773,
+            "logLoss": 1.0217564723939097,
+            "brier": 0.6114155939749278
+          },
+          "final-decay1-market0.3": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5079030558482613,
+            "logLoss": 1.0181289975874233,
+            "brier": 0.6097048649052441
+          },
+          "final-decay1-market0.5": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5042149631190727,
+            "logLoss": 1.0134182858465601,
+            "brier": 0.6069550583975436
+          },
+          "final-decay1-market0.75": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5110642781875658,
+            "logLoss": 1.0102637166576707,
+            "brier": 0.6047771470723088
+          },
+          "final-decay2-market0": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5,
+            "logLoss": 1.1707377183265553,
+            "brier": 0.6166540468837644
+          },
+          "final-decay2-market0.1": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.49789251844046367,
+            "logLoss": 1.0285203638995308,
+            "brier": 0.6142680785372964
+          },
+          "final-decay2-market0.2": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5026343519494204,
+            "logLoss": 1.0226250018520011,
+            "brier": 0.6121310912255095
+          },
+          "final-decay2-market0.3": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5068493150684932,
+            "logLoss": 1.0187522940397955,
+            "brier": 0.6102430849484051
+          },
+          "final-decay2-market0.5": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5110642781875658,
+            "logLoss": 1.013683416546192,
+            "brier": 0.6072140154982356
+          },
+          "final-decay2-market0.75": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.512118018967334,
+            "logLoss": 1.0102887650710826,
+            "brier": 0.604828197005602
+          },
+          "final-decay3-market0": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5005268703898841,
+            "logLoss": 1.1742283260134618,
+            "brier": 0.6189065405503533
+          },
+          "final-decay3-market0.1": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.49789251844046367,
+            "logLoss": 1.0311902488699634,
+            "brier": 0.6160785175630775
+          },
+          "final-decay3-market0.2": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5015806111696522,
+            "logLoss": 1.0246409283857736,
+            "brier": 0.613547654560295
+          },
+          "final-decay3-market0.3": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5047418335089568,
+            "logLoss": 1.0202330515722353,
+            "brier": 0.6113139515420026
+          },
+          "final-decay3-market0.5": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5094836670179136,
+            "logLoss": 1.0143712443444888,
+            "brier": 0.6077380254588918
+          },
+          "final-decay3-market0.75": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5094836670179136,
+            "logLoss": 1.0104150690562792,
+            "brier": 0.6049396427677716
+          },
+          "final70-initial15-movement15-decay0.5-market0": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5079030558482613,
+            "logLoss": 1.1689699484963438,
+            "brier": 0.6151590487995262
+          },
+          "final70-initial15-movement15-decay0.5-market0.1": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5063224446786091,
+            "logLoss": 1.0271169811812453,
+            "brier": 0.6130318130889271
+          },
+          "final70-initial15-movement15-decay0.5-market0.2": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5084299262381454,
+            "logLoss": 1.0215226321400008,
+            "brier": 0.6111292844513546
+          },
+          "final70-initial15-movement15-decay0.5-market0.3": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5079030558482613,
+            "logLoss": 1.0179044017807934,
+            "brier": 0.6094514628868098
+          },
+          "final70-initial15-movement15-decay0.5-market0.5": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5084299262381454,
+            "logLoss": 1.0132328292393662,
+            "brier": 0.6067699409767975
+          },
+          "final70-initial15-movement15-decay0.5-market0.75": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5115911485774499,
+            "logLoss": 1.0101566222353837,
+            "brier": 0.6046820158750525
+          },
+          "final70-initial15-movement15-decay1-market0": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.505795574288725,
+            "logLoss": 1.1693391974823855,
+            "brier": 0.6153269304027835
+          },
+          "final70-initial15-movement15-decay1-market0.1": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5047418335089568,
+            "logLoss": 1.0273114966065466,
+            "brier": 0.6131349522660575
+          },
+          "final70-initial15-movement15-decay1-market0.2": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5068493150684932,
+            "logLoss": 1.0215990188034805,
+            "brier": 0.611178337705868
+          },
+          "final70-initial15-movement15-decay1-market0.3": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5063224446786091,
+            "logLoss": 1.017899327292734,
+            "brier": 0.6094570867222178
+          },
+          "final70-initial15-movement15-decay1-market0.5": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5126448893572181,
+            "logLoss": 1.0131402838807773,
+            "brier": 0.6067206754845311
+          },
+          "final70-initial15-movement15-decay1-market0.75": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5147523709167545,
+            "logLoss": 1.010059006946798,
+            "brier": 0.6046240815554463
+          },
+          "final70-initial15-movement15-decay2-market0": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5042149631190727,
+            "logLoss": 1.1725238644031064,
+            "brier": 0.6167146448667129
+          },
+          "final70-initial15-movement15-decay2-market0.1": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5068493150684932,
+            "logLoss": 1.0292426316043026,
+            "brier": 0.6142161904179896
+          },
+          "final70-initial15-movement15-decay2-market0.2": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5084299262381454,
+            "logLoss": 1.0228820345171166,
+            "brier": 0.6119903672937157
+          },
+          "final70-initial15-movement15-decay2-market0.3": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5115911485774499,
+            "logLoss": 1.0187398895765745,
+            "brier": 0.6100371754938931
+          },
+          "final70-initial15-movement15-decay2-market0.5": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5105374077976818,
+            "logLoss": 1.0134195532116943,
+            "brier": 0.6069486858675963
+          },
+          "final70-initial15-movement15-decay2-market0.75": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5136986301369864,
+            "logLoss": 1.0100234248166418,
+            "brier": 0.6046216250347541
+          },
+          "final70-initial15-movement15-decay3-market0": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5036880927291886,
+            "logLoss": 1.178514725675591,
+            "brier": 0.6194962385640644
+          },
+          "final70-initial15-movement15-decay3-market0.1": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5015806111696522,
+            "logLoss": 1.0326625514404981,
+            "brier": 0.6164524032141553
+          },
+          "final70-initial15-movement15-decay3-market0.2": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5047418335089568,
+            "logLoss": 1.0253963009835443,
+            "brier": 0.6137405817512392
+          },
+          "final70-initial15-movement15-decay3-market0.3": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5073761854583773,
+            "logLoss": 1.0205724480201719,
+            "brier": 0.611360774175319
+          },
+          "final70-initial15-movement15-decay3-market0.5": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5100105374077977,
+            "logLoss": 1.0142744641360038,
+            "brier": 0.6075972006844621
+          },
+          "final70-initial15-movement15-decay3-market0.75": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5131717597471022,
+            "logLoss": 1.010186388806252,
+            "brier": 0.604760311935234
+          },
+          "final60-initial20-movement20-decay0.5-market0": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5068493150684932,
+            "logLoss": 1.1690429304246495,
+            "brier": 0.6151487598117036
+          },
+          "final60-initial20-movement20-decay0.5-market0.1": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5063224446786091,
+            "logLoss": 1.0271455566600698,
+            "brier": 0.6130119687818174
+          },
+          "final60-initial20-movement20-decay0.5-market0.2": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5079030558482613,
+            "logLoss": 1.0215224346216039,
+            "brier": 0.6111022368734166
+          },
+          "final60-initial20-movement20-decay0.5-market0.3": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5084299262381454,
+            "logLoss": 1.0178853182964045,
+            "brier": 0.6094195640865019
+          },
+          "final60-initial20-movement20-decay0.5-market0.5": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5100105374077977,
+            "logLoss": 1.0131959439134444,
+            "brier": 0.6067353958771334
+          },
+          "final60-initial20-movement20-decay0.5-market0.75": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.512118018967334,
+            "logLoss": 1.0101248748216023,
+            "brier": 0.6046573931737824
+          },
+          "final60-initial20-movement20-decay1-market0": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5036880927291886,
+            "logLoss": 1.169866092358466,
+            "brier": 0.615426986818335
+          },
+          "final60-initial20-movement20-decay1-market0.1": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5047418335089568,
+            "logLoss": 1.0276236232665827,
+            "brier": 0.6131978927375006
+          },
+          "final60-initial20-movement20-decay1-market0.2": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5079030558482613,
+            "logLoss": 1.0217826300906114,
+            "brier": 0.6112101867448796
+          },
+          "final60-initial20-movement20-decay1-market0.3": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5063224446786091,
+            "logLoss": 1.017998137923399,
+            "brier": 0.6094638688404781
+          },
+          "final60-initial20-movement20-decay1-market0.5": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5136986301369864,
+            "logLoss": 1.0131429287711116,
+            "brier": 0.6066953972963219
+          },
+          "final60-initial20-movement20-decay1-market0.75": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5136986301369864,
+            "logLoss": 1.0100254720569246,
+            "brier": 0.6045926158623464
+          },
+          "final60-initial20-movement20-decay2-market0": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.505795574288725,
+            "logLoss": 1.1743750273006917,
+            "brier": 0.6170453854748423
+          },
+          "final60-initial20-movement20-decay2-market0.1": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5073761854583773,
+            "logLoss": 1.0298637804089643,
+            "brier": 0.6144531115976869
+          },
+          "final60-initial20-movement20-decay2-market0.2": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5079030558482613,
+            "logLoss": 1.0232424703027645,
+            "brier": 0.6121469680155629
+          },
+          "final60-initial20-movement20-decay2-market0.3": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5110642781875658,
+            "logLoss": 1.0189453781894622,
+            "brier": 0.610126954728472
+          },
+          "final60-initial20-movement20-decay2-market0.5": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.512118018967334,
+            "logLoss": 1.0134450827236345,
+            "brier": 0.6069453190393838
+          },
+          "final60-initial20-movement20-decay2-market0.75": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.512118018967334,
+            "logLoss": 1.0099684777463191,
+            "brier": 0.6045777573375788
+          },
+          "final60-initial20-movement20-decay3-market0": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5036880927291886,
+            "logLoss": 1.181932836625063,
+            "brier": 0.6203208495974205
+          },
+          "final60-initial20-movement20-decay3-market0.1": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.505795574288725,
+            "logLoss": 1.0338864000506185,
+            "brier": 0.6170853003920456
+          },
+          "final60-initial20-movement20-decay3-market0.2": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5047418335089568,
+            "logLoss": 1.0262345702622342,
+            "brier": 0.6142060434630248
+          },
+          "final60-initial20-movement20-decay3-market0.3": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5073761854583773,
+            "logLoss": 1.0211399188568147,
+            "brier": 0.6116830788103637
+          },
+          "final60-initial20-movement20-decay3-market0.5": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5100105374077977,
+            "logLoss": 1.0144798484397897,
+            "brier": 0.6077060263341102
+          },
+          "final60-initial20-movement20-decay3-market0.75": {
+            "targets": 1903,
+            "evaluated": 1898,
+            "coverage": 0.9973725696269049,
+            "accuracy": 0.5147523709167545,
+            "logLoss": 1.0101725057083777,
+            "brier": 0.6047388547932998
+          }
+        }
+      },
+      "sameLeague": {
+        "spf": {
+          "uniform": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4397602201257862,
+            "logLoss": 4.904078500851392,
+            "brier": 0.7567585145491896
+          },
+          "final-decay0.5-market0": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.439563679245283,
+            "logLoss": 4.906157472278035,
+            "brier": 0.7578001336682558
+          },
+          "final-decay0.5-market0.1": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4481132075471698,
+            "logLoss": 1.3071569649458468,
+            "brier": 0.7286337560647148
+          },
+          "final-decay0.5-market0.2": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4522405660377358,
+            "logLoss": 1.200741206842408,
+            "brier": 0.7023594430036031
+          },
+          "final-decay0.5-market0.3": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.45931603773584906,
+            "logLoss": 1.1390556537252239,
+            "brier": 0.6789771944849222
+          },
+          "final-decay0.5-market0.5": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.47346698113207547,
+            "logLoss": 1.0652648363686998,
+            "brier": 0.6408888910748503
+          },
+          "final-decay0.5-market0.75": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.49528301886792453,
+            "logLoss": 1.0165254218010822,
+            "brier": 0.609546374863433
+          },
+          "final-decay1-market0": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4336674528301887,
+            "logLoss": 4.911122612158016,
+            "brier": 0.7605704273492595
+          },
+          "final-decay1-market0.1": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4380896226415094,
+            "logLoss": 1.310859901508617,
+            "brier": 0.7308490666295538
+          },
+          "final-decay1-market0.2": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.44634433962264153,
+            "logLoss": 1.2034864500926972,
+            "brier": 0.7040815379518508
+          },
+          "final-decay1-market0.3": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4540094339622642,
+            "logLoss": 1.1410505304282668,
+            "brier": 0.6802678413161457
+          },
+          "final-decay1-market0.5": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4716981132075472,
+            "logLoss": 1.0661923805006392,
+            "brier": 0.6415019441707367
+          },
+          "final-decay1-market0.75": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4970518867924528,
+            "logLoss": 1.016707070853468,
+            "brier": 0.6096598779752211
+          },
+          "final-decay2-market0": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4336674528301887,
+            "logLoss": 4.929907415689321,
+            "brier": 0.7710079907427378
+          },
+          "final-decay2-market0.1": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.43514150943396224,
+            "logLoss": 1.3246800058259836,
+            "brier": 0.7392617747752731
+          },
+          "final-decay2-market0.2": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4375,
+            "logLoss": 1.213711971550313,
+            "brier": 0.7106874128294526
+          },
+          "final-decay2-market0.3": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.44516509433962265,
+            "logLoss": 1.1485242754443887,
+            "brier": 0.6852849049052827
+          },
+          "final-decay2-market0.5": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.46285377358490565,
+            "logLoss": 1.0697984677044874,
+            "brier": 0.6439954511218823
+          },
+          "final-decay2-market0.75": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4970518867924528,
+            "logLoss": 1.0175625644809385,
+            "brier": 0.6102253127643961
+          },
+          "final-decay3-market0": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.43130896226415094,
+            "logLoss": 4.960465515305283,
+            "brier": 0.7868515182343049
+          },
+          "final-decay3-market0.1": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.43101415094339623,
+            "logLoss": 1.3463133334885558,
+            "brier": 0.7520873395159446
+          },
+          "final-decay3-market0.2": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4380896226415094,
+            "logLoss": 1.229472866937737,
+            "brier": 0.7208135948196178
+          },
+          "final-decay3-market0.3": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4481132075471698,
+            "logLoss": 1.1599884462052228,
+            "brier": 0.6930302841453263
+          },
+          "final-decay3-market0.5": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4581367924528302,
+            "logLoss": 1.075399611870483,
+            "brier": 0.6479349648628391
+          },
+          "final-decay3-market0.75": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4946933962264151,
+            "logLoss": 1.019010504537594,
+            "brier": 0.6111995071336691
+          },
+          "final70-initial15-movement15-decay0.5-market0": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4375,
+            "logLoss": 4.908072526993264,
+            "brier": 0.7594094060687456
+          },
+          "final70-initial15-movement15-decay0.5-market0.1": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4404481132075472,
+            "logLoss": 1.3089538941256804,
+            "brier": 0.7300923314612874
+          },
+          "final70-initial15-movement15-decay0.5-market0.2": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4498820754716981,
+            "logLoss": 1.2024062701113765,
+            "brier": 0.7036650480104509
+          },
+          "final70-initial15-movement15-decay0.5-market0.3": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4563679245283019,
+            "logLoss": 1.1405728004198181,
+            "brier": 0.6801275557162387
+          },
+          "final70-initial15-movement15-decay0.5-market0.5": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.47464622641509435,
+            "logLoss": 1.066440485372024,
+            "brier": 0.6417219445976817
+          },
+          "final70-initial15-movement15-decay0.5-market0.75": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4946933962264151,
+            "logLoss": 1.0171847004540595,
+            "brier": 0.6099700059554962
+          },
+          "final70-initial15-movement15-decay1-market0": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4345518867924528,
+            "logLoss": 4.9153476805693055,
+            "brier": 0.7640529674813092
+          },
+          "final70-initial15-movement15-decay1-market0.1": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4392688679245283,
+            "logLoss": 1.3147605556017057,
+            "brier": 0.7339822669204334
+          },
+          "final70-initial15-movement15-decay1-market0.2": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.43985849056603776,
+            "logLoss": 1.2070587375489843,
+            "brier": 0.7068656396966625
+          },
+          "final70-initial15-movement15-decay1-market0.3": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4522405660377358,
+            "logLoss": 1.1442739621821019,
+            "brier": 0.6827030858099954
+          },
+          "final70-initial15-movement15-decay1-market0.5": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4705188679245283,
+            "logLoss": 1.0686503801913945,
+            "brier": 0.6432401980479676
+          },
+          "final70-initial15-movement15-decay1-market0.75": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.49528301886792453,
+            "logLoss": 1.0180621465904254,
+            "brier": 0.6105282508666381
+          },
+          "final70-initial15-movement15-decay2-market0": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.43042452830188677,
+            "logLoss": 4.9394916714223225,
+            "brier": 0.7781895089929262
+          },
+          "final70-initial15-movement15-decay2-market0.1": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4386792452830189,
+            "logLoss": 1.3332088354247322,
+            "brier": 0.7456803525539071
+          },
+          "final70-initial15-movement15-decay2-market0.2": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.43985849056603776,
+            "logLoss": 1.2213325538149475,
+            "brier": 0.7163530031690957
+          },
+          "final70-initial15-movement15-decay2-market0.3": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.44398584905660377,
+            "logLoss": 1.1552679082105073,
+            "brier": 0.6902074608384977
+          },
+          "final70-initial15-movement15-decay2-market0.5": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4634433962264151,
+            "logLoss": 1.0747903757982022,
+            "brier": 0.647461797339932
+          },
+          "final70-initial15-movement15-decay2-market0.75": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.49292452830188677,
+            "logLoss": 1.0202418599179874,
+            "brier": 0.6119273826466601
+          },
+          "final70-initial15-movement15-decay3-market0": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4257075471698113,
+            "logLoss": 4.9760203273291905,
+            "brier": 0.7970106353648339
+          },
+          "final70-initial15-movement15-decay3-market0.1": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.43337264150943394,
+            "logLoss": 1.3594366979969752,
+            "brier": 0.7611390939160816
+          },
+          "final70-initial15-movement15-decay3-market0.2": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4363207547169811,
+            "logLoss": 1.2408705355859382,
+            "brier": 0.7287783089376594
+          },
+          "final70-initial15-movement15-decay3-market0.3": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.44162735849056606,
+            "logLoss": 1.169867809206089,
+            "brier": 0.699928280429568
+          },
+          "final70-initial15-movement15-decay3-market0.5": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4569575471698113,
+            "logLoss": 1.082501034666563,
+            "brier": 0.6527604928243793
+          },
+          "final70-initial15-movement15-decay3-market0.75": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.48997641509433965,
+            "logLoss": 1.0227353018901135,
+            "brier": 0.6135487634635054
+          },
+          "final60-initial20-movement20-decay0.5-market0": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4380896226415094,
+            "logLoss": 4.909129455104669,
+            "brier": 0.7602256717875469
+          },
+          "final60-initial20-movement20-decay0.5-market0.1": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.44162735849056606,
+            "logLoss": 1.3098727499999563,
+            "brier": 0.7308052705060584
+          },
+          "final60-initial20-movement20-decay0.5-market0.2": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.44752358490566035,
+            "logLoss": 1.2032058946257822,
+            "brier": 0.7042794826261143
+          },
+          "final60-initial20-movement20-decay0.5-market0.3": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4534198113207547,
+            "logLoss": 1.1412629870682298,
+            "brier": 0.6806483081477167
+          },
+          "final60-initial20-movement20-decay0.5-market0.5": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.47346698113207547,
+            "logLoss": 1.066927824057331,
+            "brier": 0.642069799395557
+          },
+          "final60-initial20-movement20-decay0.5-market0.75": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.49351415094339623,
+            "logLoss": 1.0174311305716617,
+            "brier": 0.610128863839051
+          },
+          "final60-initial20-movement20-decay1-market0": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4363207547169811,
+            "logLoss": 4.918331870801951,
+            "brier": 0.7661474838383067
+          },
+          "final60-initial20-movement20-decay1-market0.1": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4380896226415094,
+            "logLoss": 1.3172359816027435,
+            "brier": 0.7357793017300989
+          },
+          "final60-initial20-movement20-decay1-market0.2": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.43985849056603776,
+            "logLoss": 1.2091304777788194,
+            "brier": 0.7083847551615813
+          },
+          "final60-initial20-movement20-decay1-market0.3": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4522405660377358,
+            "logLoss": 1.1460000259253718,
+            "brier": 0.683963844132753
+          },
+          "final60-initial20-movement20-decay1-market0.5": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.46639150943396224,
+            "logLoss": 1.0697916646444035,
+            "brier": 0.6440429286941558
+          },
+          "final60-initial20-movement20-decay1-market0.75": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.49351415094339623,
+            "logLoss": 1.01859372797192,
+            "brier": 0.6108684843066554
+          },
+          "final60-initial20-movement20-decay2-market0": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.42983490566037735,
+            "logLoss": 4.948297406592767,
+            "brier": 0.7830237898544563
+          },
+          "final60-initial20-movement20-decay2-market0.1": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4363207547169811,
+            "logLoss": 1.3398877400192426,
+            "brier": 0.7497618788562804
+          },
+          "final60-initial20-movement20-decay2-market0.2": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.43985849056603776,
+            "logLoss": 1.226583211455429,
+            "brier": 0.7197416252396472
+          },
+          "final60-initial20-movement20-decay2-market0.3": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.44634433962264153,
+            "logLoss": 1.1594177934906842,
+            "brier": 0.6929630290045609
+          },
+          "final60-initial20-movement20-decay2-market0.5": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.46167452830188677,
+            "logLoss": 1.0772881840165496,
+            "brier": 0.6491308086790216
+          },
+          "final60-initial20-movement20-decay2-market0.75": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4893867924528302,
+            "logLoss": 1.0212759091461887,
+            "brier": 0.6125748560432857
+          },
+          "final60-initial20-movement20-decay3-market0": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4233490566037736,
+            "logLoss": 4.992441838797514,
+            "brier": 0.8039250392727488
+          },
+          "final60-initial20-movement20-decay3-market0.1": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.42983490566037735,
+            "logLoss": 1.3704978310845541,
+            "brier": 0.7669220539502842
+          },
+          "final60-initial20-movement20-decay3-market0.2": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.43514150943396224,
+            "logLoss": 1.2490784285972634,
+            "brier": 0.7335276036499071
+          },
+          "final60-initial20-movement20-decay3-market0.3": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.44221698113207547,
+            "logLoss": 1.1760821882757306,
+            "brier": 0.7037416883716262
+          },
+          "final60-initial20-movement20-decay3-market0.5": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4545990566037736,
+            "logLoss": 1.085982977521097,
+            "brier": 0.6549954628813348
+          },
+          "final60-initial20-movement20-decay3-market0.75": {
+            "targets": 1815,
+            "evaluated": 1696,
+            "coverage": 0.934435261707989,
+            "accuracy": 0.4852594339622642,
+            "logLoss": 1.0240515427171029,
+            "brier": 0.6143606905177327
+          }
+        },
+        "hhad": {
+          "uniform": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4407470610542285,
+            "logLoss": 5.615849800130894,
+            "brier": 0.7817705496307772
+          },
+          "final-decay0.5-market0": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.439419795221843,
+            "logLoss": 5.617327210800382,
+            "brier": 0.7824459090714124
+          },
+          "final-decay0.5-market0.1": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4459613196814562,
+            "logLoss": 1.3597457757365772,
+            "brier": 0.7498733221526412
+          },
+          "final-decay0.5-market0.2": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.45620022753128553,
+            "logLoss": 1.2368624143064708,
+            "brier": 0.7206096804536696
+          },
+          "final-decay0.5-market0.3": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4630261660978385,
+            "logLoss": 1.1665144182482388,
+            "brier": 0.6946549839744945
+          },
+          "final-decay0.5-market0.5": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4778156996587031,
+            "logLoss": 1.0836530076506272,
+            "brier": 0.6526724266755332
+          },
+          "final-decay0.5-market0.75": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4948805460750853,
+            "logLoss": 1.0305187872477628,
+            "brier": 0.6188070469131884
+          },
+          "final-decay1-market0": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4445392491467577,
+            "logLoss": 5.621429017492966,
+            "brier": 0.7847826658888369
+          },
+          "final-decay1-market0.1": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.44766780432309444,
+            "logLoss": 1.3629087247779696,
+            "brier": 0.7518055655817594
+          },
+          "final-decay1-market0.2": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.45051194539249145,
+            "logLoss": 1.2393235988144091,
+            "brier": 0.722175374429273
+          },
+          "final-decay1-market0.3": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.46075085324232085,
+            "logLoss": 1.1684208783482428,
+            "brier": 0.6958920924313723
+          },
+          "final-decay1-market0.5": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4732650739476678,
+            "logLoss": 1.084736096086316,
+            "brier": 0.6533662558993417
+          },
+          "final-decay1-market0.75": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4931740614334471,
+            "logLoss": 1.0309261165532473,
+            "brier": 0.6190353242288651
+          },
+          "final-decay2-market0": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4416951080773606,
+            "logLoss": 5.637633978176975,
+            "brier": 0.7940784080376404
+          },
+          "final-decay2-market0.1": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4459613196814562,
+            "logLoss": 1.3750823023130214,
+            "brier": 0.7594102303719772
+          },
+          "final-decay2-market0.2": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.45051194539249145,
+            "logLoss": 1.2485841167483944,
+            "brier": 0.7282581847817273
+          },
+          "final-decay2-market0.3": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4539249146757679,
+            "logLoss": 1.1754235452631716,
+            "brier": 0.70062227126689
+          },
+          "final-decay2-market0.5": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.46871444823663255,
+            "logLoss": 1.088471878947849,
+            "brier": 0.6558988404634527
+          },
+          "final-decay2-market0.75": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4920364050056883,
+            "logLoss": 1.032137902730392,
+            "brier": 0.6197727948833492
+          },
+          "final-decay3-market0": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4320250284414107,
+            "logLoss": 5.664428599543882,
+            "brier": 0.8083866868612134
+          },
+          "final-decay3-market0.1": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.43458475540386804,
+            "logLoss": 1.3943996755371764,
+            "brier": 0.7710604173999087
+          },
+          "final-decay3-market0.2": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.44141069397042093,
+            "logLoss": 1.262926441206233,
+            "brier": 0.7375230053280823
+          },
+          "final-decay3-market0.3": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.44766780432309444,
+            "logLoss": 1.1860589249439784,
+            "brier": 0.7077744506457272
+          },
+          "final-decay3-market0.5": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.46757679180887374,
+            "logLoss": 1.093924569927936,
+            "brier": 0.6596439134494503
+          },
+          "final-decay3-market0.75": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4908987485779295,
+            "logLoss": 1.0337569198049594,
+            "brier": 0.6207930647699016
+          },
+          "final70-initial15-movement15-decay0.5-market0": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.44141069397042093,
+            "logLoss": 5.61811202705522,
+            "brier": 0.7829462824174157
+          },
+          "final70-initial15-movement15-decay0.5-market0.1": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.45164960182025027,
+            "logLoss": 1.360399921467932,
+            "brier": 0.7503066534693149
+          },
+          "final70-initial15-movement15-decay0.5-market0.2": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.46245733788395904,
+            "logLoss": 1.2374041116660308,
+            "brier": 0.7209797485620614
+          },
+          "final70-initial15-movement15-decay0.5-market0.3": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.46359499431171786,
+            "logLoss": 1.1669554492926901,
+            "brier": 0.6949655676956543
+          },
+          "final70-initial15-movement15-decay0.5-market0.5": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.47554038680318544,
+            "logLoss": 1.0839200805684166,
+            "brier": 0.6528753780853909
+          },
+          "final70-initial15-movement15-decay0.5-market0.75": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.49772468714448237,
+            "logLoss": 1.0306161784336447,
+            "brier": 0.6188967138023305
+          },
+          "final70-initial15-movement15-decay1-market0": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.444254835039818,
+            "logLoss": 5.624015359275414,
+            "brier": 0.7862039444094417
+          },
+          "final70-initial15-movement15-decay1-market0.1": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.447098976109215,
+            "logLoss": 1.3649421349363058,
+            "brier": 0.7530235441063315
+          },
+          "final70-initial15-movement15-decay1-market0.2": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4590443686006826,
+            "logLoss": 1.2409327363993696,
+            "brier": 0.7232036467675839
+          },
+          "final70-initial15-movement15-decay1-market0.3": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4630261660978385,
+            "logLoss": 1.169685112085246,
+            "brier": 0.6967442523931934
+          },
+          "final70-initial15-movement15-decay1-market0.5": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.472127417519909,
+            "logLoss": 1.0854638894276352,
+            "brier": 0.6539069725375001
+          },
+          "final70-initial15-movement15-decay1-market0.75": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4948805460750853,
+            "logLoss": 1.0311836121718927,
+            "brier": 0.6192632018924095
+          },
+          "final70-initial15-movement15-decay2-market0": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.431740614334471,
+            "logLoss": 5.645936282770072,
+            "brier": 0.7976487609386368
+          },
+          "final70-initial15-movement15-decay2-market0.1": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.43572241183162685,
+            "logLoss": 1.3803377932721297,
+            "brier": 0.7624386985523227
+          },
+          "final70-initial15-movement15-decay2-market0.2": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.44141069397042093,
+            "logLoss": 1.2524540767882946,
+            "brier": 0.7307858458926549
+          },
+          "final70-initial15-movement15-decay2-market0.3": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.45563139931740615,
+            "logLoss": 1.1783200867761716,
+            "brier": 0.702690202959632
+          },
+          "final70-initial15-movement15-decay2-market0.5": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4726962457337884,
+            "logLoss": 1.0900245112970912,
+            "brier": 0.6571705462735263
+          },
+          "final70-initial15-movement15-decay2-market0.75": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4937428896473265,
+            "logLoss": 1.0326471400103603,
+            "brier": 0.6202802801282804
+          },
+          "final70-initial15-movement15-decay3-market0": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4340159271899886,
+            "logLoss": 5.6800132713629425,
+            "brier": 0.8142451264302903
+          },
+          "final70-initial15-movement15-decay3-market0.1": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.43458475540386804,
+            "logLoss": 1.4026870113649759,
+            "brier": 0.7760033992296759
+          },
+          "final70-initial15-movement15-decay3-market0.2": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.43742889647326505,
+            "logLoss": 1.2688038342953383,
+            "brier": 0.7416237769257387
+          },
+          "final70-initial15-movement15-decay3-market0.3": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4465301478953356,
+            "logLoss": 1.1903378130265567,
+            "brier": 0.7111062595184737
+          },
+          "final70-initial15-movement15-decay3-market0.5": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4664391353811149,
+            "logLoss": 1.0961155082038379,
+            "brier": 0.6616575393939788
+          },
+          "final70-initial15-movement15-decay3-market0.75": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4908987485779295,
+            "logLoss": 1.0344356221530142,
+            "brier": 0.6215709792821618
+          },
+          "final60-initial20-movement20-decay0.5-market0": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.44141069397042093,
+            "logLoss": 5.618902319749269,
+            "brier": 0.7834009067841118
+          },
+          "final60-initial20-movement20-decay0.5-market0.1": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4522184300341297,
+            "logLoss": 1.361014509286177,
+            "brier": 0.7506872270921348
+          },
+          "final60-initial20-movement20-decay0.5-market0.2": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.46245733788395904,
+            "logLoss": 1.2378831807281931,
+            "brier": 0.7212926243981642
+          },
+          "final60-initial20-movement20-decay0.5-market0.3": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4653014789533561,
+            "logLoss": 1.1673248459336907,
+            "brier": 0.6952170987021965
+          },
+          "final60-initial20-movement20-decay0.5-market0.5": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.472127417519909,
+            "logLoss": 1.0841229271165318,
+            "brier": 0.6530232783042809
+          },
+          "final60-initial20-movement20-decay0.5-market0.75": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.49772468714448237,
+            "logLoss": 1.0306820825428824,
+            "brier": 0.618950810920662
+          },
+          "final60-initial20-movement20-decay1-market0": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.44141069397042093,
+            "logLoss": 5.626864317785157,
+            "brier": 0.7876078577865504
+          },
+          "final60-initial20-movement20-decay1-market0.1": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.44766780432309444,
+            "logLoss": 1.366939325793135,
+            "brier": 0.7541863633535915
+          },
+          "final60-initial20-movement20-decay1-market0.2": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4579067121729238,
+            "logLoss": 1.2424011125728955,
+            "brier": 0.7241477502832468
+          },
+          "final60-initial20-movement20-decay1-market0.3": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4641638225255973,
+            "logLoss": 1.1707698584232569,
+            "brier": 0.6974920185755157
+          },
+          "final60-initial20-movement20-decay1-market0.5": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.47155858930602956,
+            "logLoss": 1.0860190626069846,
+            "brier": 0.6543291992478929
+          },
+          "final60-initial20-movement20-decay1-market0.75": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4948805460750853,
+            "logLoss": 1.0313462435922645,
+            "brier": 0.6194043827530668
+          },
+          "final60-initial20-movement20-decay2-market0": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4311717861205916,
+            "logLoss": 5.655129323376647,
+            "brier": 0.8016003525149514
+          },
+          "final60-initial20-movement20-decay2-market0.1": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.431740614334471,
+            "logLoss": 1.3857598896422363,
+            "brier": 0.7656835199953805
+          },
+          "final60-initial20-movement20-decay2-market0.2": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4391353811149033,
+            "logLoss": 1.2563379173886535,
+            "brier": 0.7333931440859297
+          },
+          "final60-initial20-movement20-decay2-market0.3": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4522184300341297,
+            "logLoss": 1.1811233841577082,
+            "brier": 0.704729224786597
+          },
+          "final60-initial20-movement20-decay2-market0.5": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.47042093287827075,
+            "logLoss": 1.0913884216748828,
+            "brier": 0.6582807560182876
+          },
+          "final60-initial20-movement20-decay2-market0.75": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4948805460750853,
+            "logLoss": 1.0330052146203361,
+            "brier": 0.6206189884898119
+          },
+          "final60-initial20-movement20-decay3-market0": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.42662116040955633,
+            "logLoss": 5.6977152421028485,
+            "brier": 0.8208571061714218
+          },
+          "final60-initial20-movement20-decay3-market0.1": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4300341296928328,
+            "logLoss": 1.412221128281289,
+            "brier": 0.7814153219047019
+          },
+          "final60-initial20-movement20-decay3-market0.2": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.43572241183162685,
+            "logLoss": 1.275375123843388,
+            "brier": 0.7459553889995458
+          },
+          "final60-initial20-movement20-decay3-market0.3": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.447098976109215,
+            "logLoss": 1.194967397566563,
+            "brier": 0.7144773074559541
+          },
+          "final60-initial20-movement20-decay3-market0.5": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.4613196814562002,
+            "logLoss": 1.0982900801974906,
+            "brier": 0.6634666984534587
+          },
+          "final60-initial20-movement20-decay3-market0.75": {
+            "targets": 1903,
+            "evaluated": 1758,
+            "coverage": 0.9238045191802418,
+            "accuracy": 0.48862343572241185,
+            "logLoss": 1.0349762839413164,
+            "brier": 0.62210135110913
+          }
+        }
+      }
+    }
+  }
+}

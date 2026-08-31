@@ -1,0 +1,247 @@
+{
+  "version": 1,
+  "generatedAt": "2026-08-30T12:56:25.814Z",
+  "data": {
+    "database": "betwin.db",
+    "verifiedMatches": 9060,
+    "sourceUpdatedAt": "2026-08-30T12:54:36+00:00",
+    "matchingVersion": "spf-hhad-joint-v1",
+    "goalMatchingVersion": "goal-zero-composite-v1",
+    "probabilityPolicy": "historical-similarity-v3-zero-floor-m1.5",
+    "thresholds": {
+      "spf": 0.07,
+      "hhad": 0.07,
+      "goals": 0.015
+    },
+    "thresholdSource": "locked-formal-production-rules"
+  },
+  "methodology": {
+    "ordering": "选择记录最多的历史来源，按 source_row 递增；每场只读取此前记录",
+    "warmup": 500,
+    "split": "前60%选择规则、中间20%验证、最新20%最终测试",
+    "matching": "SPF/HHAD复用生产联合优先与联合零样本回退；只训练全部联赛口径",
+    "probability": "与生产一致使用 historical-similarity-v3-zero-floor-m1.5；三项盘和总进球均先应用总先验质量1.5的保序防零",
+    "gate": "训练提升至少3%；中间20%提升至少3%；最新20%提升至少2%，且两段连续20场区块Bootstrap的95%提升下界不低于0",
+    "goals": "复用生产0球赔率±2.00窗口；全部合格样本按终赔60%、初赔15%、走势15%、隐含进球10%的综合距离指数加权；四档样本池方向用于稳定性筛选"
+  },
+  "sources": {
+    "spf": {
+      "file": "lsspfpl.xlsx",
+      "rows": 9552
+    },
+    "hhad": {
+      "file": "lsspfpl.xlsx",
+      "rows": 9552
+    },
+    "goals": {
+      "file": "历史进球数.xlsx",
+      "rows": 8804
+    }
+  },
+  "markets": {
+    "spf": {
+      "enabled": true,
+      "rule": {
+        "threshold": 0.07,
+        "minSamples": 1,
+        "minTopProbability": 0.6,
+        "minMargin": 0.3614457831,
+        "requireStable": false,
+        "minConsensus": 1
+      },
+      "train": {
+        "targets": 5205,
+        "available": 5181,
+        "modelCoverage": 0.9953890489913545,
+        "selected": 873,
+        "coverage": 0.1685002895193978,
+        "baselineAccuracy": 0.49623624782860454,
+        "selectedAccuracy": 0.6437571592210768,
+        "accuracyLift": 0.14752091139247225
+      },
+      "calibration": {
+        "targets": 1735,
+        "available": 1730,
+        "modelCoverage": 0.9971181556195965,
+        "selected": 306,
+        "coverage": 0.176878612716763,
+        "baselineAccuracy": 0.49836223506743743,
+        "selectedAccuracy": 0.6862745098039216,
+        "accuracyLift": 0.18791227473648414
+      },
+      "calibrationSignificance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "accuracyLift": {
+          "lower": 0.14522922793711518,
+          "upper": 0.23234468929739516
+        }
+      },
+      "test": {
+        "targets": 1736,
+        "available": 1732,
+        "modelCoverage": 0.9976958525345622,
+        "selected": 336,
+        "coverage": 0.19399538106235567,
+        "baselineAccuracy": 0.5073133179368745,
+        "selectedAccuracy": 0.6785714285714286,
+        "accuracyLift": 0.1712581106345541
+      },
+      "testSignificance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "accuracyLift": {
+          "lower": 0.1278527413962016,
+          "upper": 0.21209399721160024
+        }
+      },
+      "gate": {
+        "passed": true,
+        "calibrationPassed": true,
+        "testPassed": true,
+        "minimumTrainLift": 0.03,
+        "minimumCalibrationLift": 0.03,
+        "minimumTestLift": 0.02,
+        "reason": "训练段选出的规则在中间20%和最新20%均提高命中率，且连续区块Bootstrap的95%下界不低于0"
+      }
+    },
+    "hhad": {
+      "enabled": true,
+      "rule": {
+        "threshold": 0.07,
+        "minSamples": 35,
+        "minTopProbability": 0.547826087,
+        "minMargin": 0.2857142857,
+        "requireStable": false,
+        "minConsensus": 0
+      },
+      "train": {
+        "targets": 5431,
+        "available": 5379,
+        "modelCoverage": 0.9904253360338796,
+        "selected": 806,
+        "coverage": 0.14984197806283697,
+        "baselineAccuracy": 0.4802937348949621,
+        "selectedAccuracy": 0.609181141439206,
+        "accuracyLift": 0.1288874065442439
+      },
+      "calibration": {
+        "targets": 1810,
+        "available": 1805,
+        "modelCoverage": 0.9972375690607734,
+        "selected": 511,
+        "coverage": 0.28310249307479224,
+        "baselineAccuracy": 0.4986149584487535,
+        "selectedAccuracy": 0.5831702544031311,
+        "accuracyLift": 0.08455529595437761
+      },
+      "calibrationSignificance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "accuracyLift": {
+          "lower": 0.04542486674497046,
+          "upper": 0.12206235608410539
+        }
+      },
+      "test": {
+        "targets": 1811,
+        "available": 1802,
+        "modelCoverage": 0.9950303699613473,
+        "selected": 471,
+        "coverage": 0.26137624861265263,
+        "baselineAccuracy": 0.49435812060673334,
+        "selectedAccuracy": 0.564755838641189,
+        "accuracyLift": 0.0703977180344556
+      },
+      "testSignificance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "accuracyLift": {
+          "lower": 0.030000389656243978,
+          "upper": 0.109140971073334
+        }
+      },
+      "gate": {
+        "passed": true,
+        "calibrationPassed": true,
+        "testPassed": true,
+        "minimumTrainLift": 0.03,
+        "minimumCalibrationLift": 0.03,
+        "minimumTestLift": 0.02,
+        "reason": "训练段选出的规则在中间20%和最新20%均提高命中率，且连续区块Bootstrap的95%下界不低于0"
+      }
+    },
+    "goals": {
+      "enabled": false,
+      "rule": {
+        "threshold": 0.015,
+        "minSamples": 336,
+        "minTopProbability": 0.2566255981,
+        "minMargin": 0.0206728443,
+        "requireStable": false,
+        "minConsensus": 1
+      },
+      "train": {
+        "targets": 4982,
+        "available": 4973,
+        "modelCoverage": 0.9981934965877157,
+        "selected": 615,
+        "coverage": 0.12366780615322742,
+        "baselineAccuracy": 0.22561833903076614,
+        "selectedAccuracy": 0.28780487804878047,
+        "accuracyLift": 0.062186539018014325
+      },
+      "calibration": {
+        "targets": 1661,
+        "available": 1660,
+        "modelCoverage": 0.9993979530403372,
+        "selected": 225,
+        "coverage": 0.1355421686746988,
+        "baselineAccuracy": 0.23795180722891565,
+        "selectedAccuracy": 0.27111111111111114,
+        "accuracyLift": 0.033159303882195484
+      },
+      "calibrationSignificance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "accuracyLift": {
+          "lower": -0.019478115845692052,
+          "upper": 0.09145867962863048
+        }
+      },
+      "test": {
+        "targets": 1661,
+        "available": 1661,
+        "modelCoverage": 1,
+        "selected": 225,
+        "coverage": 0.13546056592414207,
+        "baselineAccuracy": 0.25225767609873573,
+        "selectedAccuracy": 0.24,
+        "accuracyLift": -0.012257676098735737
+      },
+      "testSignificance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "accuracyLift": {
+          "lower": -0.05994357089250782,
+          "upper": 0.037459733391846155
+        }
+      },
+      "gate": {
+        "passed": false,
+        "calibrationPassed": false,
+        "testPassed": false,
+        "minimumTrainLift": 0.03,
+        "minimumCalibrationLift": 0.03,
+        "minimumTestLift": 0.02,
+        "reason": "训练段筛选规则未能在中间20%稳定复现，本玩法不标记“重点参考”"
+      }
+    }
+  }
+}

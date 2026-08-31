@@ -1,31 +1,32 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-03T00:31:28.984Z",
+  "generatedAt": "2026-08-15T04:44:17.438Z",
   "data": {
     "database": "betwin.db",
-    "verifiedMatches": 7903,
-    "sourceUpdatedAt": "2026-08-03T00:30:12+00:00",
+    "verifiedMatches": 8011,
+    "sourceUpdatedAt": "2026-08-15T04:41:30+00:00",
     "trainingSource": "历史进球数.xlsx",
-    "trainingRows": 7856,
+    "trainingRows": 7964,
     "excludedTrainingRows": 47
   },
   "methodology": {
     "feature": "竞彩0球原始赔率",
-    "intervals": "0球赔率固定分为五个连续且不重叠的进球环境区间",
-    "distance": "区间内比较1球至7+球去水概率的最大绝对差，不再用0球赔率计算距离",
-    "tuning": "中间20%为每个区间选择七项赔率距离，未重复通过的区间使用整段历史",
+    "zeroOddsGate": "参照n52goalfx.py V7：历史0球赔率与本场绝对差不超过3.00",
+    "intervals": "五个固定区间仅用于按本场赔率环境选择七项距离策略，不作为相似赔率范围",
+    "distance": "通过0球±3.00门槛后，比较1球至7+球去水概率的最大绝对差",
+    "tuning": "中间20%为每个本场赔率环境选择七项赔率距离，未重复通过时仅使用0球±3.00近邻",
     "validation": "最新20%只验证，不参与区间和距离选择",
     "baseline": "原八档去水概率逐档最大差模型"
   },
   "model": {
     "enabled": true,
-    "method": "five-zero-odds-bands-plus-seven-probability-distance",
-    "distance": "0球赔率先分段；段内比较1球至7+球去水概率的最大绝对差",
-    "legacyTolerance": 0.02,
+    "method": "n52-zero-odds-neighborhood-plus-seven-probability-distance",
+    "distance": "0球赔率先按绝对差±3.00筛选；再比较1球至7+球去水概率的最大绝对差",
+    "legacyTolerance": 0.015,
     "splits": {
-      "trainEnd": 4713,
-      "tuningEnd": 6284,
-      "validationEnd": 7856
+      "trainEnd": 4778,
+      "tuningEnd": 6371,
+      "validationEnd": 7964
     },
     "intervals": [
       {
@@ -35,26 +36,26 @@
         "label": "≤10.00",
         "observedMin": 4.35,
         "observedMax": 10,
-        "samples": 1136,
+        "samples": 1153,
         "counts": {
-          "0": 115,
-          "1": 271,
-          "2": 296,
-          "3": 235,
-          "4": 138,
-          "5": 66,
+          "0": 117,
+          "1": 275,
+          "2": 301,
+          "3": 237,
+          "4": 140,
+          "5": 68,
           "6": 14,
           "7+": 1
         },
         "probabilities": {
-          "0": 0.10123239436619719,
-          "1": 0.238556338028169,
-          "2": 0.2605633802816901,
-          "3": 0.2068661971830986,
-          "4": 0.12147887323943662,
-          "5": 0.058098591549295774,
-          "6": 0.01232394366197183,
-          "7+": 0.0008802816901408451
+          "0": 0.10147441457068516,
+          "1": 0.23850823937554205,
+          "2": 0.2610581092801388,
+          "3": 0.20555073720728534,
+          "4": 0.12142237640936687,
+          "5": 0.05897658282740677,
+          "6": 0.012142237640936688,
+          "7+": 0.0008673026886383347
         }
       },
       {
@@ -64,26 +65,26 @@
         "label": "10.50～22.50",
         "observedMin": 10.5,
         "observedMax": 22.5,
-        "samples": 2977,
+        "samples": 3018,
         "counts": {
-          "0": 174,
-          "1": 506,
-          "2": 670,
-          "3": 714,
-          "4": 487,
-          "5": 282,
-          "6": 125,
+          "0": 175,
+          "1": 512,
+          "2": 688,
+          "3": 722,
+          "4": 489,
+          "5": 286,
+          "6": 127,
           "7+": 19
         },
         "probabilities": {
-          "0": 0.058448102116224386,
-          "1": 0.16996976822304333,
-          "2": 0.22505878401074908,
-          "3": 0.2398387638562311,
-          "4": 0.1635875041988579,
-          "5": 0.09472623446422573,
-          "6": 0.041988579106483036,
-          "7+": 0.006382264024185421
+          "0": 0.05798542080848244,
+          "1": 0.16964877402253148,
+          "2": 0.22796554009277667,
+          "3": 0.2392312789927104,
+          "4": 0.16202783300198806,
+          "5": 0.09476474486414845,
+          "6": 0.042080848243870116,
+          "7+": 0.006295559973492379
         }
       },
       {
@@ -93,26 +94,26 @@
         "label": "23.00～25.50",
         "observedMin": 23,
         "observedMax": 25.5,
-        "samples": 250,
+        "samples": 254,
         "counts": {
           "0": 5,
           "1": 29,
           "2": 42,
-          "3": 65,
-          "4": 62,
+          "3": 68,
+          "4": 63,
           "5": 31,
           "6": 15,
           "7+": 1
         },
         "probabilities": {
-          "0": 0.02,
-          "1": 0.116,
-          "2": 0.168,
-          "3": 0.26,
-          "4": 0.248,
-          "5": 0.124,
-          "6": 0.06,
-          "7+": 0.004
+          "0": 0.01968503937007874,
+          "1": 0.1141732283464567,
+          "2": 0.16535433070866143,
+          "3": 0.2677165354330709,
+          "4": 0.24803149606299213,
+          "5": 0.1220472440944882,
+          "6": 0.05905511811023622,
+          "7+": 0.003937007874015748
         }
       },
       {
@@ -122,26 +123,26 @@
         "label": "26.00～32.00",
         "observedMin": 26,
         "observedMax": 32,
-        "samples": 239,
+        "samples": 241,
         "counts": {
           "0": 11,
           "1": 31,
-          "2": 47,
+          "2": 48,
           "3": 42,
           "4": 52,
           "5": 33,
-          "6": 19,
+          "6": 20,
           "7+": 4
         },
         "probabilities": {
-          "0": 0.04602510460251046,
-          "1": 0.1297071129707113,
-          "2": 0.19665271966527198,
-          "3": 0.17573221757322174,
-          "4": 0.2175732217573222,
-          "5": 0.13807531380753138,
-          "6": 0.0794979079497908,
-          "7+": 0.016736401673640166
+          "0": 0.04564315352697095,
+          "1": 0.12863070539419086,
+          "2": 0.1991701244813278,
+          "3": 0.17427385892116182,
+          "4": 0.2157676348547718,
+          "5": 0.13692946058091288,
+          "6": 0.08298755186721991,
+          "7+": 0.016597510373443983
         }
       },
       {
@@ -151,7 +152,7 @@
         "label": "≥33.00",
         "observedMin": 33,
         "observedMax": 70,
-        "samples": 111,
+        "samples": 112,
         "counts": {
           "0": 2,
           "1": 9,
@@ -159,17 +160,17 @@
           "3": 29,
           "4": 28,
           "5": 18,
-          "6": 9,
+          "6": 10,
           "7+": 0
         },
         "probabilities": {
-          "0": 0.018018018018018018,
-          "1": 0.08108108108108109,
-          "2": 0.14414414414414414,
-          "3": 0.26126126126126126,
-          "4": 0.25225225225225223,
-          "5": 0.16216216216216217,
-          "6": 0.08108108108108109,
+          "0": 0.017857142857142856,
+          "1": 0.08035714285714286,
+          "2": 0.14285714285714285,
+          "3": 0.25892857142857145,
+          "4": 0.25,
+          "5": 0.16071428571428573,
+          "6": 0.08928571428571429,
           "7+": 0
         }
       }
@@ -189,288 +190,288 @@
     "tuningSearch": {
       "g0-1": {
         "baseline": {
-          "targets": 443,
-          "evaluated": 443,
+          "targets": 446,
+          "evaluated": 446,
           "coverage": 1,
-          "accuracy": 0.2528216704288939,
-          "topTwoCoverage": 0.4492099322799097,
-          "logLoss": 1.7707032558260605,
-          "brier": 0.8137509988453528,
-          "medianSamples": 1357
+          "accuracy": 0.26681614349775784,
+          "topTwoCoverage": 0.4663677130044843,
+          "logLoss": 1.7658745315676063,
+          "brier": 0.8116449906208103,
+          "medianSamples": 1541
         },
         "candidates": [
           {
             "threshold": 0.005,
             "summary": {
-              "targets": 443,
-              "evaluated": 377,
-              "coverage": 0.8510158013544018,
-              "accuracy": 0.21750663129973474,
-              "topTwoCoverage": 0.38992042440318303,
-              "logLoss": 8.728046818445867,
-              "brier": 0.9825032048985514,
-              "medianSamples": 9
+              "targets": 446,
+              "evaluated": 387,
+              "coverage": 0.8677130044843049,
+              "accuracy": 0.21188630490956073,
+              "topTwoCoverage": 0.4082687338501292,
+              "logLoss": 8.204944533432279,
+              "brier": 0.9584957454533078,
+              "medianSamples": 11
             }
           },
           {
             "threshold": 0.0075,
             "summary": {
-              "targets": 443,
-              "evaluated": 433,
-              "coverage": 0.9774266365688488,
-              "accuracy": 0.23325635103926096,
-              "topTwoCoverage": 0.43648960739030024,
-              "logLoss": 4.823349112974851,
-              "brier": 0.8920584684891236,
-              "medianSamples": 47
+              "targets": 446,
+              "evaluated": 436,
+              "coverage": 0.9775784753363229,
+              "accuracy": 0.23394495412844038,
+              "topTwoCoverage": 0.4426605504587156,
+              "logLoss": 4.392747863210737,
+              "brier": 0.8796178327767233,
+              "medianSamples": 60
             }
           },
           {
             "threshold": 0.01,
             "summary": {
-              "targets": 443,
-              "evaluated": 435,
-              "coverage": 0.981941309255079,
-              "accuracy": 0.25057471264367814,
-              "topTwoCoverage": 0.4735632183908046,
-              "logLoss": 2.5224416322349996,
-              "brier": 0.8303127240367073,
-              "medianSamples": 128
+              "targets": 446,
+              "evaluated": 439,
+              "coverage": 0.984304932735426,
+              "accuracy": 0.24145785876993167,
+              "topTwoCoverage": 0.4760820045558087,
+              "logLoss": 2.63485426339067,
+              "brier": 0.8323541537570491,
+              "medianSamples": 150
             }
           },
           {
             "threshold": 0.0125,
             "summary": {
-              "targets": 443,
-              "evaluated": 439,
-              "coverage": 0.9909706546275395,
-              "accuracy": 0.2733485193621868,
-              "topTwoCoverage": 0.4760820045558087,
-              "logLoss": 2.22400041443134,
-              "brier": 0.8226804559079981,
-              "medianSamples": 237
+              "targets": 446,
+              "evaluated": 442,
+              "coverage": 0.9910313901345291,
+              "accuracy": 0.26244343891402716,
+              "topTwoCoverage": 0.49547511312217196,
+              "logLoss": 2.2214663757656714,
+              "brier": 0.8213302051065884,
+              "medianSamples": 284
             }
           },
           {
             "threshold": 0.015,
             "summary": {
-              "targets": 443,
-              "evaluated": 442,
-              "coverage": 0.9977426636568849,
-              "accuracy": 0.27828054298642535,
-              "topTwoCoverage": 0.46153846153846156,
-              "logLoss": 1.9966835258670952,
-              "brier": 0.819848185730909,
-              "medianSamples": 362
+              "targets": 446,
+              "evaluated": 445,
+              "coverage": 0.9977578475336323,
+              "accuracy": 0.2786516853932584,
+              "topTwoCoverage": 0.46741573033707867,
+              "logLoss": 1.995529352255572,
+              "brier": 0.8183296939805038,
+              "medianSamples": 453
             }
           },
           {
             "threshold": 0.02,
             "summary": {
-              "targets": 443,
-              "evaluated": 443,
+              "targets": 446,
+              "evaluated": 446,
               "coverage": 1,
-              "accuracy": 0.24604966139954854,
-              "topTwoCoverage": 0.45372460496614,
-              "logLoss": 1.8327567049043638,
-              "brier": 0.8182908024089443,
-              "medianSamples": 581
+              "accuracy": 0.26905829596412556,
+              "topTwoCoverage": 0.47085201793721976,
+              "logLoss": 1.890767979441323,
+              "brier": 0.8183921449464745,
+              "medianSamples": 759
             }
           },
           {
             "threshold": 0.025,
             "summary": {
-              "targets": 443,
-              "evaluated": 443,
+              "targets": 446,
+              "evaluated": 446,
               "coverage": 1,
-              "accuracy": 0.2618510158013544,
-              "topTwoCoverage": 0.44469525959367945,
-              "logLoss": 1.7725246789946367,
-              "brier": 0.8131227110763058,
-              "medianSamples": 795
+              "accuracy": 0.26681614349775784,
+              "topTwoCoverage": 0.4551569506726457,
+              "logLoss": 1.7732890794081433,
+              "brier": 0.8125923753307827,
+              "medianSamples": 1030
             }
           },
           {
             "threshold": 0.03,
             "summary": {
-              "targets": 443,
-              "evaluated": 443,
+              "targets": 446,
+              "evaluated": 446,
               "coverage": 1,
-              "accuracy": 0.2595936794582393,
-              "topTwoCoverage": 0.45146726862302483,
-              "logLoss": 1.7690806523559768,
-              "brier": 0.8130484163526731,
-              "medianSamples": 950
+              "accuracy": 0.2645739910313901,
+              "topTwoCoverage": 0.4641255605381166,
+              "logLoss": 1.770598687181343,
+              "brier": 0.8123928867640925,
+              "medianSamples": 1221
             }
           },
           {
             "threshold": 0.04,
             "summary": {
-              "targets": 443,
-              "evaluated": 443,
+              "targets": 446,
+              "evaluated": 446,
               "coverage": 1,
-              "accuracy": 0.25733634311512416,
-              "topTwoCoverage": 0.4469525959367946,
-              "logLoss": 1.7690242801567717,
-              "brier": 0.8136126103261396,
-              "medianSamples": 1147
+              "accuracy": 0.2623318385650224,
+              "topTwoCoverage": 0.45964125560538116,
+              "logLoss": 1.7684543230898508,
+              "brier": 0.812421148788506,
+              "medianSamples": 1456
             }
           },
           {
             "threshold": 0.05,
             "summary": {
-              "targets": 443,
-              "evaluated": 443,
+              "targets": 446,
+              "evaluated": 446,
               "coverage": 1,
-              "accuracy": 0.255079006772009,
-              "topTwoCoverage": 0.4469525959367946,
-              "logLoss": 1.7698293564683343,
-              "brier": 0.8137395271648539,
-              "medianSamples": 1246
+              "accuracy": 0.26905829596412556,
+              "topTwoCoverage": 0.45964125560538116,
+              "logLoss": 1.7666285798532166,
+              "brier": 0.8117561707211196,
+              "medianSamples": 1522
             }
           }
         ]
       },
       "g0-2": {
         "baseline": {
-          "targets": 953,
-          "evaluated": 953,
+          "targets": 966,
+          "evaluated": 966,
           "coverage": 1,
-          "accuracy": 0.23924449108079748,
-          "topTwoCoverage": 0.47429171038824763,
-          "logLoss": 1.8340050895459632,
-          "brier": 0.8226644556338683,
-          "medianSamples": 3453
+          "accuracy": 0.2536231884057971,
+          "topTwoCoverage": 0.47619047619047616,
+          "logLoss": 1.8234008378308437,
+          "brier": 0.8197369802520452,
+          "medianSamples": 1700
         },
         "candidates": [
           {
             "threshold": 0.005,
             "summary": {
-              "targets": 953,
-              "evaluated": 869,
-              "coverage": 0.9118572927597062,
-              "accuracy": 0.19332566168009205,
-              "topTwoCoverage": 0.3947065592635213,
-              "logLoss": 7.266314612874268,
-              "brier": 0.9673158142062764,
+              "targets": 966,
+              "evaluated": 889,
+              "coverage": 0.9202898550724637,
+              "accuracy": 0.19122609673790777,
+              "topTwoCoverage": 0.3847019122609674,
+              "logLoss": 7.1029439608706095,
+              "brier": 0.9537310012366146,
               "medianSamples": 16
             }
           },
           {
             "threshold": 0.0075,
             "summary": {
-              "targets": 953,
-              "evaluated": 933,
-              "coverage": 0.9790136411332634,
-              "accuracy": 0.1982851018220793,
-              "topTwoCoverage": 0.43086816720257237,
-              "logLoss": 3.3355529727334225,
-              "brier": 0.8608297892925001,
-              "medianSamples": 93
+              "targets": 966,
+              "evaluated": 953,
+              "coverage": 0.9865424430641822,
+              "accuracy": 0.2130115424973767,
+              "topTwoCoverage": 0.4260230849947534,
+              "logLoss": 3.424944469006886,
+              "brier": 0.857876427937117,
+              "medianSamples": 89
             }
           },
           {
             "threshold": 0.01,
             "summary": {
-              "targets": 953,
-              "evaluated": 945,
-              "coverage": 0.9916054564533053,
-              "accuracy": 0.23809523809523808,
-              "topTwoCoverage": 0.4582010582010582,
-              "logLoss": 2.2343796939917375,
-              "brier": 0.8324732270407882,
-              "medianSamples": 241
+              "targets": 966,
+              "evaluated": 962,
+              "coverage": 0.9958592132505176,
+              "accuracy": 0.24636174636174638,
+              "topTwoCoverage": 0.4677754677754678,
+              "logLoss": 2.314854530715719,
+              "brier": 0.8281407664952191,
+              "medianSamples": 228
             }
           },
           {
             "threshold": 0.0125,
             "summary": {
-              "targets": 953,
-              "evaluated": 952,
-              "coverage": 0.9989506820566632,
-              "accuracy": 0.2510504201680672,
-              "topTwoCoverage": 0.4642857142857143,
-              "logLoss": 2.1473646035440477,
-              "brier": 0.8286575241343485,
-              "medianSamples": 436
+              "targets": 966,
+              "evaluated": 965,
+              "coverage": 0.9989648033126294,
+              "accuracy": 0.2621761658031088,
+              "topTwoCoverage": 0.47046632124352333,
+              "logLoss": 2.055220623086001,
+              "brier": 0.8253231109901015,
+              "medianSamples": 407
             }
           },
           {
             "threshold": 0.015,
             "summary": {
-              "targets": 953,
-              "evaluated": 953,
+              "targets": 966,
+              "evaluated": 966,
               "coverage": 1,
-              "accuracy": 0.24868835257082897,
-              "topTwoCoverage": 0.47114375655823715,
-              "logLoss": 1.8825027033427304,
-              "brier": 0.8230517194398003,
-              "medianSamples": 673
+              "accuracy": 0.2505175983436853,
+              "topTwoCoverage": 0.4772256728778468,
+              "logLoss": 1.8761069179036822,
+              "brier": 0.8208786354868046,
+              "medianSamples": 605
             }
           },
           {
             "threshold": 0.02,
             "summary": {
-              "targets": 953,
-              "evaluated": 953,
+              "targets": 966,
+              "evaluated": 966,
               "coverage": 1,
-              "accuracy": 0.25078698845750264,
-              "topTwoCoverage": 0.472193074501574,
-              "logLoss": 1.8598257017231277,
-              "brier": 0.8214661928775604,
-              "medianSamples": 1148
+              "accuracy": 0.2525879917184265,
+              "topTwoCoverage": 0.47101449275362317,
+              "logLoss": 1.827342935939635,
+              "brier": 0.8200402187809148,
+              "medianSamples": 963
             }
           },
           {
             "threshold": 0.025,
             "summary": {
-              "targets": 953,
-              "evaluated": 953,
+              "targets": 966,
+              "evaluated": 966,
               "coverage": 1,
-              "accuracy": 0.236096537250787,
-              "topTwoCoverage": 0.47429171038824763,
-              "logLoss": 1.8313961842410058,
-              "brier": 0.821231342656855,
-              "medianSamples": 1606
+              "accuracy": 0.2515527950310559,
+              "topTwoCoverage": 0.4782608695652174,
+              "logLoss": 1.824969377339474,
+              "brier": 0.8195844823810392,
+              "medianSamples": 1234
             }
           },
           {
             "threshold": 0.03,
             "summary": {
-              "targets": 953,
-              "evaluated": 953,
+              "targets": 966,
+              "evaluated": 966,
               "coverage": 1,
-              "accuracy": 0.23819517313746066,
-              "topTwoCoverage": 0.47429171038824763,
-              "logLoss": 1.8325975366272138,
-              "brier": 0.8218633925628188,
-              "medianSamples": 1978
+              "accuracy": 0.2505175983436853,
+              "topTwoCoverage": 0.4772256728778468,
+              "logLoss": 1.8251445234114771,
+              "brier": 0.819833986579848,
+              "medianSamples": 1428
             }
           },
           {
             "threshold": 0.04,
             "summary": {
-              "targets": 953,
-              "evaluated": 953,
+              "targets": 966,
+              "evaluated": 966,
               "coverage": 1,
-              "accuracy": 0.24344176285414482,
-              "topTwoCoverage": 0.47429171038824763,
-              "logLoss": 1.8303250179978492,
-              "brier": 0.8216024173429436,
-              "medianSamples": 2580
+              "accuracy": 0.2432712215320911,
+              "topTwoCoverage": 0.4751552795031056,
+              "logLoss": 1.8231730964299568,
+              "brier": 0.8197727094185702,
+              "medianSamples": 1610
             }
           },
           {
             "threshold": 0.05,
             "summary": {
-              "targets": 953,
-              "evaluated": 953,
+              "targets": 966,
+              "evaluated": 966,
               "coverage": 1,
-              "accuracy": 0.24554039874081846,
-              "topTwoCoverage": 0.47429171038824763,
-              "logLoss": 1.8315533458135123,
-              "brier": 0.8219674354239778,
-              "medianSamples": 3012
+              "accuracy": 0.2505175983436853,
+              "topTwoCoverage": 0.47619047619047616,
+              "logLoss": 1.823419104430223,
+              "brier": 0.8197362849822895,
+              "medianSamples": 1681
             }
           }
         ]
@@ -480,24 +481,24 @@
           "targets": 76,
           "evaluated": 76,
           "coverage": 1,
-          "accuracy": 0.25,
-          "topTwoCoverage": 0.4605263157894737,
-          "logLoss": 1.803040143716676,
-          "brier": 0.8167488762597293,
-          "medianSamples": 287
+          "accuracy": 0.14473684210526316,
+          "topTwoCoverage": 0.42105263157894735,
+          "logLoss": 1.8358248375601893,
+          "brier": 0.823132503250147,
+          "medianSamples": 470
         },
         "candidates": [
           {
             "threshold": 0.005,
             "summary": {
               "targets": 76,
-              "evaluated": 63,
-              "coverage": 0.8289473684210527,
-              "accuracy": 0.14285714285714285,
-              "topTwoCoverage": 0.30158730158730157,
-              "logLoss": 13.426384008477305,
-              "brier": 1.134573187043919,
-              "medianSamples": 4
+              "evaluated": 68,
+              "coverage": 0.8947368421052632,
+              "accuracy": 0.22058823529411764,
+              "topTwoCoverage": 0.3088235294117647,
+              "logLoss": 11.062704248608489,
+              "brier": 1.027424739143112,
+              "medianSamples": 6
             }
           },
           {
@@ -506,11 +507,11 @@
               "targets": 76,
               "evaluated": 73,
               "coverage": 0.9605263157894737,
-              "accuracy": 0.2328767123287671,
-              "topTwoCoverage": 0.4383561643835616,
-              "logLoss": 5.547076099626718,
-              "brier": 0.8872395985460744,
-              "medianSamples": 21
+              "accuracy": 0.2191780821917808,
+              "topTwoCoverage": 0.3972602739726027,
+              "logLoss": 3.566171040502843,
+              "brier": 0.876743104514383,
+              "medianSamples": 34
             }
           },
           {
@@ -519,11 +520,11 @@
               "targets": 76,
               "evaluated": 74,
               "coverage": 0.9736842105263158,
-              "accuracy": 0.20270270270270271,
-              "topTwoCoverage": 0.5135135135135135,
-              "logLoss": 2.7844193965096267,
-              "brier": 0.8406375137785378,
-              "medianSamples": 57
+              "accuracy": 0.1891891891891892,
+              "topTwoCoverage": 0.4594594594594595,
+              "logLoss": 2.528858263552298,
+              "brier": 0.8463717204073932,
+              "medianSamples": 96
             }
           },
           {
@@ -532,11 +533,11 @@
               "targets": 76,
               "evaluated": 75,
               "coverage": 0.9868421052631579,
-              "accuracy": 0.18666666666666668,
+              "accuracy": 0.17333333333333334,
               "topTwoCoverage": 0.48,
-              "logLoss": 2.4664787178979686,
-              "brier": 0.8486631304080344,
-              "medianSamples": 103
+              "logLoss": 1.8571174728240802,
+              "brier": 0.8370063556145746,
+              "medianSamples": 169
             }
           },
           {
@@ -545,11 +546,11 @@
               "targets": 76,
               "evaluated": 75,
               "coverage": 0.9868421052631579,
-              "accuracy": 0.24,
-              "topTwoCoverage": 0.48,
-              "logLoss": 2.417687326423162,
-              "brier": 0.8192113277472233,
-              "medianSamples": 147
+              "accuracy": 0.2,
+              "topTwoCoverage": 0.4533333333333333,
+              "logLoss": 1.8299792721314887,
+              "brier": 0.8245701731055535,
+              "medianSamples": 242
             }
           },
           {
@@ -558,11 +559,11 @@
               "targets": 76,
               "evaluated": 76,
               "coverage": 1,
-              "accuracy": 0.23684210526315788,
-              "topTwoCoverage": 0.4605263157894737,
-              "logLoss": 2.11683315501725,
-              "brier": 0.8202521498389699,
-              "medianSamples": 223
+              "accuracy": 0.17105263157894737,
+              "topTwoCoverage": 0.4342105263157895,
+              "logLoss": 1.8177056001471095,
+              "brier": 0.8203283903936794,
+              "medianSamples": 367
             }
           },
           {
@@ -571,11 +572,11 @@
               "targets": 76,
               "evaluated": 76,
               "coverage": 1,
-              "accuracy": 0.23684210526315788,
-              "topTwoCoverage": 0.4605263157894737,
-              "logLoss": 2.1248023215807605,
-              "brier": 0.8208191610384572,
-              "medianSamples": 259
+              "accuracy": 0.15789473684210525,
+              "topTwoCoverage": 0.42105263157894735,
+              "logLoss": 1.8384405353250302,
+              "brier": 0.8248306923891623,
+              "medianSamples": 417
             }
           },
           {
@@ -584,11 +585,11 @@
               "targets": 76,
               "evaluated": 76,
               "coverage": 1,
-              "accuracy": 0.25,
-              "topTwoCoverage": 0.4605263157894737,
-              "logLoss": 1.8084079743556736,
-              "brier": 0.8176867772618677,
-              "medianSamples": 274
+              "accuracy": 0.13157894736842105,
+              "topTwoCoverage": 0.42105263157894735,
+              "logLoss": 1.8438913418821568,
+              "brier": 0.8247680294274451,
+              "medianSamples": 447
             }
           },
           {
@@ -597,11 +598,11 @@
               "targets": 76,
               "evaluated": 76,
               "coverage": 1,
-              "accuracy": 0.25,
-              "topTwoCoverage": 0.4605263157894737,
-              "logLoss": 1.810247091821667,
-              "brier": 0.817373550148997,
-              "medianSamples": 285
+              "accuracy": 0.14473684210526316,
+              "topTwoCoverage": 0.42105263157894735,
+              "logLoss": 1.8390992207482297,
+              "brier": 0.8232752437509486,
+              "medianSamples": 459
             }
           },
           {
@@ -610,299 +611,299 @@
               "targets": 76,
               "evaluated": 76,
               "coverage": 1,
-              "accuracy": 0.25,
-              "topTwoCoverage": 0.4605263157894737,
-              "logLoss": 1.8024327885135225,
-              "brier": 0.8166101313130251,
-              "medianSamples": 286
+              "accuracy": 0.14473684210526316,
+              "topTwoCoverage": 0.42105263157894735,
+              "logLoss": 1.8353268842524764,
+              "brier": 0.82300257459799,
+              "medianSamples": 467
             }
           }
         ]
       },
       "g0-4": {
         "baseline": {
-          "targets": 59,
-          "evaluated": 59,
+          "targets": 60,
+          "evaluated": 60,
           "coverage": 1,
-          "accuracy": 0.2033898305084746,
-          "topTwoCoverage": 0.3898305084745763,
-          "logLoss": 1.9049695948855385,
-          "brier": 0.8360390261803327,
-          "medianSamples": 268
+          "accuracy": 0.15,
+          "topTwoCoverage": 0.38333333333333336,
+          "logLoss": 1.9195158433648696,
+          "brier": 0.8395585598473629,
+          "medianSamples": 189
         },
         "candidates": [
           {
             "threshold": 0.005,
             "summary": {
-              "targets": 59,
-              "evaluated": 47,
-              "coverage": 0.7966101694915254,
-              "accuracy": 0.1276595744680851,
-              "topTwoCoverage": 0.19148936170212766,
-              "logLoss": 20.282609596160285,
-              "brier": 1.3550717662951706,
+              "targets": 60,
+              "evaluated": 52,
+              "coverage": 0.8666666666666667,
+              "accuracy": 0.1346153846153846,
+              "topTwoCoverage": 0.21153846153846154,
+              "logLoss": 19.482021580940845,
+              "brier": 1.371504587233754,
               "medianSamples": 3
             }
           },
           {
             "threshold": 0.0075,
             "summary": {
-              "targets": 59,
-              "evaluated": 57,
-              "coverage": 0.9661016949152542,
-              "accuracy": 0.22807017543859648,
-              "topTwoCoverage": 0.3333333333333333,
-              "logLoss": 7.181174454144501,
-              "brier": 0.9473329193112464,
+              "targets": 60,
+              "evaluated": 58,
+              "coverage": 0.9666666666666667,
+              "accuracy": 0.1896551724137931,
+              "topTwoCoverage": 0.3275862068965517,
+              "logLoss": 8.048266451851624,
+              "brier": 0.9804692729522455,
               "medianSamples": 15
             }
           },
           {
             "threshold": 0.01,
             "summary": {
-              "targets": 59,
-              "evaluated": 58,
-              "coverage": 0.9830508474576272,
-              "accuracy": 0.2413793103448276,
-              "topTwoCoverage": 0.4482758620689655,
-              "logLoss": 2.2629477740765145,
-              "brier": 0.8338387170109943,
-              "medianSamples": 49
+              "targets": 60,
+              "evaluated": 60,
+              "coverage": 1,
+              "accuracy": 0.23333333333333334,
+              "topTwoCoverage": 0.4166666666666667,
+              "logLoss": 3.160695954003087,
+              "brier": 0.8739855818625212,
+              "medianSamples": 46
             }
           },
           {
             "threshold": 0.0125,
             "summary": {
-              "targets": 59,
-              "evaluated": 59,
+              "targets": 60,
+              "evaluated": 60,
               "coverage": 1,
-              "accuracy": 0.1864406779661017,
-              "topTwoCoverage": 0.3728813559322034,
-              "logLoss": 2.3441693867248747,
-              "brier": 0.8601875736567678,
-              "medianSamples": 84
+              "accuracy": 0.15,
+              "topTwoCoverage": 0.36666666666666664,
+              "logLoss": 2.3677450228707775,
+              "brier": 0.8616895483890167,
+              "medianSamples": 78
             }
           },
           {
             "threshold": 0.015,
             "summary": {
-              "targets": 59,
-              "evaluated": 59,
+              "targets": 60,
+              "evaluated": 60,
               "coverage": 1,
-              "accuracy": 0.13559322033898305,
-              "topTwoCoverage": 0.3389830508474576,
-              "logLoss": 2.368073964246783,
-              "brier": 0.8594942612167243,
-              "medianSamples": 133
+              "accuracy": 0.13333333333333333,
+              "topTwoCoverage": 0.36666666666666664,
+              "logLoss": 2.378034075638916,
+              "brier": 0.8603263523669592,
+              "medianSamples": 115
             }
           },
           {
             "threshold": 0.02,
             "summary": {
-              "targets": 59,
-              "evaluated": 59,
+              "targets": 60,
+              "evaluated": 60,
               "coverage": 1,
-              "accuracy": 0.13559322033898305,
-              "topTwoCoverage": 0.3220338983050847,
-              "logLoss": 2.3742680358873045,
-              "brier": 0.8521141270453741,
-              "medianSamples": 202
+              "accuracy": 0.13333333333333333,
+              "topTwoCoverage": 0.36666666666666664,
+              "logLoss": 1.9727044151309168,
+              "brier": 0.8534793655187662,
+              "medianSamples": 160
             }
           },
           {
             "threshold": 0.025,
             "summary": {
-              "targets": 59,
-              "evaluated": 59,
+              "targets": 60,
+              "evaluated": 60,
               "coverage": 1,
-              "accuracy": 0.15254237288135594,
-              "topTwoCoverage": 0.3559322033898305,
-              "logLoss": 1.9171795572805286,
-              "brier": 0.842354116823073,
-              "medianSamples": 235
+              "accuracy": 0.16666666666666666,
+              "topTwoCoverage": 0.38333333333333336,
+              "logLoss": 1.9454503431607886,
+              "brier": 0.8484034523876538,
+              "medianSamples": 181
             }
           },
           {
             "threshold": 0.03,
             "summary": {
-              "targets": 59,
-              "evaluated": 59,
+              "targets": 60,
+              "evaluated": 60,
               "coverage": 1,
-              "accuracy": 0.1864406779661017,
-              "topTwoCoverage": 0.3050847457627119,
-              "logLoss": 1.9034304697513535,
-              "brier": 0.8360487419957723,
-              "medianSamples": 255
+              "accuracy": 0.13333333333333333,
+              "topTwoCoverage": 0.35,
+              "logLoss": 1.9357851143845572,
+              "brier": 0.8451502488213862,
+              "medianSamples": 187
             }
           },
           {
             "threshold": 0.04,
             "summary": {
-              "targets": 59,
-              "evaluated": 59,
+              "targets": 60,
+              "evaluated": 60,
               "coverage": 1,
-              "accuracy": 0.2033898305084746,
-              "topTwoCoverage": 0.3728813559322034,
-              "logLoss": 1.9050947103230957,
-              "brier": 0.8366771041946253,
-              "medianSamples": 266
+              "accuracy": 0.15,
+              "topTwoCoverage": 0.38333333333333336,
+              "logLoss": 1.920143642820078,
+              "brier": 0.8401161376143097,
+              "medianSamples": 188
             }
           },
           {
             "threshold": 0.05,
             "summary": {
-              "targets": 59,
-              "evaluated": 59,
+              "targets": 60,
+              "evaluated": 60,
               "coverage": 1,
-              "accuracy": 0.2033898305084746,
-              "topTwoCoverage": 0.3898305084745763,
-              "logLoss": 1.9042211661890722,
-              "brier": 0.8359625184150746,
-              "medianSamples": 266
+              "accuracy": 0.15,
+              "topTwoCoverage": 0.38333333333333336,
+              "logLoss": 1.9190101550831642,
+              "brier": 0.8395048926345596,
+              "medianSamples": 189
             }
           }
         ]
       },
       "g0-5": {
         "baseline": {
-          "targets": 40,
-          "evaluated": 40,
+          "targets": 45,
+          "evaluated": 45,
           "coverage": 1,
-          "accuracy": 0.175,
-          "topTwoCoverage": 0.325,
-          "logLoss": 2.5570016534086295,
-          "brier": 0.8589887744314595,
-          "medianSamples": 130
+          "accuracy": 0.06666666666666667,
+          "topTwoCoverage": 0.3111111111111111,
+          "logLoss": 4.728636648468685,
+          "brier": 0.9118222035481484,
+          "medianSamples": 77
         },
         "candidates": [
           {
             "threshold": 0.005,
             "summary": {
-              "targets": 40,
-              "evaluated": 16,
-              "coverage": 0.4,
-              "accuracy": 0.1875,
-              "topTwoCoverage": 0.3125,
-              "logLoss": 19.194955381597623,
-              "brier": 1.394965277777778,
-              "medianSamples": 2
+              "targets": 45,
+              "evaluated": 19,
+              "coverage": 0.4222222222222222,
+              "accuracy": 0.10526315789473684,
+              "topTwoCoverage": 0.15789473684210525,
+              "logLoss": 23.34119116926193,
+              "brier": 1.5957602339181287,
+              "medianSamples": 1
             }
           },
           {
             "threshold": 0.0075,
             "summary": {
-              "targets": 40,
-              "evaluated": 35,
-              "coverage": 0.875,
-              "accuracy": 0.11428571428571428,
-              "topTwoCoverage": 0.34285714285714286,
-              "logLoss": 14.032986393716211,
-              "brier": 1.1292596589144386,
-              "medianSamples": 6
+              "targets": 45,
+              "evaluated": 34,
+              "coverage": 0.7555555555555555,
+              "accuracy": 0.17647058823529413,
+              "topTwoCoverage": 0.4117647058823529,
+              "logLoss": 14.367509799705601,
+              "brier": 1.0681243091379524,
+              "medianSamples": 4
             }
           },
           {
             "threshold": 0.01,
             "summary": {
-              "targets": 40,
-              "evaluated": 40,
-              "coverage": 1,
-              "accuracy": 0.175,
-              "topTwoCoverage": 0.3,
-              "logLoss": 10.154989855787885,
-              "brier": 1.047648018312246,
-              "medianSamples": 14
+              "targets": 45,
+              "evaluated": 43,
+              "coverage": 0.9555555555555556,
+              "accuracy": 0.20930232558139536,
+              "topTwoCoverage": 0.37209302325581395,
+              "logLoss": 10.683184181935943,
+              "brier": 1.0505765141452383,
+              "medianSamples": 12
             }
           },
           {
             "threshold": 0.0125,
             "summary": {
-              "targets": 40,
-              "evaluated": 40,
-              "coverage": 1,
-              "accuracy": 0.225,
-              "topTwoCoverage": 0.35,
-              "logLoss": 6.279402236075064,
-              "brier": 0.9131679264767673,
-              "medianSamples": 27
+              "targets": 45,
+              "evaluated": 44,
+              "coverage": 0.9777777777777777,
+              "accuracy": 0.25,
+              "topTwoCoverage": 0.3409090909090909,
+              "logLoss": 7.577571152509029,
+              "brier": 0.9708750231303855,
+              "medianSamples": 22
             }
           },
           {
             "threshold": 0.015,
             "summary": {
-              "targets": 40,
-              "evaluated": 40,
+              "targets": 45,
+              "evaluated": 45,
               "coverage": 1,
-              "accuracy": 0.2,
-              "topTwoCoverage": 0.325,
-              "logLoss": 3.7289154424490065,
-              "brier": 0.8827764673111502,
-              "medianSamples": 42
+              "accuracy": 0.2222222222222222,
+              "topTwoCoverage": 0.35555555555555557,
+              "logLoss": 6.291404633578634,
+              "brier": 0.9412881667260738,
+              "medianSamples": 33
             }
           },
           {
             "threshold": 0.02,
             "summary": {
-              "targets": 40,
-              "evaluated": 40,
+              "targets": 45,
+              "evaluated": 45,
               "coverage": 1,
-              "accuracy": 0.2,
-              "topTwoCoverage": 0.35,
-              "logLoss": 3.0959907371623285,
-              "brier": 0.8602474502439925,
-              "medianSamples": 82
+              "accuracy": 0.1111111111111111,
+              "topTwoCoverage": 0.35555555555555557,
+              "logLoss": 5.224278077073587,
+              "brier": 0.9151898733523122,
+              "medianSamples": 42
             }
           },
           {
             "threshold": 0.025,
             "summary": {
-              "targets": 40,
-              "evaluated": 40,
+              "targets": 45,
+              "evaluated": 45,
               "coverage": 1,
-              "accuracy": 0.225,
-              "topTwoCoverage": 0.375,
-              "logLoss": 2.52758512002418,
-              "brier": 0.8560668803799917,
-              "medianSamples": 93
+              "accuracy": 0.13333333333333333,
+              "topTwoCoverage": 0.3111111111111111,
+              "logLoss": 4.71717386611012,
+              "brier": 0.9075997978138348,
+              "medianSamples": 58
             }
           },
           {
             "threshold": 0.03,
             "summary": {
-              "targets": 40,
-              "evaluated": 40,
+              "targets": 45,
+              "evaluated": 45,
               "coverage": 1,
-              "accuracy": 0.225,
-              "topTwoCoverage": 0.375,
-              "logLoss": 2.537100500557918,
-              "brier": 0.8539855902954454,
-              "medianSamples": 107
+              "accuracy": 0.08888888888888889,
+              "topTwoCoverage": 0.3333333333333333,
+              "logLoss": 4.7282051542900785,
+              "brier": 0.9081787054960108,
+              "medianSamples": 67
             }
           },
           {
             "threshold": 0.04,
             "summary": {
-              "targets": 40,
-              "evaluated": 40,
+              "targets": 45,
+              "evaluated": 45,
               "coverage": 1,
-              "accuracy": 0.2,
-              "topTwoCoverage": 0.325,
-              "logLoss": 2.5442259677318706,
-              "brier": 0.85588104452158,
-              "medianSamples": 121
+              "accuracy": 0.06666666666666667,
+              "topTwoCoverage": 0.28888888888888886,
+              "logLoss": 4.730745852228413,
+              "brier": 0.9127459808498003,
+              "medianSamples": 77
             }
           },
           {
             "threshold": 0.05,
             "summary": {
-              "targets": 40,
-              "evaluated": 40,
+              "targets": 45,
+              "evaluated": 45,
               "coverage": 1,
-              "accuracy": 0.175,
-              "topTwoCoverage": 0.325,
-              "logLoss": 2.5545297288997735,
-              "brier": 0.8576979609295462,
-              "medianSamples": 128
+              "accuracy": 0.06666666666666667,
+              "topTwoCoverage": 0.28888888888888886,
+              "logLoss": 4.729673487716882,
+              "brier": 0.9123264768477404,
+              "medianSamples": 77
             }
           }
         ]
@@ -914,31 +915,31 @@
         "threshold": 0.0125,
         "tuning": {
           "candidate": {
-            "targets": 443,
-            "evaluated": 439,
-            "coverage": 0.9909706546275395,
-            "accuracy": 0.2733485193621868,
-            "topTwoCoverage": 0.4760820045558087,
-            "logLoss": 2.22400041443134,
-            "brier": 0.8226804559079981,
-            "medianSamples": 237
+            "targets": 446,
+            "evaluated": 442,
+            "coverage": 0.9910313901345291,
+            "accuracy": 0.26244343891402716,
+            "topTwoCoverage": 0.49547511312217196,
+            "logLoss": 2.2214663757656714,
+            "brier": 0.8213302051065884,
+            "medianSamples": 284
           },
           "baseline": {
-            "targets": 443,
-            "evaluated": 443,
+            "targets": 446,
+            "evaluated": 446,
             "coverage": 1,
-            "accuracy": 0.2528216704288939,
-            "topTwoCoverage": 0.4492099322799097,
-            "logLoss": 1.7707032558260605,
-            "brier": 0.8137509988453528,
-            "medianSamples": 1357
+            "accuracy": 0.26681614349775784,
+            "topTwoCoverage": 0.4663677130044843,
+            "logLoss": 1.7658745315676063,
+            "brier": 0.8116449906208103,
+            "medianSamples": 1541
           },
           "delta": {
-            "accuracy": 0.020526848933292874,
-            "topTwoCoverage": 0.026872072275898995,
-            "logLoss": 0.45329715860527964,
-            "brier": 0.008929457062645252,
-            "coverage": -0.009029345372460473
+            "accuracy": -0.00437270458373068,
+            "topTwoCoverage": 0.029107400117687643,
+            "logLoss": 0.4555918441980651,
+            "brier": 0.009685214485778082,
+            "coverage": -0.008968609865470878
           }
         },
         "validation": {
@@ -946,165 +947,165 @@
             "targets": 376,
             "evaluated": 370,
             "coverage": 0.9840425531914894,
-            "accuracy": 0.22702702702702704,
-            "topTwoCoverage": 0.4486486486486487,
-            "logLoss": 2.312192392154958,
-            "brier": 0.8195043996126502,
-            "medianSamples": 242
+            "accuracy": 0.22432432432432434,
+            "topTwoCoverage": 0.44054054054054054,
+            "logLoss": 1.9855289595574892,
+            "brier": 0.8197246339208847,
+            "medianSamples": 293
           },
           "baseline": {
             "targets": 376,
             "evaluated": 376,
             "coverage": 1,
-            "accuracy": 0.2765957446808511,
-            "topTwoCoverage": 0.4973404255319149,
-            "logLoss": 1.7648018954035793,
-            "brier": 0.8069687065473887,
-            "medianSamples": 1766
+            "accuracy": 0.2712765957446808,
+            "topTwoCoverage": 0.5026595744680851,
+            "logLoss": 1.756374858243301,
+            "brier": 0.8064259207768628,
+            "medianSamples": 2117
           },
           "delta": {
-            "accuracy": -0.049568717653824035,
-            "topTwoCoverage": -0.0486917768832662,
-            "logLoss": 0.5473904967513785,
-            "brier": 0.012535693065261477,
+            "accuracy": -0.04695227142035649,
+            "topTwoCoverage": -0.06211903392754453,
+            "logLoss": 0.22915410131418823,
+            "brier": 0.013298713144021868,
             "coverage": -0.015957446808510634
           }
         },
         "gate": {
           "passed": false,
-          "reason": "其余七项赔率距离未在中间20%和最新20%重复提高，使用整段历史"
+          "reason": "其余七项赔率距离未在中间20%和最新20%重复提高，仅使用0球赔率±3.00近邻"
         }
       },
       "g0-2": {
         "enabled": false,
-        "threshold": 0.04,
+        "threshold": 0.025,
         "tuning": {
           "candidate": {
-            "targets": 953,
-            "evaluated": 953,
+            "targets": 966,
+            "evaluated": 966,
             "coverage": 1,
-            "accuracy": 0.24344176285414482,
-            "topTwoCoverage": 0.47429171038824763,
-            "logLoss": 1.8303250179978492,
-            "brier": 0.8216024173429436,
-            "medianSamples": 2580
+            "accuracy": 0.2515527950310559,
+            "topTwoCoverage": 0.4782608695652174,
+            "logLoss": 1.824969377339474,
+            "brier": 0.8195844823810392,
+            "medianSamples": 1234
           },
           "baseline": {
-            "targets": 953,
-            "evaluated": 953,
+            "targets": 966,
+            "evaluated": 966,
             "coverage": 1,
-            "accuracy": 0.23924449108079748,
-            "topTwoCoverage": 0.47429171038824763,
-            "logLoss": 1.8340050895459632,
-            "brier": 0.8226644556338683,
-            "medianSamples": 3453
+            "accuracy": 0.2536231884057971,
+            "topTwoCoverage": 0.47619047619047616,
+            "logLoss": 1.8234008378308437,
+            "brier": 0.8197369802520452,
+            "medianSamples": 1700
           },
           "delta": {
-            "accuracy": 0.004197271773347333,
-            "topTwoCoverage": 0,
-            "logLoss": -0.0036800715481140056,
-            "brier": -0.0010620382909246606,
+            "accuracy": -0.0020703933747412417,
+            "topTwoCoverage": 0.0020703933747412417,
+            "logLoss": 0.001568539508630229,
+            "brier": -0.00015249787100601875,
             "coverage": 0
           }
         },
         "validation": {
           "candidate": {
-            "targets": 1006,
-            "evaluated": 1006,
+            "targets": 1024,
+            "evaluated": 1024,
             "coverage": 1,
-            "accuracy": 0.26043737574552683,
-            "topTwoCoverage": 0.5019880715705766,
-            "logLoss": 1.8060948131386745,
-            "brier": 0.8141269598260237,
-            "medianSamples": 3303
+            "accuracy": 0.2568359375,
+            "topTwoCoverage": 0.486328125,
+            "logLoss": 1.8147757545923173,
+            "brier": 0.817121325051056,
+            "medianSamples": 1439
           },
           "baseline": {
-            "targets": 1006,
-            "evaluated": 1006,
+            "targets": 1024,
+            "evaluated": 1024,
             "coverage": 1,
-            "accuracy": 0.24751491053677932,
-            "topTwoCoverage": 0.5029821073558648,
-            "logLoss": 1.8094717966343845,
-            "brier": 0.8150996717973777,
-            "medianSamples": 4432
+            "accuracy": 0.26171875,
+            "topTwoCoverage": 0.4912109375,
+            "logLoss": 1.8132277034584088,
+            "brier": 0.8165247383427164,
+            "medianSamples": 2177
           },
           "delta": {
-            "accuracy": 0.012922465208747513,
-            "topTwoCoverage": -0.0009940357852882276,
-            "logLoss": -0.0033769834957100286,
-            "brier": -0.0009727119713540677,
+            "accuracy": -0.0048828125,
+            "topTwoCoverage": -0.0048828125,
+            "logLoss": 0.0015480511339085457,
+            "brier": 0.0005965867083395082,
             "coverage": 0
           }
         },
         "gate": {
           "passed": false,
-          "reason": "其余七项赔率距离未在中间20%和最新20%重复提高，使用整段历史"
+          "reason": "其余七项赔率距离未在中间20%和最新20%重复提高，仅使用0球赔率±3.00近邻"
         }
       },
       "g0-3": {
-        "enabled": true,
-        "threshold": 0.015,
+        "enabled": false,
+        "threshold": 0.0125,
         "tuning": {
           "candidate": {
             "targets": 76,
             "evaluated": 75,
             "coverage": 0.9868421052631579,
-            "accuracy": 0.24,
+            "accuracy": 0.17333333333333334,
             "topTwoCoverage": 0.48,
-            "logLoss": 2.417687326423162,
-            "brier": 0.8192113277472233,
-            "medianSamples": 147
+            "logLoss": 1.8571174728240802,
+            "brier": 0.8370063556145746,
+            "medianSamples": 169
           },
           "baseline": {
             "targets": 76,
             "evaluated": 76,
             "coverage": 1,
-            "accuracy": 0.25,
-            "topTwoCoverage": 0.4605263157894737,
-            "logLoss": 1.803040143716676,
-            "brier": 0.8167488762597293,
-            "medianSamples": 287
+            "accuracy": 0.14473684210526316,
+            "topTwoCoverage": 0.42105263157894735,
+            "logLoss": 1.8358248375601893,
+            "brier": 0.823132503250147,
+            "medianSamples": 470
           },
           "delta": {
-            "accuracy": -0.010000000000000009,
-            "topTwoCoverage": 0.01947368421052631,
-            "logLoss": 0.6146471827064861,
-            "brier": 0.0024624514874940218,
+            "accuracy": 0.028596491228070176,
+            "topTwoCoverage": 0.05894736842105264,
+            "logLoss": 0.021292635263890913,
+            "brier": 0.013873852364427619,
             "coverage": -0.013157894736842146
           }
         },
         "validation": {
           "candidate": {
-            "targets": 64,
-            "evaluated": 64,
+            "targets": 70,
+            "evaluated": 70,
             "coverage": 1,
-            "accuracy": 0.234375,
-            "topTwoCoverage": 0.484375,
-            "logLoss": 2.219689371343359,
-            "brier": 0.8373826617635844,
-            "medianSamples": 165
+            "accuracy": 0.2571428571428571,
+            "topTwoCoverage": 0.4857142857142857,
+            "logLoss": 2.141519366775585,
+            "brier": 0.835325942732715,
+            "medianSamples": 167
           },
           "baseline": {
-            "targets": 64,
-            "evaluated": 64,
+            "targets": 70,
+            "evaluated": 70,
             "coverage": 1,
-            "accuracy": 0.25,
-            "topTwoCoverage": 0.453125,
-            "logLoss": 1.7759901434147778,
-            "brier": 0.8112493324799993,
-            "medianSamples": 357
+            "accuracy": 0.22857142857142856,
+            "topTwoCoverage": 0.4857142857142857,
+            "logLoss": 1.7275204040659469,
+            "brier": 0.802326964652355,
+            "medianSamples": 633
           },
           "delta": {
-            "accuracy": -0.015625,
-            "topTwoCoverage": 0.03125,
-            "logLoss": 0.4436992279285812,
-            "brier": 0.02613332928358514,
+            "accuracy": 0.028571428571428553,
+            "topTwoCoverage": 0,
+            "logLoss": 0.4139989627096383,
+            "brier": 0.03299897808036001,
             "coverage": 0
           }
         },
         "gate": {
-          "passed": true,
-          "reason": "其余七项赔率距离在中间20%和最新20%均提高双选覆盖率"
+          "passed": false,
+          "reason": "其余七项赔率距离未在中间20%和最新20%重复提高，仅使用0球赔率±3.00近邻"
         }
       },
       "g0-4": {
@@ -1112,186 +1113,186 @@
         "threshold": 0.01,
         "tuning": {
           "candidate": {
-            "targets": 59,
-            "evaluated": 58,
-            "coverage": 0.9830508474576272,
-            "accuracy": 0.2413793103448276,
-            "topTwoCoverage": 0.4482758620689655,
-            "logLoss": 2.2629477740765145,
-            "brier": 0.8338387170109943,
-            "medianSamples": 49
+            "targets": 60,
+            "evaluated": 60,
+            "coverage": 1,
+            "accuracy": 0.23333333333333334,
+            "topTwoCoverage": 0.4166666666666667,
+            "logLoss": 3.160695954003087,
+            "brier": 0.8739855818625212,
+            "medianSamples": 46
           },
           "baseline": {
-            "targets": 59,
-            "evaluated": 59,
+            "targets": 60,
+            "evaluated": 60,
             "coverage": 1,
-            "accuracy": 0.2033898305084746,
-            "topTwoCoverage": 0.3898305084745763,
-            "logLoss": 1.9049695948855385,
-            "brier": 0.8360390261803327,
-            "medianSamples": 268
+            "accuracy": 0.15,
+            "topTwoCoverage": 0.38333333333333336,
+            "logLoss": 1.9195158433648696,
+            "brier": 0.8395585598473629,
+            "medianSamples": 189
           },
           "delta": {
-            "accuracy": 0.03798947983635301,
-            "topTwoCoverage": 0.05844535359438924,
-            "logLoss": 0.35797817919097596,
-            "brier": -0.0022003091693383325,
-            "coverage": -0.016949152542372836
+            "accuracy": 0.08333333333333334,
+            "topTwoCoverage": 0.033333333333333326,
+            "logLoss": 1.2411801106382172,
+            "brier": 0.03442702201515824,
+            "coverage": 0
           }
         },
         "validation": {
           "candidate": {
-            "targets": 87,
+            "targets": 88,
             "evaluated": 87,
-            "coverage": 1,
+            "coverage": 0.9886363636363636,
             "accuracy": 0.1724137931034483,
-            "topTwoCoverage": 0.28735632183908044,
-            "logLoss": 4.172327965697769,
-            "brier": 0.8903744071901827,
-            "medianSamples": 38
+            "topTwoCoverage": 0.4367816091954023,
+            "logLoss": 2.948427004515983,
+            "brier": 0.8485309315115839,
+            "medianSamples": 35
           },
           "baseline": {
-            "targets": 87,
-            "evaluated": 87,
+            "targets": 88,
+            "evaluated": 88,
             "coverage": 1,
-            "accuracy": 0.25287356321839083,
-            "topTwoCoverage": 0.4827586206896552,
-            "logLoss": 1.8215607445477462,
-            "brier": 0.8222912992519009,
-            "medianSamples": 341
+            "accuracy": 0.2727272727272727,
+            "topTwoCoverage": 0.4772727272727273,
+            "logLoss": 1.8011487300645634,
+            "brier": 0.8157406188018835,
+            "medianSamples": 280
           },
           "delta": {
-            "accuracy": -0.08045977011494254,
-            "topTwoCoverage": -0.19540229885057475,
-            "logLoss": 2.350767221150023,
-            "brier": 0.06808310793828176,
-            "coverage": 0
+            "accuracy": -0.10031347962382442,
+            "topTwoCoverage": -0.04049111807732497,
+            "logLoss": 1.1472782744514194,
+            "brier": 0.03279031270970034,
+            "coverage": -0.011363636363636354
           }
         },
         "gate": {
           "passed": false,
-          "reason": "其余七项赔率距离未在中间20%和最新20%重复提高，使用整段历史"
+          "reason": "其余七项赔率距离未在中间20%和最新20%重复提高，仅使用0球赔率±3.00近邻"
         }
       },
       "g0-5": {
         "enabled": false,
-        "threshold": 0.025,
+        "threshold": 0.02,
         "tuning": {
           "candidate": {
-            "targets": 40,
-            "evaluated": 40,
+            "targets": 45,
+            "evaluated": 45,
             "coverage": 1,
-            "accuracy": 0.225,
-            "topTwoCoverage": 0.375,
-            "logLoss": 2.52758512002418,
-            "brier": 0.8560668803799917,
-            "medianSamples": 93
+            "accuracy": 0.1111111111111111,
+            "topTwoCoverage": 0.35555555555555557,
+            "logLoss": 5.224278077073587,
+            "brier": 0.9151898733523122,
+            "medianSamples": 42
           },
           "baseline": {
-            "targets": 40,
-            "evaluated": 40,
+            "targets": 45,
+            "evaluated": 45,
             "coverage": 1,
-            "accuracy": 0.175,
-            "topTwoCoverage": 0.325,
-            "logLoss": 2.5570016534086295,
-            "brier": 0.8589887744314595,
-            "medianSamples": 130
+            "accuracy": 0.06666666666666667,
+            "topTwoCoverage": 0.3111111111111111,
+            "logLoss": 4.728636648468685,
+            "brier": 0.9118222035481484,
+            "medianSamples": 77
           },
           "delta": {
-            "accuracy": 0.05000000000000002,
-            "topTwoCoverage": 0.04999999999999999,
-            "logLoss": -0.029416533384449384,
-            "brier": -0.0029218940514678104,
+            "accuracy": 0.04444444444444444,
+            "topTwoCoverage": 0.04444444444444445,
+            "logLoss": 0.4956414286049018,
+            "brier": 0.0033676698041638087,
             "coverage": 0
           }
         },
         "validation": {
           "candidate": {
-            "targets": 39,
-            "evaluated": 39,
-            "coverage": 1,
-            "accuracy": 0.20512820512820512,
-            "topTwoCoverage": 0.48717948717948717,
-            "logLoss": 2.4997807574992255,
-            "brier": 0.8310454148654555,
-            "medianSamples": 119
+            "targets": 35,
+            "evaluated": 34,
+            "coverage": 0.9714285714285714,
+            "accuracy": 0.11764705882352941,
+            "topTwoCoverage": 0.4411764705882353,
+            "logLoss": 3.4047030995614604,
+            "brier": 0.8939211996768627,
+            "medianSamples": 62
           },
           "baseline": {
-            "targets": 39,
-            "evaluated": 39,
+            "targets": 35,
+            "evaluated": 35,
             "coverage": 1,
-            "accuracy": 0.20512820512820512,
-            "topTwoCoverage": 0.48717948717948717,
-            "logLoss": 1.8523717479139434,
-            "brier": 0.822420926032126,
-            "medianSamples": 170
+            "accuracy": 0.17142857142857143,
+            "topTwoCoverage": 0.42857142857142855,
+            "logLoss": 3.3313264990154243,
+            "brier": 0.8531150799117546,
+            "medianSamples": 90
           },
           "delta": {
-            "accuracy": 0,
-            "topTwoCoverage": 0,
-            "logLoss": 0.647409009585282,
-            "brier": 0.008624488833329447,
-            "coverage": 0
+            "accuracy": -0.05378151260504202,
+            "topTwoCoverage": 0.012605042016806733,
+            "logLoss": 0.07337660054603612,
+            "brier": 0.04080611976510806,
+            "coverage": -0.02857142857142858
           }
         },
         "gate": {
           "passed": false,
-          "reason": "其余七项赔率距离未在中间20%和最新20%重复提高，使用整段历史"
+          "reason": "其余七项赔率距离未在中间20%和最新20%重复提高，仅使用0球赔率±3.00近邻"
         }
       }
     },
     "tuning": {
       "candidate": {
-        "targets": 1571,
-        "evaluated": 1570,
-        "coverage": 0.9993634627625716,
-        "accuracy": 0.24012738853503185,
-        "topTwoCoverage": 0.4605095541401274,
-        "logLoss": 1.8651135123468665,
-        "brier": 0.8214124979684753,
-        "medianSamples": 3144
+        "targets": 1593,
+        "evaluated": 1593,
+        "coverage": 1,
+        "accuracy": 0.24293785310734464,
+        "topTwoCoverage": 0.46264908976773383,
+        "logLoss": 1.8935766088269366,
+        "brier": 0.820981275416117,
+        "medianSamples": 1558
       },
       "bandBaseline": {
-        "targets": 1571,
-        "evaluated": 1571,
+        "targets": 1593,
+        "evaluated": 1593,
         "coverage": 1,
-        "accuracy": 0.24061107574793125,
-        "topTwoCoverage": 0.45957988542329725,
-        "logLoss": 1.8357305638607961,
-        "brier": 0.8212919712445601,
-        "medianSamples": 3144
+        "accuracy": 0.24293785310734464,
+        "topTwoCoverage": 0.46264908976773383,
+        "logLoss": 1.8935766088269366,
+        "brier": 0.820981275416117,
+        "medianSamples": 1558
       },
       "legacy": {
-        "targets": 1571,
-        "evaluated": 1571,
-        "coverage": 1,
-        "accuracy": 0.24252068746021643,
-        "topTwoCoverage": 0.4633991088478676,
-        "logLoss": 1.8679225647751645,
-        "brier": 0.8224802225703423,
-        "medianSamples": 1067
+        "targets": 1593,
+        "evaluated": 1592,
+        "coverage": 0.9993722536095417,
+        "accuracy": 0.25314070351758794,
+        "topTwoCoverage": 0.4723618090452261,
+        "logLoss": 1.9858208952741732,
+        "brier": 0.8225989444156591,
+        "medianSamples": 590
       },
       "perBand": {
         "g0-1": {
           "candidate": {
-            "targets": 443,
-            "evaluated": 443,
+            "targets": 446,
+            "evaluated": 446,
             "coverage": 1,
-            "accuracy": 0.2528216704288939,
-            "topTwoCoverage": 0.4492099322799097,
-            "logLoss": 1.7707032558260605,
-            "brier": 0.8137509988453528,
-            "medianSamples": 1357
+            "accuracy": 0.26681614349775784,
+            "topTwoCoverage": 0.4663677130044843,
+            "logLoss": 1.7658745315676063,
+            "brier": 0.8116449906208103,
+            "medianSamples": 1541
           },
           "baseline": {
-            "targets": 443,
-            "evaluated": 443,
+            "targets": 446,
+            "evaluated": 446,
             "coverage": 1,
-            "accuracy": 0.2528216704288939,
-            "topTwoCoverage": 0.4492099322799097,
-            "logLoss": 1.7707032558260605,
-            "brier": 0.8137509988453528,
-            "medianSamples": 1357
+            "accuracy": 0.26681614349775784,
+            "topTwoCoverage": 0.4663677130044843,
+            "logLoss": 1.7658745315676063,
+            "brier": 0.8116449906208103,
+            "medianSamples": 1541
           },
           "delta": {
             "accuracy": 0,
@@ -1303,24 +1304,24 @@
         },
         "g0-2": {
           "candidate": {
-            "targets": 953,
-            "evaluated": 953,
+            "targets": 966,
+            "evaluated": 966,
             "coverage": 1,
-            "accuracy": 0.23924449108079748,
-            "topTwoCoverage": 0.47429171038824763,
-            "logLoss": 1.8340050895459632,
-            "brier": 0.8226644556338683,
-            "medianSamples": 3453
+            "accuracy": 0.2536231884057971,
+            "topTwoCoverage": 0.47619047619047616,
+            "logLoss": 1.8234008378308437,
+            "brier": 0.8197369802520452,
+            "medianSamples": 1700
           },
           "baseline": {
-            "targets": 953,
-            "evaluated": 953,
+            "targets": 966,
+            "evaluated": 966,
             "coverage": 1,
-            "accuracy": 0.23924449108079748,
-            "topTwoCoverage": 0.47429171038824763,
-            "logLoss": 1.8340050895459632,
-            "brier": 0.8226644556338683,
-            "medianSamples": 3453
+            "accuracy": 0.2536231884057971,
+            "topTwoCoverage": 0.47619047619047616,
+            "logLoss": 1.8234008378308437,
+            "brier": 0.8197369802520452,
+            "medianSamples": 1700
           },
           "delta": {
             "accuracy": 0,
@@ -1333,52 +1334,52 @@
         "g0-3": {
           "candidate": {
             "targets": 76,
-            "evaluated": 75,
-            "coverage": 0.9868421052631579,
-            "accuracy": 0.24,
-            "topTwoCoverage": 0.48,
-            "logLoss": 2.417687326423162,
-            "brier": 0.8192113277472233,
-            "medianSamples": 147
+            "evaluated": 76,
+            "coverage": 1,
+            "accuracy": 0.14473684210526316,
+            "topTwoCoverage": 0.42105263157894735,
+            "logLoss": 1.8358248375601893,
+            "brier": 0.823132503250147,
+            "medianSamples": 470
           },
           "baseline": {
             "targets": 76,
             "evaluated": 76,
             "coverage": 1,
-            "accuracy": 0.25,
-            "topTwoCoverage": 0.4605263157894737,
-            "logLoss": 1.803040143716676,
-            "brier": 0.8167488762597293,
-            "medianSamples": 287
+            "accuracy": 0.14473684210526316,
+            "topTwoCoverage": 0.42105263157894735,
+            "logLoss": 1.8358248375601893,
+            "brier": 0.823132503250147,
+            "medianSamples": 470
           },
           "delta": {
-            "accuracy": -0.010000000000000009,
-            "topTwoCoverage": 0.01947368421052631,
-            "logLoss": 0.6146471827064861,
-            "brier": 0.0024624514874940218,
-            "coverage": -0.013157894736842146
+            "accuracy": 0,
+            "topTwoCoverage": 0,
+            "logLoss": 0,
+            "brier": 0,
+            "coverage": 0
           }
         },
         "g0-4": {
           "candidate": {
-            "targets": 59,
-            "evaluated": 59,
+            "targets": 60,
+            "evaluated": 60,
             "coverage": 1,
-            "accuracy": 0.2033898305084746,
-            "topTwoCoverage": 0.3898305084745763,
-            "logLoss": 1.9049695948855385,
-            "brier": 0.8360390261803327,
-            "medianSamples": 268
+            "accuracy": 0.15,
+            "topTwoCoverage": 0.38333333333333336,
+            "logLoss": 1.9195158433648696,
+            "brier": 0.8395585598473629,
+            "medianSamples": 189
           },
           "baseline": {
-            "targets": 59,
-            "evaluated": 59,
+            "targets": 60,
+            "evaluated": 60,
             "coverage": 1,
-            "accuracy": 0.2033898305084746,
-            "topTwoCoverage": 0.3898305084745763,
-            "logLoss": 1.9049695948855385,
-            "brier": 0.8360390261803327,
-            "medianSamples": 268
+            "accuracy": 0.15,
+            "topTwoCoverage": 0.38333333333333336,
+            "logLoss": 1.9195158433648696,
+            "brier": 0.8395585598473629,
+            "medianSamples": 189
           },
           "delta": {
             "accuracy": 0,
@@ -1390,24 +1391,24 @@
         },
         "g0-5": {
           "candidate": {
-            "targets": 40,
-            "evaluated": 40,
+            "targets": 45,
+            "evaluated": 45,
             "coverage": 1,
-            "accuracy": 0.175,
-            "topTwoCoverage": 0.325,
-            "logLoss": 2.5570016534086295,
-            "brier": 0.8589887744314595,
-            "medianSamples": 130
+            "accuracy": 0.06666666666666667,
+            "topTwoCoverage": 0.3111111111111111,
+            "logLoss": 4.728636648468685,
+            "brier": 0.9118222035481484,
+            "medianSamples": 77
           },
           "baseline": {
-            "targets": 40,
-            "evaluated": 40,
+            "targets": 45,
+            "evaluated": 45,
             "coverage": 1,
-            "accuracy": 0.175,
-            "topTwoCoverage": 0.325,
-            "logLoss": 2.5570016534086295,
-            "brier": 0.8589887744314595,
-            "medianSamples": 130
+            "accuracy": 0.06666666666666667,
+            "topTwoCoverage": 0.3111111111111111,
+            "logLoss": 4.728636648468685,
+            "brier": 0.9118222035481484,
+            "medianSamples": 77
           },
           "delta": {
             "accuracy": 0,
@@ -1421,34 +1422,34 @@
     },
     "validation": {
       "candidate": {
-        "targets": 1572,
-        "evaluated": 1572,
+        "targets": 1593,
+        "evaluated": 1593,
         "coverage": 1,
-        "accuracy": 0.25318066157760816,
-        "topTwoCoverage": 0.4993638676844784,
-        "logLoss": 1.8172217193360116,
-        "brier": 0.814641700377237,
-        "medianSamples": 4149
+        "accuracy": 0.26114249843063403,
+        "topTwoCoverage": 0.4915254237288136,
+        "logLoss": 1.828729478365804,
+        "brier": 0.8142778204972904,
+        "medianSamples": 1998
       },
       "bandBaseline": {
-        "targets": 1572,
-        "evaluated": 1572,
+        "targets": 1593,
+        "evaluated": 1593,
         "coverage": 1,
-        "accuracy": 0.2538167938931298,
-        "topTwoCoverage": 0.49809160305343514,
-        "logLoss": 1.7991576286315394,
-        "brier": 0.8135777480399918,
-        "medianSamples": 4149
+        "accuracy": 0.26114249843063403,
+        "topTwoCoverage": 0.4915254237288136,
+        "logLoss": 1.828729478365804,
+        "brier": 0.8142778204972904,
+        "medianSamples": 1998
       },
       "legacy": {
-        "targets": 1572,
-        "evaluated": 1570,
-        "coverage": 0.9987277353689568,
-        "accuracy": 0.2662420382165605,
-        "topTwoCoverage": 0.4929936305732484,
-        "logLoss": 1.8482277851400677,
-        "brier": 0.8154021716865905,
-        "medianSamples": 1230
+        "targets": 1593,
+        "evaluated": 1589,
+        "coverage": 0.997489014438167,
+        "accuracy": 0.2422907488986784,
+        "topTwoCoverage": 0.47388294524858404,
+        "logLoss": 2.0160395201349317,
+        "brier": 0.8238700083631401,
+        "medianSamples": 613
       },
       "perBand": {
         "g0-1": {
@@ -1456,21 +1457,21 @@
             "targets": 376,
             "evaluated": 376,
             "coverage": 1,
-            "accuracy": 0.2765957446808511,
-            "topTwoCoverage": 0.4973404255319149,
-            "logLoss": 1.7648018954035793,
-            "brier": 0.8069687065473887,
-            "medianSamples": 1766
+            "accuracy": 0.2712765957446808,
+            "topTwoCoverage": 0.5026595744680851,
+            "logLoss": 1.756374858243301,
+            "brier": 0.8064259207768628,
+            "medianSamples": 2117
           },
           "baseline": {
             "targets": 376,
             "evaluated": 376,
             "coverage": 1,
-            "accuracy": 0.2765957446808511,
-            "topTwoCoverage": 0.4973404255319149,
-            "logLoss": 1.7648018954035793,
-            "brier": 0.8069687065473887,
-            "medianSamples": 1766
+            "accuracy": 0.2712765957446808,
+            "topTwoCoverage": 0.5026595744680851,
+            "logLoss": 1.756374858243301,
+            "brier": 0.8064259207768628,
+            "medianSamples": 2117
           },
           "delta": {
             "accuracy": 0,
@@ -1482,24 +1483,24 @@
         },
         "g0-2": {
           "candidate": {
-            "targets": 1006,
-            "evaluated": 1006,
+            "targets": 1024,
+            "evaluated": 1024,
             "coverage": 1,
-            "accuracy": 0.24751491053677932,
-            "topTwoCoverage": 0.5029821073558648,
-            "logLoss": 1.8094717966343845,
-            "brier": 0.8150996717973777,
-            "medianSamples": 4432
+            "accuracy": 0.26171875,
+            "topTwoCoverage": 0.4912109375,
+            "logLoss": 1.8132277034584088,
+            "brier": 0.8165247383427164,
+            "medianSamples": 2177
           },
           "baseline": {
-            "targets": 1006,
-            "evaluated": 1006,
+            "targets": 1024,
+            "evaluated": 1024,
             "coverage": 1,
-            "accuracy": 0.24751491053677932,
-            "topTwoCoverage": 0.5029821073558648,
-            "logLoss": 1.8094717966343845,
-            "brier": 0.8150996717973777,
-            "medianSamples": 4432
+            "accuracy": 0.26171875,
+            "topTwoCoverage": 0.4912109375,
+            "logLoss": 1.8132277034584088,
+            "brier": 0.8165247383427164,
+            "medianSamples": 2177
           },
           "delta": {
             "accuracy": 0,
@@ -1511,53 +1512,53 @@
         },
         "g0-3": {
           "candidate": {
-            "targets": 64,
-            "evaluated": 64,
+            "targets": 70,
+            "evaluated": 70,
             "coverage": 1,
-            "accuracy": 0.234375,
-            "topTwoCoverage": 0.484375,
-            "logLoss": 2.219689371343359,
-            "brier": 0.8373826617635844,
-            "medianSamples": 165
+            "accuracy": 0.22857142857142856,
+            "topTwoCoverage": 0.4857142857142857,
+            "logLoss": 1.7275204040659469,
+            "brier": 0.802326964652355,
+            "medianSamples": 633
           },
           "baseline": {
-            "targets": 64,
-            "evaluated": 64,
+            "targets": 70,
+            "evaluated": 70,
             "coverage": 1,
-            "accuracy": 0.25,
-            "topTwoCoverage": 0.453125,
-            "logLoss": 1.7759901434147778,
-            "brier": 0.8112493324799993,
-            "medianSamples": 357
+            "accuracy": 0.22857142857142856,
+            "topTwoCoverage": 0.4857142857142857,
+            "logLoss": 1.7275204040659469,
+            "brier": 0.802326964652355,
+            "medianSamples": 633
           },
           "delta": {
-            "accuracy": -0.015625,
-            "topTwoCoverage": 0.03125,
-            "logLoss": 0.4436992279285812,
-            "brier": 0.02613332928358514,
+            "accuracy": 0,
+            "topTwoCoverage": 0,
+            "logLoss": 0,
+            "brier": 0,
             "coverage": 0
           }
         },
         "g0-4": {
           "candidate": {
-            "targets": 87,
-            "evaluated": 87,
+            "targets": 88,
+            "evaluated": 88,
             "coverage": 1,
-            "accuracy": 0.25287356321839083,
-            "topTwoCoverage": 0.4827586206896552,
-            "logLoss": 1.8215607445477462,
-            "brier": 0.8222912992519009,
-            "medianSamples": 341
+            "accuracy": 0.2727272727272727,
+            "topTwoCoverage": 0.4772727272727273,
+            "logLoss": 1.8011487300645634,
+            "brier": 0.8157406188018835,
+            "medianSamples": 280
           },
           "baseline": {
-            "targets": 87,
-            "evaluated": 87,
+            "targets": 88,
+            "evaluated": 88,
             "coverage": 1,
-            "accuracy": 0.25287356321839083,
-            "topTwoCoverage": 0.4827586206896552,
-            "logLoss": 1.8215607445477462,
-            "brier": 0.8222912992519009,
-            "medianSamples": 341
+            "accuracy": 0.2727272727272727,
+            "topTwoCoverage": 0.4772727272727273,
+            "logLoss": 1.8011487300645634,
+            "brier": 0.8157406188018835,
+            "medianSamples": 280
           },
           "delta": {
             "accuracy": 0,
@@ -1569,24 +1570,24 @@
         },
         "g0-5": {
           "candidate": {
-            "targets": 39,
-            "evaluated": 39,
+            "targets": 35,
+            "evaluated": 35,
             "coverage": 1,
-            "accuracy": 0.20512820512820512,
-            "topTwoCoverage": 0.48717948717948717,
-            "logLoss": 1.8523717479139434,
-            "brier": 0.822420926032126,
-            "medianSamples": 170
+            "accuracy": 0.17142857142857143,
+            "topTwoCoverage": 0.42857142857142855,
+            "logLoss": 3.3313264990154243,
+            "brier": 0.8531150799117546,
+            "medianSamples": 90
           },
           "baseline": {
-            "targets": 39,
-            "evaluated": 39,
+            "targets": 35,
+            "evaluated": 35,
             "coverage": 1,
-            "accuracy": 0.20512820512820512,
-            "topTwoCoverage": 0.48717948717948717,
-            "logLoss": 1.8523717479139434,
-            "brier": 0.822420926032126,
-            "medianSamples": 170
+            "accuracy": 0.17142857142857143,
+            "topTwoCoverage": 0.42857142857142855,
+            "logLoss": 3.3313264990154243,
+            "brier": 0.8531150799117546,
+            "medianSamples": 90
           },
           "delta": {
             "accuracy": 0,
@@ -1600,7 +1601,7 @@
     },
     "gate": {
       "passed": true,
-      "reason": "五段0球赔率门槛与已验证七项距离在最新20%优于原八档整体距离"
+      "reason": "0球赔率±3.00近邻与已验证七项距离在最新20%优于原八档整体距离"
     }
   }
 }
