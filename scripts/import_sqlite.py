@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
+import re
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -246,7 +248,9 @@ CREATE TABLE IF NOT EXISTS prediction_ledger (
     id INTEGER PRIMARY KEY,
     match_id TEXT NOT NULL,
     policy_version TEXT NOT NULL,
-    market TEXT NOT NULL CHECK (market IN ('spf', 'hhad', 'goals')),
+    market TEXT NOT NULL CHECK (
+        market IN ('spf', 'hhad', 'goals', 'goalMultiple')
+    ),
     handicap INTEGER,
     captured_at TEXT NOT NULL,
     source_updated_at TEXT,
@@ -283,6 +287,9 @@ CREATE TABLE IF NOT EXISTS prediction_ledger (
   settled_at TEXT,
   valid INTEGER NOT NULL DEFAULT 1 CHECK (valid IN (0, 1)),
   invalid_reason TEXT,
+  algorithm_version TEXT,
+  data_version TEXT,
+  validation_status TEXT,
   UNIQUE (match_id, market, policy_version)
 );
 
@@ -322,6 +329,8 @@ CREATE INDEX IF NOT EXISTS idx_historical_spf_result
     ON historical_spf (result);
 CREATE INDEX IF NOT EXISTS idx_historical_goals_league
     ON historical_goals (league);
+CREATE INDEX IF NOT EXISTS idx_goals_g0
+    ON historical_goals (final_g0);
 CREATE INDEX IF NOT EXISTS idx_historical_goals_actual
     ON historical_goals (actual_goals);
 CREATE INDEX IF NOT EXISTS idx_historical_hhad_league_handicap
@@ -555,9 +564,19 @@ def import_historical_spf(
                 source_file, source_row, initial_source_file, initial_source_row
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(fingerprint) DO UPDATE SET
+                league = excluded.league,
+                home_team = excluded.home_team,
+                away_team = excluded.away_team,
+                score = excluded.score,
+                result = excluded.result,
+                handicap = excluded.handicap,
+                total_goals = excluded.total_goals,
                 initial_home_odds = excluded.initial_home_odds,
                 initial_draw_odds = excluded.initial_draw_odds,
                 initial_away_odds = excluded.initial_away_odds,
+                final_home_odds = excluded.final_home_odds,
+                final_draw_odds = excluded.final_draw_odds,
+                final_away_odds = excluded.final_away_odds,
                 source_name = excluded.source_name,
                 source_file = excluded.source_file,
                 source_row = excluded.source_row,
@@ -609,9 +628,18 @@ def import_historical_hhad(
                 source_file, source_row, initial_source_file, initial_source_row
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(fingerprint) DO UPDATE SET
+                league = excluded.league,
+                home_team = excluded.home_team,
+                away_team = excluded.away_team,
+                score = excluded.score,
+                handicap = excluded.handicap,
+                result = excluded.result,
                 initial_home_odds = excluded.initial_home_odds,
                 initial_draw_odds = excluded.initial_draw_odds,
                 initial_away_odds = excluded.initial_away_odds,
+                final_home_odds = excluded.final_home_odds,
+                final_draw_odds = excluded.final_draw_odds,
+                final_away_odds = excluded.final_away_odds,
                 source_name = excluded.source_name,
                 source_file = excluded.source_file,
                 source_row = excluded.source_row,
@@ -668,6 +696,10 @@ def import_historical_goals(
                 ?, ?, ?, ?
             )
             ON CONFLICT(fingerprint) DO UPDATE SET
+                league = excluded.league,
+                home_team = excluded.home_team,
+                away_team = excluded.away_team,
+                actual_goals = excluded.actual_goals,
                 initial_g0 = excluded.initial_g0,
                 initial_g1 = excluded.initial_g1,
                 initial_g2 = excluded.initial_g2,
@@ -676,6 +708,14 @@ def import_historical_goals(
                 initial_g5 = excluded.initial_g5,
                 initial_g6 = excluded.initial_g6,
                 initial_g7plus = excluded.initial_g7plus,
+                final_g0 = excluded.final_g0,
+                final_g1 = excluded.final_g1,
+                final_g2 = excluded.final_g2,
+                final_g3 = excluded.final_g3,
+                final_g4 = excluded.final_g4,
+                final_g5 = excluded.final_g5,
+                final_g6 = excluded.final_g6,
+                final_g7plus = excluded.final_g7plus,
                 source_name = excluded.source_name,
                 source_file = excluded.source_file,
                 source_row = excluded.source_row,
@@ -782,6 +822,16 @@ def detail_goal_odds(detail: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def realtime_display_teams(display_name: object) -> tuple[str, str]:
+    text = str(display_name or "").strip()
+    if ":" in text:
+        text = text.split(":", 1)[1].strip()
+    teams = re.split(r"\s+vs\s+", text, maxsplit=1, flags=re.IGNORECASE)
+    if len(teams) != 2:
+        return "", ""
+    return teams[0].strip(), teams[1].strip()
+
+
 def import_live_json(
     connection: sqlite3.Connection,
     spf_live: list[dict[str, Any]],
@@ -792,11 +842,24 @@ def import_live_json(
     spf_map = {int(row["match_id"]): row for row in spf_live}
     goal_map = {int(row["match_id"]): row for row in goal_live}
     detail_map = {int(row["matchId"]): row for row in detail_live}
-    # match_data1 只补充队名、联赛和球队历史。没有进入任一实时赔率文件的
-    # 比赛不属于当期可预测场次，不能仅凭详情文件出现在“选择比赛”中。
-    match_ids = sorted(set(spf_map) | set(goal_map))
-    if not match_ids:
+    realtime_match_ids = set(spf_map) | set(goal_map)
+    if not realtime_match_ids:
         raise ValueError("当前比赛JSON为空，已停止切换活动批次")
+
+    # match_data1 不能单独制造可预测比赛，但它非空时代表当前详情批次。
+    # 赔率文件可能继续保留已完场比赛，因此只激活同时出现在赔率与详情
+    # 批次中的比赛。详情文件为空时保留原赔率并集作为容错。
+    detail_match_ids = set(detail_map)
+    match_ids = sorted(
+        realtime_match_ids & detail_match_ids
+        if detail_match_ids
+        else realtime_match_ids
+    )
+    if detail_match_ids and not match_ids:
+        raise ValueError(
+            "当前赔率JSON与match_data1.json没有共同比赛，"
+            "已停止切换活动批次"
+        )
 
     connection.execute("UPDATE current_matches SET active = 0")
 
@@ -806,11 +869,10 @@ def import_live_json(
         detail = detail_map.get(match_id, {})
         display_name = spf_row.get("display_name") or goal_row.get("display_name") or ""
         league = spf_row.get("league") or goal_row.get("league") or detail.get("league") or ""
-        home = detail.get("homeTeam") or ""
-        away = detail.get("awayTeam") or ""
-        if (not home or not away) and ": " in display_name and " vs " in display_name:
-            teams = display_name.split(": ", 1)[1].split(" vs ", 1)
-            home, away = teams[0], teams[1]
+        home, away = realtime_display_teams(display_name)
+        if not home or not away:
+            home = detail.get("homeTeam") or ""
+            away = detail.get("awayTeam") or ""
 
         connection.execute(
             """
@@ -963,7 +1025,16 @@ def record_sources(
         row_count = len(pd.read_excel(path, sheet_name=0))
         upsert_source_file(connection, path, "xlsx", row_count, imported_at)
 
-    for path in JSON_FILES:
+    record_json_sources(connection, json_payloads, imported_at)
+
+
+def record_json_sources(
+    connection: sqlite3.Connection,
+    json_payloads: dict[str, Any],
+    imported_at: str,
+    json_files: Iterable[Path] | None = None,
+) -> None:
+    for path in JSON_FILES if json_files is None else json_files:
         payload = json_payloads[path.name]
         record_count = len(payload) if isinstance(payload, list) else 1
         upsert_source_file(connection, path, "json", record_count, imported_at)
@@ -1005,26 +1076,51 @@ def table_counts(connection: sqlite3.Connection) -> dict[str, int]:
     }
 
 
-def main() -> None:
-    missing = [path.name for path in EXCEL_FILES + JSON_FILES if not path.exists()]
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="导入竞彩历史与当前比赛数据")
+    parser.add_argument(
+        "--json-only",
+        action="store_true",
+        help="只更新当前比赛JSON，不读取Excel、不重建历史表",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
+    required_files = JSON_FILES if args.json_only else EXCEL_FILES + JSON_FILES
+    missing = [path.name for path in required_files if not path.exists()]
     if missing:
         raise FileNotFoundError(f"缺少数据文件：{', '.join(missing)}")
 
     imported_at = now_iso()
-    spf_history = build_spf_history()
-    hhad_history = build_hhad_history()
-    goal_history = build_goal_history()
     json_payloads = {path.name: load_json(path) for path in JSON_FILES}
+    spf_history = None if args.json_only else build_spf_history()
+    hhad_history = None if args.json_only else build_hhad_history()
+    goal_history = None if args.json_only else build_goal_history()
 
     with sqlite3.connect(DATABASE_PATH) as connection:
         initialize_database(connection)
         connection.commit()
+        if args.json_only:
+            historical_rows = sum(
+                connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                for table in ("historical_spf", "historical_hhad", "historical_goals")
+            )
+            if historical_rows == 0:
+                raise RuntimeError(
+                    "数据库中没有历史赔率；首次使用请运行 npm run db:import-only"
+                )
         connection.execute("BEGIN IMMEDIATE")
         try:
-            spf_added = import_historical_spf(connection, spf_history)
-            hhad_added = import_historical_hhad(connection, hhad_history)
-            goals_added = import_historical_goals(connection, goal_history)
-            unified_summary = rebuild_historical_matches(connection)
+            if args.json_only:
+                spf_added = hhad_added = goals_added = 0
+                unified_summary = None
+            else:
+                spf_added = import_historical_spf(connection, spf_history or [])
+                hhad_added = import_historical_hhad(connection, hhad_history or [])
+                goals_added = import_historical_goals(connection, goal_history or [])
+                unified_summary = rebuild_historical_matches(connection)
             import_live_json(
                 connection,
                 json_payloads["realtime_matches_had_hhad_history.json"],
@@ -1032,7 +1128,10 @@ def main() -> None:
                 json_payloads["match_data1.json"],
                 imported_at,
             )
-            record_sources(connection, json_payloads, imported_at)
+            if args.json_only:
+                record_json_sources(connection, json_payloads, imported_at)
+            else:
+                record_sources(connection, json_payloads, imported_at)
             connection.commit()
         except Exception:
             connection.rollback()
@@ -1043,18 +1142,23 @@ def main() -> None:
         counts = table_counts(connection)
 
     print(f"数据库：{DATABASE_PATH}")
+    print(
+        "导入模式："
+        + ("仅当前比赛JSON（未读取Excel、未重建历史表）" if args.json_only else "完整导入")
+    )
     print(f"本次新增历史胜平负：{spf_added:,}")
     print(f"本次新增历史让球胜平负：{hhad_added:,}")
     print(f"本次新增历史进球：{goals_added:,}")
-    print(
-        "统一比赛："
-        f"匹配 {unified_summary['matched']:,}，"
-        f"匹配但进球未校验 {unified_summary['matched_unverified']:,}，"
-        f"进球冲突 {unified_summary['conflicts']:,}，"
-        f"仅胜平负/让球 {unified_summary['spf_hhad_only']:,}，"
-        f"仅让球 {unified_summary['hhad_only']:,}，"
-        f"仅进球 {unified_summary['goals_only']:,}"
-    )
+    if unified_summary:
+        print(
+            "统一比赛："
+            f"匹配 {unified_summary['matched']:,}，"
+            f"匹配但进球未校验 {unified_summary['matched_unverified']:,}，"
+            f"进球冲突 {unified_summary['conflicts']:,}，"
+            f"仅胜平负/让球 {unified_summary['spf_hhad_only']:,}，"
+            f"仅让球 {unified_summary['hhad_only']:,}，"
+            f"仅进球 {unified_summary['goals_only']:,}"
+        )
     for table, count in counts.items():
         print(f"{table}: {count:,}")
     print(f"integrity_check: {integrity}")

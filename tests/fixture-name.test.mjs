@@ -26,6 +26,13 @@ test("settlement aliases from teamname.json resolve to one team", () => {
     ["圣吉尔联合", "圣吉联合"],
     ["布拉格斯巴达", "布斯巴达"],
     ["格风暴", "格拉茨风暴"],
+    ["比亚韦斯托克", "比亚韦"],
+    ["格拉斯哥流浪者", "流浪者"],
+    ["塞伊奈约基", "塞伊奈"],
+    ["赫尔辛基火花", "赫尔火花"],
+    ["桑纳菲尤尔", "桑纳菲"],
+    ["奥斯陆KFUM", "奥斯KFUM"],
+    ["雷克斯汉姆", "雷克斯"],
   ]) {
     assert.equal(normalizeTeamName(alias), normalizeTeamName(canonical));
   }

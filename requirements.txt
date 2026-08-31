@@ -1,0 +1,8 @@
+# Core database import and Excel parsing
+pandas>=2.2,<3
+openpyxl>=3.1,<4
+
+# Optional challenger training and legacy analysis scripts
+numpy>=2.0,<3
+scikit-learn>=1.5,<2
+joblib>=1.4,<2

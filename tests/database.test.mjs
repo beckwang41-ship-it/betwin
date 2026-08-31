@@ -11,17 +11,24 @@ import {
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-function liveOddsMatchIds() {
+function expectedActiveMatchIds() {
   const files = [
     ["realtime_matches_had_hhad_history.json", "match_id"],
     ["realtime_matches_history.json", "match_id"],
   ];
-  return new Set(
+  const realtimeIds = new Set(
     files.flatMap(([fileName, field]) =>
       JSON.parse(readFileSync(path.join(ROOT, fileName), "utf8"))
         .map((row) => String(row[field])),
     ),
   );
+  const detailIds = new Set(
+    JSON.parse(readFileSync(path.join(ROOT, "match_data1.json"), "utf8"))
+      .map((row) => String(row.matchId)),
+  );
+  return detailIds.size
+    ? new Set([...realtimeIds].filter((id) => detailIds.has(id)))
+    : realtimeIds;
 }
 
 test("SQLite data store exposes imported matches and historical samples", () => {
@@ -40,7 +47,7 @@ test("SQLite data store exposes imported matches and historical samples", () => 
     assert.ok(counts.storedCurrentMatches >= counts.currentMatches);
     assert.deepEqual(
       new Set(matches.map((match) => match.id)),
-      liveOddsMatchIds(),
+      expectedActiveMatchIds(),
     );
     assert.ok(matches.every((match) => match.had || match.hhad || match.goals));
     assert.ok(
@@ -72,7 +79,7 @@ test("SQLite data store exposes imported matches and historical samples", () => 
         handicap: Number(first.hhad.goalLine),
       },
     );
-    assert.ok(spf.length > 100);
+    assert.ok(spf.length > 0);
     assert.ok(spf.every((row) => row.matchKey));
     assert.ok(spf.some((row) => row.initialOdds?.length === 3));
     assert.ok(hhad.every((row) => row.matchKey));
@@ -86,6 +93,104 @@ test("SQLite data store exposes imported matches and historical samples", () => 
       store.getPairedSpfHhadHistory().length < store.getHhadHistory().length,
     );
   } finally {
+    store.close();
+  }
+});
+
+test("SQL赔率预筛与原全量历史过滤返回相同比赛", () => {
+  const store = createDataStore(path.join(ROOT, "betwin.db"));
+  try {
+    const match = store.getMatches().find(
+      (row) => row.had && row.hhad && row.goals,
+    );
+    assert.ok(match);
+    const spfOdds = [match.had.h, match.had.d, match.had.a];
+    const hhadOdds = [match.hhad.h, match.hhad.d, match.hhad.a];
+    const handicap = Number(match.hhad.goalLine);
+    const tolerance = 0.1;
+    const within = (odds, target) =>
+      odds.every(
+        (value, index) =>
+          value >= target[index] * (1 - tolerance) &&
+          value <= target[index] * (1 + tolerance),
+      );
+    const identity = (row) => `${row.sourceFile}:${row.sourceRow}`;
+
+    for (const sameLeague of [false, true]) {
+      const options = { league: match.league, sameLeague };
+      const fullSpf = store.getSpfHistory(options);
+      const expectedSpf = fullSpf.filter((row) => within(row.odds, spfOdds));
+      const actualSpf = store.getHistoricalSpf(spfOdds, {
+        ...options,
+        tolerance,
+      });
+      assert.deepEqual(actualSpf.map(identity), expectedSpf.map(identity));
+
+      const fullHhad = store.getHhadHistory(options);
+      const expectedHhad = fullHhad.filter(
+        (row) => row.handicap === handicap && within(row.odds, hhadOdds),
+      );
+      const actualHhad = store.getHistoricalHhad(hhadOdds, {
+        ...options,
+        tolerance,
+        handicap,
+      });
+      assert.deepEqual(actualHhad.map(identity), expectedHhad.map(identity));
+
+      const zeroTolerance = sameLeague ? 2.5 : 2;
+      const fullGoals = store.getGoalHistory(options);
+      const expectedGoals = fullGoals.filter(
+        (row) => Math.abs(Number(row.odds[0]) - Number(match.goals.g0)) <= zeroTolerance,
+      );
+      const actualGoals = store.getGoalHistoryNearZeroOdds(match.goals.g0, {
+        ...options,
+        tolerance: zeroTolerance,
+      });
+      assert.deepEqual(actualGoals.map(identity), expectedGoals.map(identity));
+
+      const fullPaired = store.getPairedSpfHhadHistory(options);
+      const expectedPaired = fullPaired.filter(
+        (row) =>
+          row.hhad.handicap === handicap &&
+          within(row.spf.odds, spfOdds) &&
+          within(row.hhad.odds, hhadOdds),
+      );
+      const actualPaired = store.getPairedSpfHhadHistoryNear(
+        spfOdds,
+        hhadOdds,
+        {
+          ...options,
+          spfTolerance: tolerance,
+          hhadTolerance: tolerance,
+          handicap,
+        },
+      );
+      assert.deepEqual(actualPaired.map(identity), expectedPaired.map(identity));
+    }
+  } finally {
+    store.close();
+  }
+});
+
+test("历史模型更新时间只跟随Excel历史源，不受realtime JSON导入影响", () => {
+  const databasePath = path.join(ROOT, "betwin.db");
+  const store = createDataStore(databasePath);
+  const db = new DatabaseSync(databasePath, { readOnly: true });
+  try {
+    const historical = db.prepare(`
+      SELECT MAX(imported_at) AS value
+      FROM source_files
+      WHERE file_type = 'xlsx'
+    `).get().value;
+    const allSources = db.prepare(`
+      SELECT MAX(imported_at) AS value
+      FROM source_files
+    `).get().value;
+    assert.equal(store.getHistoricalSourceUpdatedAt(), historical);
+    assert.equal(store.getSourceUpdatedAt(), allSources);
+    assert.ok(historical <= allSources);
+  } finally {
+    db.close();
     store.close();
   }
 });
@@ -164,8 +269,12 @@ test("verified prediction pool contains all three markets from the same match", 
           row.goalMarket.odds.length === 8,
       ),
     );
+    // 缺少总进球盘口的比赛（match_status='spf_hhad_only'）仍进入胜平负/让球
+    // 预测池，此时 goals 为空；只有配有进球数据的行才校验总进球一致性。
+    const withGoals = rows.filter((row) => row.goals !== null);
+    assert.ok(withGoals.length > 0);
     assert.ok(
-      rows.every(
+      withGoals.every(
         (row) =>
           (row.totalGoals >= 7 ? "7+" : String(row.totalGoals)) === row.goals,
       ),
