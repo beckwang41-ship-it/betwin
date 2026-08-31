@@ -4,8 +4,9 @@ import json
 import math
 import os
 import sqlite3
+import subprocess
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -37,6 +38,7 @@ HISTORICAL_THRESHOLDS = {
     "hhad": [0.03, 0.05, 0.07, 0.10],
     "goals": [0.005, 0.010, 0.015, 0.020],
 }
+GOAL_POOL_FRACTIONS = [0.25, 0.5, 0.75, 1.0]
 RANDOM_SEED = 20260727
 MIN_SOURCE_ROWS = 1000
 BOOTSTRAP_ITERATIONS = 1000
@@ -81,6 +83,8 @@ def read_rows(connection: sqlite3.Connection) -> list[dict[str, Any]]:
     rows = connection.execute(
         """
         SELECT m.match_key, m.spf_source_file, m.spf_source_row,
+               g.source_file AS goal_source_file,
+               g.source_row AS goal_source_row,
                s.league, s.result AS spf_result,
                s.initial_home_odds AS spf_i_h,
                s.initial_draw_odds AS spf_i_d,
@@ -125,7 +129,7 @@ def read_rows(connection: sqlite3.Connection) -> list[dict[str, Any]]:
 
 def source_updated_at(connection: sqlite3.Connection) -> str | None:
     row = connection.execute(
-        "SELECT MAX(imported_at) AS updated_at FROM source_files"
+        "SELECT MAX(imported_at) AS updated_at FROM source_files WHERE file_type = 'xlsx'"
     ).fetchone()
     return row[0] if row else None
 
@@ -159,19 +163,22 @@ class FeatureSpec:
     names: list[str]
     history_sources: list[str]
     historical_thresholds: dict[str, list[float]]
+    goal_pool_fractions: list[float] = field(
+        default_factory=lambda: list(GOAL_POOL_FRACTIONS)
+    )
 
 
 def historical_feature_names(
     thresholds: dict[str, list[float]],
+    goal_pool_fractions: list[float] = GOAL_POOL_FRACTIONS,
 ) -> list[str]:
     names: list[str] = []
-    sizes = {"spf": 3, "hhad": 3, "goals": 8}
-    for market in ["spf", "hhad", "goals"]:
+    for market in ["spf", "hhad"]:
         for tolerance in thresholds[market]:
             band = f"{tolerance:.3f}".rstrip("0").rstrip(".").replace(".", "p")
             names.extend(
                 f"history_{market}_t{band}_p_{index}"
-                for index in range(sizes[market])
+                for index in range(3)
             )
             names.extend(
                 [
@@ -189,6 +196,28 @@ def historical_feature_names(
                 f"history_{market}_consensus_share",
             ]
         )
+    for fraction in goal_pool_fractions:
+        band = f"pool{round(fraction * 100)}"
+        names.extend(
+            f"history_goals_{band}_p_{index}"
+            for index in range(8)
+        )
+        names.extend(
+            [
+                f"history_goals_{band}_sample_count",
+                f"history_goals_{band}_sample_log1p",
+                f"history_goals_{band}_missing",
+                f"history_goals_{band}_entropy",
+                f"history_goals_{band}_margin",
+            ]
+        )
+    names.extend(
+        [
+            "history_goals_available_bands",
+            "history_goals_direction_stable",
+            "history_goals_consensus_share",
+        ]
+    )
     return names
 
 
@@ -224,12 +253,15 @@ def build_feature_spec(
     )
     names.extend(f"league::{league}" for league in leagues)
     names.append("league::__unknown__")
-    names.extend(historical_feature_names(HISTORICAL_THRESHOLDS))
+    names.extend(
+        historical_feature_names(HISTORICAL_THRESHOLDS, GOAL_POOL_FRACTIONS)
+    )
     return FeatureSpec(
         leagues=leagues,
         names=names,
         history_sources=history_sources,
         historical_thresholds=HISTORICAL_THRESHOLDS,
+        goal_pool_fractions=GOAL_POOL_FRACTIONS,
     )
 
 
@@ -356,12 +388,117 @@ def distribution_features(
     return values
 
 
+def load_goal_production_events() -> tuple[dict[tuple[str, int], dict[str, Any]], dict[str, Any]]:
+    script = ROOT / "scripts" / "export_goal_production_events.mjs"
+    environment = os.environ.copy()
+    environment["BETWIN_DATABASE_PATH"] = str(DATABASE_PATH)
+    completed = subprocess.run(
+        ["node", str(script)],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=environment,
+    )
+    payload = json.loads(completed.stdout)
+    events = {
+        (str(event["sourceFile"]), int(event["sourceRow"])): event
+        for event in payload.get("events", [])
+    }
+    return events, {
+        "matchingVersion": payload.get("matchingVersion"),
+        "ordering": payload.get("ordering"),
+        "events": len(events),
+    }
+
+
+def production_goal_features(
+    event: dict[str, Any],
+    fractions: list[float],
+) -> list[float]:
+    pools = event.get("pools", []) if event else []
+    values: list[float] = []
+    directions: list[int] = []
+    available_bands = 0
+    for fraction in fractions:
+        pool = next(
+            (
+                item
+                for item in pools
+                if math.isclose(
+                    float(item.get("fraction", 0)),
+                    fraction,
+                    abs_tol=1e-12,
+                )
+            ),
+            None,
+        )
+        sample_count = int(pool.get("sampleCount", 0)) if pool else 0
+        probabilities = (
+            np.asarray(pool.get("probabilities", []), dtype=float)
+            if pool
+            else np.asarray([], dtype=float)
+        )
+        available = (
+            sample_count > 0
+            and probabilities.shape == (8,)
+            and np.isfinite(probabilities).all()
+            and float(probabilities.sum()) > 0
+        )
+        if available:
+            probabilities = probabilities / probabilities.sum()
+            positive = probabilities[probabilities > 0]
+            entropy = float(
+                -np.sum(positive * np.log(positive)) / math.log(8)
+            )
+            ordered = np.sort(probabilities)
+            margin = float(ordered[-1] - ordered[-2])
+            top = np.flatnonzero(
+                np.isclose(probabilities, probabilities.max(), atol=1e-12)
+            )
+            if len(top) == 1:
+                directions.append(int(top[0]))
+            available_bands += 1
+            missing = 0.0
+        else:
+            probabilities = np.full(8, 1 / 8, dtype=float)
+            entropy = 1.0
+            margin = 0.0
+            missing = 1.0
+        values.extend(probabilities.tolist())
+        values.extend(
+            [
+                float(sample_count),
+                math.log1p(sample_count),
+                missing,
+                entropy,
+                margin,
+            ]
+        )
+
+    if directions:
+        direction_counts = Counter(directions)
+        consensus_share = max(direction_counts.values()) / len(directions)
+        direction_stable = (
+            1.0
+            if len(directions) == len(fractions)
+            and len(direction_counts) == 1
+            else 0.0
+        )
+    else:
+        consensus_share = 0.0
+        direction_stable = 0.0
+    values.extend(
+        [float(available_bands), direction_stable, float(consensus_share)]
+    )
+    return values
+
+
 def historical_feature_matrix(
     rows: list[dict[str, Any]],
     spec: FeatureSpec,
+    goal_events: dict[tuple[str, int], dict[str, Any]] | None = None,
 ) -> np.ndarray:
     label_index = {label: index for index, label in enumerate(OUTCOME_LABELS)}
-    goal_index = {label: index for index, label in enumerate(GOAL_LABELS)}
     spf_odds = np.asarray(
         [odds_vector(row, "spf_f", 3) for row in rows],
         dtype=float,
@@ -370,11 +507,6 @@ def historical_feature_matrix(
         [odds_vector(row, "hhad_f", 3) for row in rows],
         dtype=float,
     )
-    goal_odds = np.asarray(
-        [odds_vector(row, "goal_f", 8) for row in rows],
-        dtype=float,
-    )
-    goal_probabilities = goal_probabilities_matrix(goal_odds)
     spf_actual = np.asarray(
         [label_index[str(row["spf_result"])] for row in rows],
         dtype=np.int32,
@@ -383,19 +515,19 @@ def historical_feature_matrix(
         [label_index[str(row["hhad_result"])] for row in rows],
         dtype=np.int32,
     )
-    goal_actual = np.asarray(
-        [goal_index[str(row["actual_goals"])] for row in rows],
-        dtype=np.int32,
-    )
     handicaps = np.asarray([int(row["handicap"]) for row in rows])
-    feature_count = len(historical_feature_names(spec.historical_thresholds))
+    feature_count = len(
+        historical_feature_names(
+            spec.historical_thresholds,
+            spec.goal_pool_fractions,
+        )
+    )
     result = np.zeros((len(rows), feature_count), dtype=np.float32)
 
     for target_index in range(len(rows)):
         if target_index == 0:
             spf_distances = np.asarray([], dtype=float)
             hhad_distances = np.asarray([], dtype=float)
-            goal_distances = np.asarray([], dtype=float)
         else:
             spf_distances = spf_distance_matrix(
                 spf_odds[:target_index],
@@ -404,12 +536,6 @@ def historical_feature_matrix(
             hhad_distances = spf_distance_matrix(
                 hhad_odds[:target_index],
                 hhad_odds[target_index],
-            )
-            goal_distances = np.sqrt(
-                np.square(
-                    goal_probabilities[:target_index]
-                    - goal_probabilities[target_index]
-                ).mean(axis=1)
             )
         values: list[float] = []
         values.extend(
@@ -429,12 +555,22 @@ def historical_feature_matrix(
                 handicaps[:target_index] == handicaps[target_index],
             )
         )
+        if goal_events is None:
+            event = {}
+        else:
+            event_key = (
+                str(rows[target_index]["goal_source_file"]),
+                int(rows[target_index]["goal_source_row"]),
+            )
+            if event_key not in goal_events:
+                raise RuntimeError(
+                    f"{rows[target_index]['match_key']} 缺少生产总进球滚动事件 {event_key}"
+                )
+            event = goal_events[event_key]
         values.extend(
-            distribution_features(
-                goal_actual[:target_index],
-                goal_distances,
-                spec.historical_thresholds["goals"],
-                8,
+            production_goal_features(
+                event,
+                spec.goal_pool_fractions,
             )
         )
         result[target_index] = np.asarray(values, dtype=np.float32)
@@ -455,16 +591,20 @@ def selection_observations(
 ) -> dict[str, np.ndarray]:
     name_index = {name: index for index, name in enumerate(history_names)}
     size = 8 if market == "goals" else 3
-    band = threshold_band(THRESHOLDS[market])
-    probability_start = name_index[f"history_{market}_t{band}_p_0"]
+    band = (
+        "pool100"
+        if market == "goals"
+        else f"t{threshold_band(THRESHOLDS[market])}"
+    )
+    probability_start = name_index[f"history_{market}_{band}_p_0"]
     probabilities = historical_features[
         :, probability_start : probability_start + size
     ].astype(float)
     sample_count = historical_features[
-        :, name_index[f"history_{market}_t{band}_sample_count"]
+        :, name_index[f"history_{market}_{band}_sample_count"]
     ].astype(float)
     margin = historical_features[
-        :, name_index[f"history_{market}_t{band}_margin"]
+        :, name_index[f"history_{market}_{band}_margin"]
     ].astype(float)
     stable = historical_features[
         :, name_index[f"history_{market}_direction_stable"]
@@ -849,6 +989,7 @@ def rolling_baseline(
     rows: list[dict[str, Any]],
     test_start: int,
     market: str,
+    goal_events: dict[tuple[str, int], dict[str, Any]] | None = None,
 ) -> tuple[np.ndarray, np.ndarray, list[int]]:
     labels = GOAL_LABELS if market == "goals" else OUTCOME_LABELS
     field = {
@@ -857,6 +998,38 @@ def rolling_baseline(
         "goals": "actual_goals",
     }[market]
     label_index = {label: index for index, label in enumerate(labels)}
+    if market == "goals":
+        probabilities: list[np.ndarray] = []
+        actual: list[int] = []
+        test_indices: list[int] = []
+        for target_index in range(test_start, len(rows)):
+            row = rows[target_index]
+            event = (goal_events or {}).get(
+                (str(row["goal_source_file"]), int(row["goal_source_row"]))
+            )
+            pool = next(
+                (
+                    item
+                    for item in (event or {}).get("pools", [])
+                    if math.isclose(
+                        float(item.get("fraction", 0)),
+                        1.0,
+                        abs_tol=1e-12,
+                    )
+                ),
+                None,
+            )
+            values = np.asarray(
+                pool.get("probabilities", []) if pool else [],
+                dtype=float,
+            )
+            if values.shape != (8,) or not np.isfinite(values).all():
+                continue
+            probabilities.append(values / values.sum())
+            actual.append(label_index[str(row[field])])
+            test_indices.append(target_index - test_start)
+        return np.asarray(probabilities), np.asarray(actual), test_indices
+
     prefix = "goal_f" if market == "goals" else f"{market}_f"
     size = 8 if market == "goals" else 3
     all_odds = np.asarray(
@@ -868,26 +1041,16 @@ def rolling_baseline(
         dtype=np.int32,
     )
     all_handicaps = np.asarray([int(row["handicap"]) for row in rows])
-    goal_probabilities = (
-        goal_probabilities_matrix(all_odds) if market == "goals" else None
-    )
     probabilities: list[np.ndarray] = []
     actual: list[int] = []
     test_indices: list[int] = []
 
     for target_index in range(test_start, len(rows)):
         target_odds = all_odds[target_index]
-        if market == "goals":
-            history_probabilities = goal_probabilities[:target_index]
-            target_probabilities = goal_probabilities[target_index]
-            distances = np.sqrt(
-                np.square(history_probabilities - target_probabilities).mean(axis=1)
-            )
-        else:
-            distances = spf_distance_matrix(
-                all_odds[:target_index],
-                target_odds,
-            )
+        distances = spf_distance_matrix(
+            all_odds[:target_index],
+            target_odds,
+        )
         mask = distances <= THRESHOLDS[market]
         if market == "hhad":
             mask &= (
@@ -1084,10 +1247,21 @@ def main() -> None:
     test_rows = rows[calibration_end:]
     included_sources = sorted(eligible_sources)
     spec = build_feature_spec(train_rows, included_sources)
+    print("读取共享生产入口生成的总进球严格前序事件")
+    goal_events, goal_event_meta = load_goal_production_events()
+    print(
+        f"  {goal_event_meta['events']:,} 个事件 · "
+        f"{goal_event_meta['matchingVersion']}"
+    )
     print("生成严格前序滚动的历史相似统计特征")
-    rolling_history_features = historical_feature_matrix(rows, spec)
+    rolling_history_features = historical_feature_matrix(
+        rows,
+        spec,
+        goal_events,
+    )
     history_feature_names = historical_feature_names(
-        spec.historical_thresholds
+        spec.historical_thresholds,
+        spec.goal_pool_fractions,
     )
 
     print(
@@ -1140,6 +1314,7 @@ def main() -> None:
             rows,
             calibration_end,
             market,
+            goal_events,
         )
         challenger_common = challenger_test[np.asarray(common_indices)]
         actual_common = y_test[np.asarray(common_indices)]
@@ -1173,7 +1348,7 @@ def main() -> None:
 
         labels = labels_by_market[market]
         model_markets[market] = {
-            "enabled": gate["passed"],
+            "enabled": False,
             "selectedCandidate": selection["selected"]["id"],
             "model": export_forest(classifier, temperature, labels),
         }
@@ -1195,12 +1370,11 @@ def main() -> None:
             "significance": significance,
             "gate": gate,
             "production": {
-                "enabled": gate["passed"],
-                "policy": (
-                    "challenger"
-                    if gate["passed"]
-                    else "historical-similarity"
-                ),
+                "enabled": False,
+                "candidateOnly": True,
+                "runtimeEnabled": False,
+                "policy": "historical-similarity",
+                "reason": "离线挑战模型；未经独立门禁和用户明确批准不得上线",
             },
         }
 
@@ -1236,6 +1410,8 @@ def main() -> None:
         "modelRows": len(rows),
         "sourceUpdatedAt": updated_at,
         "includedSources": sorted(eligible_sources),
+        "goalMatchingVersion": goal_event_meta["matchingVersion"],
+        "goalTrainingEvents": goal_event_meta["events"],
         "excludedSources": {
             source: count
             for source, count in source_counts.items()
@@ -1243,14 +1419,19 @@ def main() -> None:
         },
     }
     model_payload = {
-        "version": 3,
+        "version": 4,
         "generatedAt": generated_at,
+        "candidateOnly": True,
+        "runtimeEnabled": False,
         "data": data_meta,
         "featureSpec": {
             "names": spec.names,
             "leagues": spec.leagues,
             "historySources": spec.history_sources,
             "historicalThresholds": spec.historical_thresholds,
+            "goalProductionMatching": True,
+            "goalPoolFractions": spec.goal_pool_fractions,
+            "goalMatchingVersion": goal_event_meta["matchingVersion"],
         },
         "selfTest": {
             "features": [round_number(value) for value in x_test[0]],
@@ -1259,8 +1440,10 @@ def main() -> None:
         "markets": model_markets,
     }
     config_payload = {
-        "version": 3,
+        "version": 4,
         "generatedAt": generated_at,
+        "candidateOnly": True,
+        "runtimeEnabled": False,
         "data": data_meta,
         "methodology": {
             "ordering": "主历史来源按 source_row 从小到大，最后一行视为最新",
@@ -1271,7 +1454,8 @@ def main() -> None:
                 "仅使用此前比赛计算的相似赛果占比、整数样本数、分布集中度和方向稳定性"
             ),
             "historicalFeatures": (
-                "胜平负、让球胜平负和总进球分别匹配，不取三市场交集；"
+                "胜平负和让球胜平负分别匹配，不取三市场交集；"
+                "总进球直接复用生产0球窗口、综合距离指数权重和25%/50%/75%/100%样本池；"
                 "让球玩法只使用相同让球数；没有相似样本时使用均匀占位并提供缺失标记，"
                 "1场或10场均保留真实占比及整数样本数"
             ),
@@ -1279,8 +1463,9 @@ def main() -> None:
                 "缺失初赔用同场终赔填充，并增加初赔缺失标记"
             ),
             "baseline": (
-                "最新20%每场仅使用此前历史，按生产阈值计算原始相似赛果占比"
+                "最新20%每场仅使用同来源更早source_row；总进球基准直接来自共享生产入口"
             ),
+            "goalOrdering": goal_event_meta["ordering"],
             "calibration": "只在中间20%选择模型参数及温度，不查看最新20%结果",
             "gate": (
                 "最新20%命中率至少提高1个百分点，Log Loss与Brier同时下降，"
@@ -1289,6 +1474,7 @@ def main() -> None:
             "marketsIndependent": (
                 "三个目标分别训练；多市场赔率只作为赛前特征，不作为相似样本交集"
             ),
+            "deployment": "只生成离线挑战报告；即使研究门禁通过也保持runtimeEnabled=false",
         },
         "split": {
             "train": len(train_rows),

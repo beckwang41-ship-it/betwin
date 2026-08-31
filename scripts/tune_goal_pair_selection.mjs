@@ -3,6 +3,7 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { selectTopGoalPair } from "../lib/predictor.mjs";
+import { GOAL_MATCHING_VERSION } from "../lib/goal-zero-odds.mjs";
 import {
   loadGoalRows,
   runGoals,
@@ -12,7 +13,6 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const DATABASE_PATH =
   process.env.BETWIN_DATABASE_PATH || path.join(ROOT, "betwin.db");
 const OUTPUT_PATH = path.join(ROOT, "data", "goal-pair-selection.json");
-const GOAL_TOLERANCE = 0.015;
 const WARMUP = 500;
 
 function segment(cases, start, end) {
@@ -63,14 +63,10 @@ function passesSegment(candidate, baseline, minimumSelected) {
 
 const db = new DatabaseSync(DATABASE_PATH, { readOnly: true });
 try {
-  const run = runGoals(
-    loadGoalRows(db),
-    WARMUP,
-    GOAL_TOLERANCE,
-    1,
-    1,
-  );
-  const cases = run.cases.map(enrich);
+  const run = runGoals(loadGoalRows(db), WARMUP);
+  const cases = run.cases
+    .filter((item) => item.sampleSize > 0)
+    .map(enrich);
   const training = segment(cases, 0, 0.6);
   const calibration = segment(cases, 0.6, 0.8);
   const test = segment(cases, 0.8, 1);
@@ -131,21 +127,30 @@ try {
       : "历史前两名双选的高覆盖分层未能在中间20%和最新20%同时保持至少52%命中率及2个百分点提升；仅作风险提示";
 
   const sourceUpdatedAt = db
-    .prepare("SELECT MAX(imported_at) AS value FROM source_files")
+    .prepare(
+      "SELECT MAX(imported_at) AS value FROM source_files WHERE file_type = 'xlsx'",
+    )
     .get()?.value;
+  const goalHistory = Number(
+    db.prepare("SELECT COUNT(*) AS value FROM historical_goals").get()?.value ||
+      0,
+  );
   const output = {
     version: 2,
     generatedAt: new Date().toISOString(),
     strategy: "top-two-historical-results",
     data: {
       sourceUpdatedAt,
+      goalHistory,
+      goalMatchingVersion: GOAL_MATCHING_VERSION,
       evaluated: cases.length,
       split: "较早60%选择 / 中间20%校准 / 最新20%测试",
       discipline:
         "每场仅使用同来源中更早的历史行；规则只在较早60%选择",
     },
     settings: {
-      goalTolerance: GOAL_TOLERANCE,
+      goalMatching: "0球赔率±2.00＋综合距离指数加权",
+      goalMatchingVersion: GOAL_MATCHING_VERSION,
       warmup: WARMUP,
       minimumAccuracy: 0.52,
       minimumLift: 0.02,

@@ -125,7 +125,7 @@ function printResult(label, market, result) {
   console.log(
     `当前 ${thresholdText(result.currentThreshold, market)} / ` +
       `较早段候选 ${thresholdText(result.candidateThreshold, market)} / ` +
-      `生产采用 ${thresholdText(result.threshold, market)}`,
+      `离线候选报告 ${thresholdText(result.threshold, market)}`,
   );
   console.log(
     `候选覆盖率：调参 ${percentage(result.selected.tuning.coverage)} / ` +
@@ -136,17 +136,17 @@ function printResult(label, market, result) {
   printMetrics("验证段", result.selected.validationComparison);
   printSignificance(result.selected.significance);
   const decision = result.gate.significancePassed
-    ? "严格门禁通过"
+    ? "离线候选严格通过"
     : result.gate.passed
-      ? "表现优先采用（观察中）"
-      : "未采用";
+      ? "离线候选观察中"
+      : "离线候选未胜出";
   console.log(`${decision}：${result.gate.reason}`);
 }
 
 const store = createDataStore(DATABASE_PATH);
 try {
   const verifiedHistory = store.getVerifiedHistory();
-  const sourceUpdatedAt = store.getSourceUpdatedAt();
+  const sourceUpdatedAt = store.getHistoricalSourceUpdatedAt();
   currentThresholds = loadCurrentThresholds({
     verifiedMatches: verifiedHistory.length,
     sourceUpdatedAt,
@@ -197,6 +197,10 @@ try {
   const config = {
     version: 3,
     generatedAt: new Date().toISOString(),
+    candidateOnly: true,
+    runtimeEnabled: false,
+    productionLocked: true,
+    productionThresholds: { ...DEFAULT_THRESHOLDS },
     data: {
       database: path.basename(DATABASE_PATH),
       verifiedMatches: verifiedHistory.length,
@@ -220,6 +224,8 @@ try {
       significance:
         "最新20%按连续20场为区块重采样1,000次；Log Loss和Brier区间上界须小于0，命中率区间下界须不小于0；未通过时不否决跨调参段和验证段均改善的候选，但标记为观察中",
       adoptionPolicy: "performance-first",
+      productionLock:
+        "搜索结果只作为离线候选报告；正式阈值固定为胜平负7%、让球7%、总进球1.5pp",
       fallback:
         "任意样本数都使用真实历史占比；只有零样本时不预测，不回退赔率概率",
       tieAccuracy:

@@ -1,47 +1,30 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createDataStore } from "../lib/database.mjs";
 import {
-  classifyGoalOdds,
   classifyThreeWayOdds,
   segmentLabels,
   tuneSegmentThresholds,
 } from "../lib/odds-segments.mjs";
 import {
-  GOAL_LABELS,
   OUTCOME_LABELS,
-  goalDistance,
   spfDistance,
 } from "../lib/predictor.mjs";
+import { GOAL_MATCHING_VERSION } from "../lib/goal-zero-odds.mjs";
+import { THREE_WAY_MATCHING_VERSION } from "../lib/three-way-matching.mjs";
+import { FORMAL_PRODUCTION_THRESHOLDS } from "../lib/reliability-validation.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const DATABASE_PATH =
   process.env.BETWIN_DATABASE_PATH || path.join(ROOT, "betwin.db");
-const MODEL_CONFIG_PATH = path.join(ROOT, "data", "model-config.json");
 const OUTPUT_PATH =
   process.env.BETWIN_SEGMENT_CONFIG_PATH ||
   path.join(ROOT, "data", "segment-config.json");
 const THRESHOLDS = {
   spf: [0.03, 0.05, 0.07, 0.1],
   hhad: [0.03, 0.05, 0.07, 0.1],
-  goals: [0.005, 0.01, 0.015, 0.02],
 };
-const DEFAULT_THRESHOLDS = { spf: 0.1, hhad: 0.1, goals: 0.015 };
-
-function loadProductionThresholds() {
-  try {
-    const config = JSON.parse(readFileSync(MODEL_CONFIG_PATH, "utf8"));
-    return Object.fromEntries(
-      Object.entries(DEFAULT_THRESHOLDS).map(([market, fallback]) => {
-        const value = Number(config.markets?.[market]?.threshold);
-        return [market, Number.isFinite(value) && value > 0 ? value : fallback];
-      }),
-    );
-  } catch {
-    return { ...DEFAULT_THRESHOLDS };
-  }
-}
 
 function common(row, sourceFile, sourceRow) {
   return {
@@ -70,14 +53,6 @@ function hhadRows(history) {
   }));
 }
 
-function goalRows(history) {
-  return history.map((row) => ({
-    ...common(row, row.goalSourceFile, row.goalSourceRow),
-    goals: row.goals,
-    odds: row.goalMarket.odds,
-  }));
-}
-
 function percent(value) {
   return (Number(value || 0) * 100).toFixed(2) + "%";
 }
@@ -90,6 +65,10 @@ function thresholdText(value, market) {
 
 function printMarket(label, market, result) {
   console.log("\n" + label + "：" + result.enabledSegments + " 个类型通过验证");
+  if (result.productionManaged) {
+    console.log("- 不适用：" + result.gate.reason);
+    return;
+  }
   const metric = result.objective === "top-two" ? "topTwoCoverage" : "accuracy";
   for (const [segment, policy] of Object.entries(result.policies)) {
     if (!policy.selected) {
@@ -117,7 +96,9 @@ function printMarket(label, market, result) {
 const store = createDataStore(DATABASE_PATH);
 try {
   const history = store.getVerifiedHistory();
-  const productionThresholds = loadProductionThresholds();
+  const counts = store.getCounts();
+  const sourceUpdatedAt = store.getHistoricalSourceUpdatedAt();
+  const productionThresholds = { ...FORMAL_PRODUCTION_THRESHOLDS };
   const commonOptions = {
     warmup: 500,
     validationFraction: 0.2,
@@ -147,30 +128,41 @@ try {
     compatible: (left, right) => left.handicap === right.handicap,
     objective: "accuracy",
   });
-  const goals = tuneSegmentThresholds(goalRows(history), {
-    ...commonOptions,
-    segments: segmentLabels("goals"),
-    labels: GOAL_LABELS,
-    outcomeField: "goals",
-    thresholds: THRESHOLDS.goals,
-    baselineThreshold: productionThresholds.goals,
-    segmenter: (row) => classifyGoalOdds(row.odds),
-    distance: (left, right) => goalDistance(left.odds, right.odds),
+  const goals = {
     objective: "top-two",
-  });
+    baselineThreshold: productionThresholds.goals,
+    thresholds: [],
+    policies: {},
+    enabledSegments: 0,
+    productionManaged: true,
+    matchingVersion: GOAL_MATCHING_VERSION,
+    gate: {
+      passed: false,
+      reason:
+        "总进球固定使用0球赔率窗口与综合距离权重；旧八档概率阈值分组不再参与生产",
+    },
+  };
   const config = {
     version: 1,
     generatedAt: new Date().toISOString(),
+    candidateOnly: true,
+    runtimeEnabled: false,
     data: {
       database: path.basename(DATABASE_PATH),
-      verifiedMatches: history.length,
-      sourceUpdatedAt: store.getSourceUpdatedAt(),
+      verifiedMatches: counts.verifiedHistory,
+      sourceUpdatedAt,
+      thresholdSource: "locked-formal-production-rules",
+      goalMatchingVersion: GOAL_MATCHING_VERSION,
     },
     methodology: {
+      matchingVersion: THREE_WAY_MATCHING_VERSION,
+      goalMatchingVersion: GOAL_MATCHING_VERSION,
       ordering: "每个来源文件按source_row逐场回测，每场只使用之前的数据",
       selection: "较早80%为每个赔率类型选范围，最新20%独立验证",
       gate: "目标指标、Log Loss、Brier同时改善且覆盖率不低于全局规则的98%",
       matching: "赔率类型只决定本场采用的误差范围；历史样本仍按实际赔率距离匹配，不要求类型相同",
+      goals:
+        "总进球旧阈值分段已停用；生产由固定0球赔率窗口和综合距离指数权重管理",
       fallback: "未通过验证的赔率类型继续使用当前全局范围和全部历史相似比赛",
       threeWaySegments: {
         "home-strong": "主胜去返还率概率至少55%",

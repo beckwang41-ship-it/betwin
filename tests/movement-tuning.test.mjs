@@ -43,6 +43,8 @@ test("movement correction is enabled only after earlier and latest segments pass
   assert.equal(result.production.fixedWeight, 0.2);
   assert.ok(result.selected.validation.logLoss < result.baseline.validation.logLoss);
   assert.ok(result.selected.validation.brier < result.baseline.validation.brier);
+  assert.ok(result.selected.strategy);
+  assert.equal(result.selected.strategy.evaluated, 6);
 });
 
 test("latest segment can reject a movement correction selected earlier", () => {
@@ -53,4 +55,39 @@ test("latest segment can reject a movement correction selected earlier", () => {
   assert.equal(result.production.enabled, false);
   assert.equal(result.production.fixedWeight, 0);
   assert.match(result.gate.reason, /仅展示走势参考/);
+});
+
+test("custom matcher receives only earlier rows and nested market accessors", () => {
+  const events = rows(24).map((row) => ({
+    sourceFile: row.sourceFile,
+    sourceRow: row.sourceRow,
+    spf: row,
+  }));
+  let resolverCalls = 0;
+
+  const result = tuneMovementCorrection(events, {
+    market: "spf",
+    labels: ["胜", "平", "负"],
+    outcomeField: "result",
+    tolerance: 0.1,
+    weights: [0.05],
+    warmup: 4,
+    validationFraction: 0.25,
+    targetEligible: (target) => Boolean(target.spf),
+    actualForTarget: (target) => target.spf.result,
+    oddsForTarget: (target) => target.spf.odds,
+    initialOddsForTarget: (target) => target.spf.initialOdds,
+    sampleResolver: (target, history) => {
+      resolverCalls += 1;
+      assert.ok(
+        history.every((row) => row.sourceRow < target.sourceRow),
+        "matcher must not see the target or future rows",
+      );
+      return history.map((row) => row.spf);
+    },
+  });
+
+  assert.equal(resolverCalls, 20);
+  assert.ok(result.baseline.tuning.evaluated > 0);
+  assert.ok(result.baseline.validation.evaluated > 0);
 });

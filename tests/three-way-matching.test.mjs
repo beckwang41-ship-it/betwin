@@ -23,6 +23,7 @@ function row(overrides = {}) {
 
 function match({ had = [2, 3, 4], hhad = [2.1, 3.1, 3.8], line = -1 } = {}) {
   return {
+    league: "测试联赛",
     had: had ? { h: had[0], d: had[1], a: had[2] } : null,
     hhad: hhad
       ? { h: hhad[0], d: hhad[1], a: hhad[2], goalLine: line }
@@ -56,6 +57,37 @@ test("共享三项匹配器联合命中，并在联合为零时回退独立池",
   assert.equal(fallback.hhad.mode, "standalone-fallback");
   assert.equal(fallback.spf.similar.length, 1);
   assert.equal(fallback.hhad.similar.length, 0);
+});
+
+test("共享三项匹配器在同联赛口径下排除其他联赛", () => {
+  const localSpf = row({ matchKey: "local" });
+  const localHhad = row({
+    matchKey: "local",
+    handicap: -1,
+    odds: [2.1, 3.1, 3.8],
+  });
+  const foreignSpf = row({ matchKey: "foreign", league: "其他联赛" });
+  const foreignHhad = row({
+    matchKey: "foreign",
+    league: "其他联赛",
+    handicap: -1,
+    odds: [2.1, 3.1, 3.8],
+  });
+  const selection = selectThreeWaySimilarity(
+    match(),
+    {
+      spfHistory: [localSpf, foreignSpf],
+      hhadHistory: [localHhad, foreignHhad],
+      pairedHistory: [
+        { spf: localSpf, hhad: localHhad },
+        { spf: foreignSpf, hhad: foreignHhad },
+      ],
+    },
+    { spfTolerance: 0.07, hhadTolerance: 0.07, sameLeague: true },
+  );
+  assert.equal(selection.spf.jointSamples, 1);
+  assert.equal(selection.spf.similar[0].league, "测试联赛");
+  assert.equal(selection.hhad.similar[0].league, "测试联赛");
 });
 
 test("离线事件按来源行组装，并且目标只能读取更早的生产匹配池", () => {

@@ -2,13 +2,16 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createDataStore } from "../lib/database.mjs";
+import { OUTCOME_LABELS } from "../lib/predictor.mjs";
+import { GOAL_MATCHING_VERSION } from "../lib/goal-zero-odds.mjs";
+import { adjustedThreeWayMarketPrior } from "../lib/smoothing.mjs";
 import {
-  GOAL_LABELS,
-  OUTCOME_LABELS,
-  goalDistance,
-  spfDistance,
-} from "../lib/predictor.mjs";
+  buildThreeWayEvents,
+  threeWaySamplesForThreshold,
+} from "../lib/three-way-backtest.mjs";
+import { THREE_WAY_MATCHING_VERSION } from "../lib/three-way-matching.mjs";
 import { tuneSimilarityWeighting } from "../lib/weighting-tuning.mjs";
+import { FORMAL_PRODUCTION_THRESHOLDS } from "../lib/reliability-validation.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const DATABASE_PATH =
@@ -16,8 +19,11 @@ const DATABASE_PATH =
 const OUTPUT_PATH =
   process.env.BETWIN_WEIGHTING_CONFIG_PATH ||
   path.join(ROOT, "data", "weighting-config.json");
-const THRESHOLD_CONFIG_PATH = path.join(ROOT, "data", "model-config.json");
-const DEFAULT_THRESHOLDS = { spf: 0.07, hhad: 0.07, goals: 0.015 };
+const SMOOTHING_CONFIG_PATH = path.join(
+  ROOT,
+  "data",
+  "smoothing-config.json",
+);
 const FLOORS = [0.1, 0.2, 0.35, 0.5, 0.65, 0.8];
 const POWERS = [1, 2, 3];
 const CANDIDATES = FLOORS.flatMap((floor) =>
@@ -30,58 +36,48 @@ const CANDIDATES = FLOORS.flatMap((floor) =>
 const WARMUP = 500;
 const VALIDATION_FRACTION = 0.2;
 
-function loadThresholds(history, sourceUpdatedAt) {
+function loadSmoothingPolicies(verifiedMatches, sourceUpdatedAt, thresholds) {
   try {
-    const config = JSON.parse(readFileSync(THRESHOLD_CONFIG_PATH, "utf8"));
+    const config = JSON.parse(readFileSync(SMOOTHING_CONFIG_PATH, "utf8"));
+    const configuredThresholds = config.searchSpace?.thresholds || {};
+    const thresholdChanged = ["spf", "hhad"].some(
+      (market) =>
+        Math.abs(
+          Number(configuredThresholds[market]) - Number(thresholds[market]),
+        ) > 1e-12,
+    );
     const current =
-      config.data?.verifiedMatches === history.length &&
-      config.data?.sourceUpdatedAt === sourceUpdatedAt;
-    if (!current) return DEFAULT_THRESHOLDS;
+      config.data?.verifiedMatches === verifiedMatches &&
+      config.data?.sourceUpdatedAt === sourceUpdatedAt &&
+      config.methodology?.matchingVersion === THREE_WAY_MATCHING_VERSION &&
+      !thresholdChanged;
+    if (!current) return {};
     return Object.fromEntries(
-      ["spf", "hhad", "goals"].map((market) => [
-        market,
-        Number(config.markets?.[market]?.threshold) ||
-          DEFAULT_THRESHOLDS[market],
-      ]),
+      ["spf", "hhad", "goals"].map((market) => {
+        const value = config.markets?.[market] || {};
+        const enabled = Boolean(
+          value.gate?.passed && value.production?.enabled,
+        );
+        return [market, enabled ? value.production : null];
+      }),
     );
   } catch {
-    return DEFAULT_THRESHOLDS;
+    return {};
   }
 }
 
-function common(row, sourceFile, sourceRow) {
+function productionSmoothing(policy, odds, market) {
+  if (!policy || policy.priorMode !== "adjusted-market") return {};
+  const prior = adjustedThreeWayMarketPrior(odds, market);
+  if (!prior) return {};
   return {
-    sourceFile,
-    sourceRow,
-    league: row.league,
-    home: row.home,
-    away: row.away,
+    smoothing: {
+      ...policy,
+      enabled: true,
+      validated: true,
+      prior,
+    },
   };
-}
-
-function spfRows(history) {
-  return history.map((row) => ({
-    ...common(row, row.spfSourceFile, row.spfSourceRow),
-    result: row.spf.result,
-    odds: row.spf.odds,
-  }));
-}
-
-function hhadRows(history) {
-  return history.map((row) => ({
-    ...common(row, row.spfSourceFile, row.spfSourceRow),
-    handicap: row.hhad.handicap,
-    result: row.hhad.result,
-    odds: row.hhad.odds,
-  }));
-}
-
-function goalRows(history) {
-  return history.map((row) => ({
-    ...common(row, row.goalSourceFile, row.goalSourceRow),
-    goals: row.goals,
-    odds: row.goalMarket.odds,
-  }));
 }
 
 function tune(rows, options) {
@@ -98,6 +94,11 @@ function percent(value) {
 }
 
 function printMarket(label, result) {
+  if (result.productionManaged) {
+    console.log(`\n${label}`);
+    console.log(`固定生产权重：${result.gate.reason}`);
+    return;
+  }
   const selected = result.selected;
   const baseline = result.baseline;
   console.log(`\n${label}`);
@@ -125,55 +126,113 @@ function printMarket(label, result) {
     );
   }
   console.log(
-    `${result.gate.passed ? "验证通过，生产启用距离加权" : "验证未通过，生产使用等权统计"}：${result.gate.reason}`,
+    `${result.gate.passed ? "概率门禁通过，仅保存候选" : "概率门禁未通过"}：${result.gate.reason}`,
   );
+  if (selected.strategy) {
+    console.log(
+      `投注ROI门禁：${selected.strategy.passed ? "通过" : "未通过"}（${selected.strategy.reason}）`,
+    );
+  }
 }
 
 const store = createDataStore(DATABASE_PATH);
 try {
-  const history = store.getVerifiedHistory();
-  const sourceUpdatedAt = store.getSourceUpdatedAt();
-  const thresholds = loadThresholds(history, sourceUpdatedAt);
-  const spf = tune(spfRows(history), {
+  const counts = store.getCounts();
+  const spfHistory = store.getSpfHistory();
+  const hhadHistory = store.getHhadHistory();
+  const pairedHistory = store.getPairedSpfHhadHistory();
+  const sourceUpdatedAt = store.getHistoricalSourceUpdatedAt();
+  const thresholds = { ...FORMAL_PRODUCTION_THRESHOLDS };
+  const smoothingPolicies = loadSmoothingPolicies(
+    counts.verifiedHistory,
+    sourceUpdatedAt,
+    thresholds,
+  );
+  const threeWayEvents = buildThreeWayEvents({
+    spfHistory,
+    hhadHistory,
+    pairedHistory,
+  });
+  const threeWayOptions = (market) => ({
     labels: OUTCOME_LABELS,
     outcomeField: "result",
-    tolerance: thresholds.spf,
-    distance: (left, right) => spfDistance(left.odds, right.odds),
+    tolerance: thresholds[market],
+    targetEligible: (target) => Boolean(target[market]),
+    actualForTarget: (target) => target[market]?.result,
+    oddsForTarget: (target) => target[market]?.odds,
+    sampleResolver: (target, history) =>
+      threeWaySamplesForThreshold(
+        target,
+        history,
+        market,
+        thresholds[market],
+        thresholds[market === "spf" ? "hhad" : "spf"],
+      ),
+    predictionOptionsResolver: (target) =>
+      productionSmoothing(
+        smoothingPolicies[market],
+        target[market]?.odds,
+        market,
+      ),
   });
-  const hhad = tune(hhadRows(history), {
-    labels: OUTCOME_LABELS,
-    outcomeField: "result",
-    tolerance: thresholds.hhad,
-    distance: (left, right) => spfDistance(left.odds, right.odds),
-    compatible: (left, right) => left.handicap === right.handicap,
-  });
-  const goals = tune(goalRows(history), {
-    labels: GOAL_LABELS,
-    outcomeField: "goals",
-    tolerance: thresholds.goals,
-    distance: (left, right) => goalDistance(left.odds, right.odds),
-  });
+  const spf = tune(threeWayEvents, threeWayOptions("spf"));
+  const hhad = tune(threeWayEvents, threeWayOptions("hhad"));
+  const goals = {
+    threshold: thresholds.goals,
+    selected: null,
+    baseline: null,
+    candidates: [],
+    productionManaged: true,
+    matchingVersion: GOAL_MATCHING_VERSION,
+    production: {
+      enabled: false,
+      managedBy: GOAL_MATCHING_VERSION,
+    },
+    gate: {
+      passed: false,
+      tuningPassed: false,
+      validationPassed: false,
+      significancePassed: false,
+      reason:
+        "总进球生产模型已经固定按综合距离指数衰减；旧floor/power距离权重不再适用，也不会覆盖生产权重",
+    },
+    sources: [],
+  };
   const config = {
-    version: 2,
+    version: 3,
     generatedAt: new Date().toISOString(),
+    candidateOnly: true,
+    runtimeEnabled: false,
     data: {
       database: path.basename(DATABASE_PATH),
-      verifiedMatches: history.length,
+      verifiedMatches: counts.verifiedHistory,
+      spfHistory: counts.spfHistory,
+      hhadHistory: counts.hhadHistory,
+      pairedHistory: pairedHistory.length,
+      goalHistory: counts.goalHistory,
       sourceUpdatedAt,
+      goalMatchingVersion: GOAL_MATCHING_VERSION,
     },
     methodology: {
+      matchingVersion: THREE_WAY_MATCHING_VERSION,
+      goalMatchingVersion: GOAL_MATCHING_VERSION,
       ordering: "每个来源文件按 source_row 递增，每场只使用此前记录",
       warmup: WARMUP,
       tuningFraction: 1 - VALIDATION_FRACTION,
       validationFraction: VALIDATION_FRACTION,
       selection:
         "仅在较早80%选择最低权重与衰减幂次，最新20%不参与选择",
+      matching:
+        "胜平负与让球胜平负复用生产联合匹配：两者齐全且联合池有样本时共同筛选，否则回退单市场；总进球固定由0球窗口和综合距离指数权重管理，不参与旧floor/power搜索",
+      baseline:
+        "以当前生产基础预测为基线；已通过门禁的平滑会同时应用于等权和距离加权概率",
       gate:
         "最新验证段 Log Loss、Brier 必须同时优于等权统计且命中率不得下降，并通过95%连续区块Bootstrap",
       significance:
         "最新20%按连续20场为区块重采样1,000次；Log Loss和Brier区间上界须小于0，命中率区间下界须不小于0",
-      fallback: "门禁未通过则生产环境自动使用等权历史占比",
-      marketsIndependent: true,
+      fallback:
+        "候选无论是否通过都不自动上线；生产默认等权，只有独立批准文件同时确认概率门禁、ROI门禁和参数后才可启用",
+      marketsIndependent: false,
     },
     searchSpace: {
       floors: FLOORS,
@@ -185,7 +244,12 @@ try {
 
   mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
   writeFileSync(OUTPUT_PATH, `${JSON.stringify(config, null, 2)}\n`, "utf8");
-  console.log(`已分析统一历史比赛 ${history.length.toLocaleString()} 场`);
+  console.log(
+    `已按行顺序分析胜平负 ${spfHistory.length.toLocaleString()} 场、` +
+      `让球 ${hhadHistory.length.toLocaleString()} 场、` +
+      `成对 ${pairedHistory.length.toLocaleString()} 场、` +
+      `进球数 ${counts.goalHistory.toLocaleString()} 场`,
+  );
   printMarket("胜平负", spf);
   printMarket("让球胜平负", hhad);
   printMarket("总进球", goals);

@@ -46,8 +46,12 @@ test("goal prediction exposes the top two outcomes without replacing exact pick"
   );
   assert.equal(prediction.predicted, "1");
   assert.deepEqual(prediction.goalPair.labels, ["1", "3"]);
+  // 防零层把 15 样本收缩为 (c+0.1875)/(15+1.5)，
+  // 「1」+「3」= (6+0.1875+5+0.1875)/16.5 ≈ 0.6932，低于裸占比 11/15。
+  // argmax 与配对选择均不变。
   assert.ok(
-    Math.abs(prediction.goalPair.probability - 11 / 15) < 1e-12,
+    Math.abs(prediction.goalPair.probability - 11.375 / 16.5) < 1e-9,
+    `实际配对概率 ${prediction.goalPair.probability}`,
   );
 });
 import {
@@ -103,6 +107,42 @@ test("prediction blends market and empirical history", () => {
   assert.ok(prediction.empiricalWeight > 0);
 });
 
+test("final-odds policy uses history as a gate without changing market direction", () => {
+  const odds = [1.8, 3.5, 4.5];
+  const smallHistory = Array.from({ length: 10 }, () => ({ result: "负" }));
+  const calibrated = predictSpf(odds, smallHistory, {
+    enabled: false,
+    requireSamples: true,
+  });
+
+  assert.equal(calibrated.predicted, "胜");
+  assert.equal(calibrated.empiricalWeight, 0);
+  assert.deepEqual(calibrated.final, calibrated.market);
+
+  const noHistory = predictSpf(odds, [], {
+    enabled: true,
+    requireSamples: true,
+  });
+  assert.equal(noHistory.available, false);
+  assert.equal(noHistory.predicted, null);
+  assert.deepEqual(noHistory.final, [0, 0, 0]);
+});
+
+test("final-odds goal prediction keeps the normalized market distribution", () => {
+  const prediction = predictGoals(
+    [12, 5, 3.2, 3.4, 5.2, 9, 15, 25],
+    Array.from({ length: 10 }, () => ({ goals: "7+" })),
+    {
+      enabled: false,
+      requireSamples: true,
+    },
+  );
+
+  assert.equal(prediction.predicted, "2");
+  assert.equal(prediction.empiricalWeight, 0);
+  assert.deepEqual(prediction.final, prediction.market);
+});
+
 test("validated fixed blend weight respects the minimum sample gate", () => {
   const rows = Array.from({ length: 40 }, () => ({ result: "负" }));
   const gated = predictSpf([2.2, 3.2, 3.4], rows, {
@@ -133,7 +173,12 @@ test("historical-only SPF follows the similar result distribution", () => {
   });
 
   assert.equal(prediction.empiricalWeight, 1);
-  assert.deepEqual(prediction.final, [0.4, 0.5, 0.1]);
+  // 防零层把 20/25/5 收缩为 (c+0.5)/(50+1.5)，保序但不再是裸占比。
+  assert.deepEqual(prediction.rawWeightedEmpirical, [0.4, 0.5, 0.1]);
+  assert.deepEqual(
+    prediction.final.map((value) => Number(value.toFixed(4))),
+    [0.3981, 0.4951, 0.1068],
+  );
   assert.equal(prediction.predicted, "平");
 });
 
@@ -160,7 +205,12 @@ test("empirical-only prediction accepts one or ten historical samples", () => {
     empiricalOnly: true,
   });
   assert.equal(spf.available, true);
-  assert.deepEqual(spf.final, [0.2, 0.6, 0.2]);
+  assert.deepEqual(spf.rawWeightedEmpirical, [0.2, 0.6, 0.2]);
+  // 10 样本、总先验质量 1.5：先验占 13.0%，argmax 不变。
+  assert.deepEqual(
+    spf.final.map((value) => Number(value.toFixed(4))),
+    [0.2174, 0.5652, 0.2174],
+  );
   assert.equal(spf.predicted, "平");
 
   const goals = predictGoals(
@@ -169,7 +219,11 @@ test("empirical-only prediction accepts one or ten historical samples", () => {
     { empiricalOnly: true },
   );
   assert.equal(goals.available, true);
-  assert.equal(goals.final[4], 1);
+  // 单样本不再报 100%：防零层把它压到 (1+0.1875)/(1+1.5)=47.5%，
+  // 其余 7 格各得 0.1875/2.5=7.5%。argmax 仍是「4」。
+  assert.equal(goals.rawWeightedEmpirical[4], 1);
+  assert.equal(Number(goals.final[4].toFixed(4)), 0.475);
+  assert.ok(goals.final.every((value) => value > 0));
   assert.equal(goals.predicted, "4");
 });
 
@@ -265,6 +319,27 @@ test("validated historical smoothing changes final prediction but retains raw co
   assert.equal(prediction.predicted, "平");
 });
 
+test("dynamic historical smoothing uses inverse sample strength", () => {
+  const smoothing = smoothHistoricalDistribution([1, 0, 0], 10, {
+    enabled: true,
+    validated: true,
+    strengthMode: "inverse-samples",
+    dynamicNumerator: 20,
+    minStrength: 1,
+    maxStrength: 20,
+    prior: {
+      source: "adjusted-market",
+      probabilities: [0.4, 0.3, 0.3],
+    },
+  });
+
+  assert.equal(smoothing.strength, 2);
+  assert.equal(smoothing.strengthMode, "inverse-samples");
+  assert.ok(Math.abs(smoothing.probabilities[0] - 0.9) < 1e-12);
+  assert.ok(Math.abs(smoothing.probabilities[1] - 0.05) < 1e-12);
+  assert.ok(Math.abs(smoothing.probabilities[2] - 0.05) < 1e-12);
+});
+
 test("distribution and pagination retain all records", () => {
   const rows = [
     { result: "胜" },
@@ -303,6 +378,26 @@ test("distance weighting keeps every threshold match but favors closer samples",
   assert.ok(weighted.effectiveSamples > 1);
   assert.ok(weighted.effectiveSamples < 2);
   assert.ok(weighted.minimumWeight > 0);
+});
+
+test("precomputed composite weights are used for goal similarity", () => {
+  const weighted = weightedDistribution(
+    [
+      { goals: "2", distance: 0.01, similarityWeight: 1 },
+      { goals: "3", distance: 0.02, similarityWeight: 0.25 },
+    ],
+    "goals",
+    ["0", "1", "2", "3", "4", "5", "6", "7+"],
+    {
+      enabled: true,
+      weightField: "similarityWeight",
+      method: "exponential-composite-distance",
+    },
+  );
+  assert.equal(weighted.method, "exponential-composite-distance");
+  assert.equal(weighted.raw.total, 2);
+  assert.ok(Math.abs(weighted.probabilities["2"] - 0.8) < 1e-12);
+  assert.ok(Math.abs(weighted.probabilities["3"] - 0.2) < 1e-12);
 });
 
 test("historical-only prediction uses weighted similarity while retaining raw counts", () => {

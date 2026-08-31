@@ -2,13 +2,14 @@ import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  findSimilarGoalMovements,
   findSimilarSpfMovements,
   findSimilarSpf,
-  normalizeOdds,
-  predictGoalsWithMovement,
   predictSpfWithMovement,
 } from "../lib/predictor.mjs";
+import {
+  predictProductionGoals,
+  selectProductionGoalSimilarity,
+} from "../lib/goal-production.mjs";
 import {
   median,
   summarizeCases,
@@ -28,24 +29,6 @@ function argument(name, fallback) {
 
 function topIndex(probabilities) {
   return probabilities.indexOf(Math.max(...probabilities));
-}
-
-function goalDistanceFromProbabilities(left, right) {
-  return Math.max(
-    ...left.map((probability, index) =>
-      Math.abs(probability - right[index]),
-    ),
-  );
-}
-
-function findPriorSimilarGoals(history, targetMarket, tolerance) {
-  return history
-    .map((row) => ({
-      ...row,
-      distance: goalDistanceFromProbabilities(row.market, targetMarket),
-    }))
-    .filter((row) => row.distance <= tolerance)
-    .sort((left, right) => left.distance - right.distance);
 }
 
 function loadSpfRows(db) {
@@ -90,19 +73,13 @@ function loadSpfRows(db) {
 export function loadGoalRows(db) {
   return db
     .prepare(`
-      SELECT m.goals_source_file AS source_file,
-             m.goals_source_row AS source_row,
-             g.league, g.actual_goals,
-             g.initial_g0, g.initial_g1, g.initial_g2, g.initial_g3,
-             g.initial_g4, g.initial_g5, g.initial_g6, g.initial_g7plus,
-             g.final_g0, g.final_g1, g.final_g2, g.final_g3,
-             g.final_g4, g.final_g5, g.final_g6, g.final_g7plus
-      FROM historical_matches m
-      JOIN historical_spf s ON s.id = m.spf_id
-      JOIN historical_hhad h ON h.id = m.hhad_id
-      JOIN historical_goals g ON g.id = m.goals_id
-      WHERE m.match_status = 'matched' AND m.goal_consistent = 1
-      ORDER BY m.goals_source_file, m.goals_source_row
+      SELECT source_file, source_row, league, actual_goals,
+             initial_g0, initial_g1, initial_g2, initial_g3,
+             initial_g4, initial_g5, initial_g6, initial_g7plus,
+             final_g0, final_g1, final_g2, final_g3,
+             final_g4, final_g5, final_g6, final_g7plus
+      FROM historical_goals
+      ORDER BY source_file, source_row
     `)
     .all()
     .map((row) => {
@@ -142,7 +119,6 @@ export function loadGoalRows(db) {
               ]
             : null,
         odds,
-        market: normalizeOdds(odds),
       };
     });
 }
@@ -245,49 +221,32 @@ function runSpf(rows, warmup, tolerance, weightFloor, weightPower) {
   });
 }
 
-export function runGoals(rows, warmup, tolerance, weightFloor, weightPower) {
+export function runGoals(rows, warmup, similarityOptions = {}) {
   return walkForward(rows, {
     warmup,
     predict(target, history) {
-      const similar = findPriorSimilarGoals(history, target.market, tolerance);
-      const movementSimilar = findSimilarGoalMovements(
-        similar,
-        target.initialOdds,
-        target.odds,
-        { finalTolerance: tolerance },
+      const resolved = selectProductionGoalSimilarity(
+        history,
+        target,
+        similarityOptions,
       );
-      const model = predictGoalsWithMovement(
-        target.odds,
-        similar,
-        movementSimilar,
-        target.initialOdds,
-        {
-          maxWeight: 0.03,
-          applyCorrection: false,
-          blendOptions: {
-            empiricalOnly: true,
-            weighting: weightingOptions(
-              tolerance,
-              weightFloor,
-              weightPower,
-            ),
-          },
-        },
-      );
+      const model = predictProductionGoals(target.odds, resolved, {
+        blendOptions: { empiricalOnly: true, requireSamples: true },
+      });
       const actualIndex = model.labels.indexOf(target.goals);
       return {
         actualIndex,
         odds: target.odds,
         marketProbabilities: model.market,
         marketPredictionIndex: topIndex(model.market),
-        baseModelProbabilities: model.baseline,
-        baseModelPredictionIndex: topIndex(model.baseline),
+        baseModelProbabilities: model.final,
+        baseModelPredictionIndex: topIndex(model.final),
         modelProbabilities: model.final,
         modelPredictionIndex: topIndex(model.final),
-        sampleSize: similar.length,
+        sampleSize: resolved.similar.length,
         effectiveSampleSize: model.weighting.effectiveSamples,
-        movementSampleSize: movementSimilar.length,
-        movementApplied: model.movement.applied,
+        movementSampleSize: 0,
+        movementApplied: false,
       };
     },
   });
@@ -346,6 +305,7 @@ function runHhad(rows, warmup, tolerance, weightFloor, weightPower) {
 }
 
 function summarize(run, { includeGoalPair = false } = {}) {
+  const modeledCases = run.cases.filter((item) => item.sampleSize > 0);
   const result = {
     sources: run.sources,
     samples: {
@@ -361,12 +321,12 @@ function summarize(run, { includeGoalPair = false } = {}) {
       "marketPredictionIndex",
     ),
     baseModel: summarizeCases(
-      run.cases,
+      modeledCases,
       "baseModelProbabilities",
       "baseModelPredictionIndex",
     ),
     model: summarizeCases(
-      run.cases,
+      modeledCases,
       "modelProbabilities",
       "modelPredictionIndex",
     ),
@@ -381,7 +341,7 @@ function summarize(run, { includeGoalPair = false } = {}) {
   };
   if (includeGoalPair) {
     result.topPair = summarizeGoalPairs(
-      run.cases,
+      modeledCases,
       "modelProbabilities",
     );
   }
@@ -416,7 +376,6 @@ function printSection(title, result) {
 function main() {
   const warmup = Number(argument("warmup", 500));
   const spfTolerance = Number(argument("spf-tolerance", 0.05));
-  const goalTolerance = Number(argument("goal-tolerance", 0.01));
   const weightFloor = Number(argument("weight-floor", 1));
   const weightPower = Number(argument("weight-power", 1));
   const json = process.argv.includes("--json");
@@ -437,18 +396,12 @@ function main() {
       weightFloor,
       weightPower,
     );
-    const goalRun = runGoals(
-      loadGoalRows(db),
-      warmup,
-      goalTolerance,
-      weightFloor,
-      weightPower,
-    );
+    const goalRun = runGoals(loadGoalRows(db), warmup);
     const result = {
       settings: {
         warmup,
         spfTolerance,
-        goalTolerance,
+        goalMatching: "0球赔率±2.00＋综合距离指数加权",
         weightFloor,
         weightPower,
       },
@@ -465,7 +418,7 @@ function main() {
       console.log("严格滚动回测");
       console.log(result.discipline);
       console.log(
-        `参数：预热 ${warmup} 场 / 胜平负 ±${(spfTolerance * 100).toFixed(0)}% / 进球距离 ${(goalTolerance * 100).toFixed(1)}pp / 边缘保底权重 ${formatPercent(weightFloor)} / 衰减幂次 ${weightPower}`,
+        `参数：预热 ${warmup} 场 / 胜平负 ±${(spfTolerance * 100).toFixed(0)}% / 总进球0球赔率±2.00并按综合距离指数加权 / 三项盘边缘保底权重 ${formatPercent(weightFloor)} / 衰减幂次 ${weightPower}`,
       );
       printSection("胜平负", result.spf);
       printSection("让球胜平负", result.hhad);
