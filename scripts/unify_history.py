@@ -309,9 +309,10 @@ def rebuild_historical_matches(
         """
         SELECT id, league, home_team, away_team, score, result, handicap,
                total_goals, source_file, source_row,
-               initial_source_file, initial_source_row
+               initial_source_file, initial_source_row, imported_at, history_batch_id
         FROM historical_spf
         ORDER BY
+          history_batch_id DESC,
           CASE source_file WHEN 'lsspfpl.xlsx' THEN 0 ELSE 1 END,
           source_row DESC,
           id DESC
@@ -321,9 +322,10 @@ def rebuild_historical_matches(
         connection,
         """
         SELECT id, league, home_team, away_team, score, result, handicap,
-               source_file, source_row
+               source_file, source_row, imported_at, history_batch_id
         FROM historical_hhad
         ORDER BY
+          history_batch_id DESC,
           CASE source_file WHEN 'lsspfpl.xlsx' THEN 0 ELSE 1 END,
           source_row DESC,
           id DESC
@@ -334,18 +336,37 @@ def rebuild_historical_matches(
         """
         SELECT id, league, home_team, away_team, actual_goals,
                source_file, source_row,
-               initial_source_file, initial_source_row
+               initial_source_file, initial_source_row, imported_at, history_batch_id
         FROM historical_goals
         ORDER BY
+          history_batch_id DESC,
           CASE source_file WHEN '历史进球数.xlsx' THEN 0 ELSE 1 END,
           source_row DESC,
           id DESC
         """,
     )
-    hhad_by_source = {
-        (row["source_file"], int(row["source_row"])): row
-        for row in hhad_rows
-    }
+    # 每日文件的不同工作表可以错行；只按同批次的联赛和双方身份配对。
+    def batch_key(row: dict[str, Any]) -> tuple:
+        if row.get("history_batch_id"):
+            return (row["history_batch_id"], normalize_league(row["league"]),
+                    normalize_name(row["home_team"]), normalize_name(row["away_team"]))
+        return (
+            row["source_file"],
+            int(row["source_row"]),
+            row.get("imported_at") or "",
+        )
+
+    def unique_index(rows):
+        groups = defaultdict(list)
+        for row in rows:
+            groups[batch_key(row)].append(row)
+        return {key: items[0] for key, items in groups.items() if len(items) == 1}
+
+    hhad_by_source = unique_index(hhad_rows)
+    spf_by_source = unique_index(spf_rows)
+    # 有歧义的同队对阵不强行合并。
+    hhad_by_source = {key: row for key, row in hhad_by_source.items()
+                      if key in spf_by_source and row.get("score") == spf_by_source[key].get("score")}
     spf_occurrences = _occurrences_from_latest(spf_rows)
     hhad_occurrences = _occurrences_from_latest(hhad_rows)
     goal_occurrences = _occurrences_from_latest(goal_rows)
@@ -406,6 +427,23 @@ def rebuild_historical_matches(
             used_spf.add(spf_id)
             used_goals.add(goals_id)
 
+    goals_by_batch = unique_index(goals for goals in goal_rows if int(goals["id"]) not in used_goals)
+    for spf in spf_rows:
+        spf_id = int(spf["id"])
+        if spf_id in used_spf:
+            continue
+        if batch_key(spf) not in spf_by_source:
+            continue
+        goals = goals_by_batch.get(batch_key(spf))
+        if not goals:
+            continue
+        goals_id = int(goals["id"])
+        if goals_id in used_goals:
+            continue
+        pairs.append((spf, goals, pair_quality(spf, goals), "import_batch_fixture"))
+        used_spf.add(spf_id)
+        used_goals.add(goals_id)
+
     goal_match_by_spf = {
         int(spf["id"]): (goals, quality, method)
         for spf, goals, quality, method in pairs
@@ -435,15 +473,9 @@ def rebuild_historical_matches(
         unverified += int(status == "matched_unverified")
         conflicts += int(status == "conflict")
         spf_only += int(status == "spf_hhad_only")
-        hhad = hhad_by_source.get(
-            (spf["source_file"], int(spf["source_row"]))
-        )
+        hhad = hhad_by_source.get(batch_key(spf))
         hhad_id = int(hhad["id"]) if hhad else None
-        match_key = fingerprint(
-            "spf",
-            spf["source_file"],
-            int(spf["source_row"]),
-        )
+        match_key = fingerprint("spf", spf_id)
         connection.execute(
             """
             INSERT INTO historical_matches (
@@ -495,9 +527,7 @@ def rebuild_historical_matches(
 
     used_hhad: set[int] = set()
     for spf in spf_rows:
-        hhad = hhad_by_source.get(
-            (spf["source_file"], int(spf["source_row"]))
-        )
+        hhad = hhad_by_source.get(batch_key(spf))
         if hhad:
             used_hhad.add(int(hhad["id"]))
 
@@ -507,11 +537,7 @@ def rebuild_historical_matches(
         if hhad_id in used_hhad:
             continue
         hhad_only += 1
-        match_key = fingerprint(
-            "hhad",
-            hhad["source_file"],
-            int(hhad["source_row"]),
-        )
+        match_key = fingerprint("hhad", hhad_id)
         connection.execute(
             """
             INSERT INTO historical_matches (
@@ -544,11 +570,7 @@ def rebuild_historical_matches(
         if goals_id in used_goals:
             continue
         goals_only += 1
-        match_key = fingerprint(
-            "goals",
-            goals["source_file"],
-            int(goals["source_row"]),
-        )
+        match_key = fingerprint("goals", goals_id)
         connection.execute(
             """
             INSERT INTO historical_matches (

@@ -18,7 +18,12 @@ from unify_history import rebuild_historical_matches
 
 ROOT = Path(__file__).resolve().parents[1]
 DATABASE_PATH = Path(os.environ.get("BETWIN_DATABASE_PATH", ROOT / "betwin.db"))
+# 新版：统一从 history.xlsx 读取最新比赛数据
+# 保留旧文件配置作为备份参考
 EXCEL_FILES = [
+    ROOT / "history.xlsx",
+]
+EXCEL_FILES_LEGACY = [
     ROOT / "initspfpl.xlsx",
     ROOT / "lsspfpl.xlsx",
     ROOT / "lottery_goals_data_df1cda93.xlsx",
@@ -33,6 +38,11 @@ JSON_FILES = [
 
 SCHEMA = """
 PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS history_import_batches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    imported_at TEXT NOT NULL UNIQUE
+);
 
 CREATE TABLE IF NOT EXISTS source_files (
     file_name TEXT PRIMARY KEY,
@@ -69,7 +79,9 @@ CREATE TABLE IF NOT EXISTS historical_spf (
     source_file TEXT NOT NULL,
     source_row INTEGER NOT NULL CHECK (source_row > 0),
     initial_source_file TEXT,
-    initial_source_row INTEGER
+    initial_source_row INTEGER,
+    imported_at TEXT,
+    history_batch_id INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS historical_goals (
@@ -99,7 +111,9 @@ CREATE TABLE IF NOT EXISTS historical_goals (
     source_file TEXT NOT NULL,
     source_row INTEGER NOT NULL CHECK (source_row > 0),
     initial_source_file TEXT,
-    initial_source_row INTEGER
+    initial_source_row INTEGER,
+    imported_at TEXT,
+    history_batch_id INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS historical_hhad (
@@ -121,7 +135,9 @@ CREATE TABLE IF NOT EXISTS historical_hhad (
     source_file TEXT NOT NULL,
     source_row INTEGER NOT NULL CHECK (source_row > 0),
     initial_source_file TEXT,
-    initial_source_row INTEGER
+    initial_source_row INTEGER,
+    imported_at TEXT,
+    history_batch_id INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS historical_matches (
@@ -293,6 +309,44 @@ CREATE TABLE IF NOT EXISTS prediction_ledger (
   UNIQUE (match_id, market, policy_version)
 );
 
+CREATE TABLE IF NOT EXISTS shadow_spf_predictions (
+  id INTEGER PRIMARY KEY,
+  match_id TEXT NOT NULL,
+  model_version TEXT NOT NULL,
+  captured_at TEXT NOT NULL,
+  source_updated_at TEXT,
+  history_source_file TEXT NOT NULL,
+  history_row_watermark INTEGER NOT NULL,
+  league TEXT NOT NULL,
+  home_team TEXT NOT NULL,
+  away_team TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  odds_json TEXT NOT NULL,
+  baseline_available INTEGER NOT NULL CHECK (baseline_available IN (0, 1)),
+  baseline_matching_mode TEXT NOT NULL,
+  baseline_samples INTEGER NOT NULL,
+  baseline_probabilities_json TEXT NOT NULL,
+  baseline_top_labels_json TEXT NOT NULL,
+  candidate_available INTEGER NOT NULL CHECK (candidate_available IN (0, 1)),
+  candidate_matching_mode TEXT NOT NULL,
+  candidate_samples INTEGER NOT NULL,
+  candidate_probabilities_json TEXT NOT NULL,
+  candidate_top_labels_json TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'settled')),
+  actual_result TEXT CHECK (actual_result IN ('胜', '平', '负') OR actual_result IS NULL),
+  score TEXT,
+  settled_source_file TEXT,
+  settled_source_row INTEGER,
+  settled_at TEXT,
+  UNIQUE (match_id, model_version)
+);
+
+CREATE TABLE IF NOT EXISTS shadow_model_state (
+  model_version TEXT PRIMARY KEY,
+  activated_at TEXT NOT NULL,
+  initial_match_ids_json TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS parlay_ledger (
   id INTEGER PRIMARY KEY,
   fingerprint TEXT NOT NULL UNIQUE,
@@ -354,6 +408,8 @@ CREATE INDEX IF NOT EXISTS idx_parlay_ledger_status
     ON parlay_ledger (status, captured_at);
 CREATE INDEX IF NOT EXISTS idx_parlay_ledger_mode
     ON parlay_ledger (mode, selection_source, status);
+CREATE INDEX IF NOT EXISTS idx_shadow_spf_status
+    ON shadow_spf_predictions (status, captured_at);
 CREATE INDEX IF NOT EXISTS idx_historical_matches_goals_source
     ON historical_matches (goals_source_file, goals_source_row);
 CREATE INDEX IF NOT EXISTS idx_spf_snapshots_match_time
@@ -391,7 +447,7 @@ WHERE row_number = 1;
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
 def load_json(path: Path) -> Any:
@@ -410,6 +466,33 @@ def file_sha256(path: Path) -> str:
 def fingerprint(*values: Any) -> str:
     payload = json.dumps(values, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+# 历史表指纹按比赛内容生成，不用「文件名+行号」。
+# 原因：history.xlsx 每天覆盖更新，同一行号明天是另一场比赛，
+# 按文件+行号生成指纹会把旧比赛整条覆盖掉（静默丢数据）。
+def spf_content_fingerprint(row: dict[str, Any]) -> str:
+    return fingerprint(
+        "historical_spf",
+        row["league"], row["home"], row["away"], row.get("score") or "",
+        int(row["handicap"]), *[float(v) for v in row["odds"]],
+    )
+
+
+def hhad_content_fingerprint(row: dict[str, Any]) -> str:
+    return fingerprint(
+        "historical_hhad",
+        row["league"], row["home"], row["away"], row.get("score") or "",
+        int(row["handicap"]), *[float(v) for v in row["odds"]],
+    )
+
+
+def goals_content_fingerprint(row: dict[str, Any]) -> str:
+    return fingerprint(
+        "historical_goals",
+        row["league"], row["home"], row["away"], str(row["goals"]),
+        *[float(v) for v in row["odds"]],
+    )
 
 
 def as_float(value: Any) -> float | None:
@@ -476,12 +559,113 @@ def migrate_source_identity_fingerprints(
                     for row_id, source_file, source_row in rows
                 ],
             )
+        # 旧身份体系（文件+行号）的唯一索引必须删除：
+        # history.xlsx 每天覆盖更新，同一行号明天是另一场比赛，
+        # 唯一索引会挡住新比赛入库（UNIQUE constraint failed）。
+        # 行身份已由内容指纹的 UNIQUE(fingerprint) 保证。
+        connection.execute(
+            f"DROP INDEX IF EXISTS idx_{table}_source_identity"
+        )
+
+
+def migrate_history_imported_at(connection: sqlite3.Connection) -> None:
+    # 行级导入时间是账本结算的唯一时序锚点（赛果必须在投注之后入库），
+    # 与来源文件名无关，换文件名不影响结算。
+    for table in ("historical_spf", "historical_hhad", "historical_goals"):
+        ensure_column(connection, table, "imported_at", "TEXT")
+        # 存量行按来源文件最近一次导入时间回填（保守：同文件所有行同一时刻）
         connection.execute(
             f"""
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_{table}_source_identity
-            ON {table} (source_file, source_row)
+            UPDATE {table}
+            SET imported_at = (
+                SELECT MAX(imported_at) FROM source_files
+                WHERE file_name = {table}.source_file
+            )
+            WHERE imported_at IS NULL
             """
         )
+
+
+def migrate_history_content_fingerprints(connection: sqlite3.Connection) -> None:
+    # 旧指纹是「文件名+行号」，history.xlsx 每天覆盖更新会撞指纹覆盖旧比赛。
+    # 逐行重算为内容指纹；与既有行冲突说明是重复内容，保留旧指纹不动。
+    plans = (
+        (
+            "historical_spf",
+            "id, league, home_team, away_team, score, handicap, "
+            "final_home_odds, final_draw_odds, final_away_odds",
+            lambda r: spf_content_fingerprint({
+                "league": r[1], "home": r[2], "away": r[3], "score": r[4],
+                "handicap": r[5], "odds": [r[6], r[7], r[8]],
+            }),
+        ),
+        (
+            "historical_hhad",
+            "id, league, home_team, away_team, score, handicap, "
+            "final_home_odds, final_draw_odds, final_away_odds",
+            lambda r: hhad_content_fingerprint({
+                "league": r[1], "home": r[2], "away": r[3], "score": r[4],
+                "handicap": r[5], "odds": [r[6], r[7], r[8]],
+            }),
+        ),
+        (
+            "historical_goals",
+            "id, league, home_team, away_team, actual_goals, "
+            "final_g0, final_g1, final_g2, final_g3, final_g4, final_g5, "
+            "final_g6, final_g7plus",
+            lambda r: goals_content_fingerprint({
+                "league": r[1], "home": r[2], "away": r[3], "goals": r[4],
+                "odds": [r[5], r[6], r[7], r[8], r[9], r[10], r[11], r[12]],
+            }),
+        ),
+    )
+    for table, columns, make_key in plans:
+        rows = connection.execute(f"SELECT {columns} FROM {table}").fetchall()
+        for row in rows:
+            try:
+                key = make_key(row)
+            except (TypeError, ValueError):
+                continue
+            try:
+                connection.execute(
+                    f"UPDATE {table} SET fingerprint = ? WHERE id = ?",
+                    (key, row[0]),
+                )
+            except sqlite3.IntegrityError:
+                continue
+
+
+def history_batch(connection: sqlite3.Connection, imported_at: str) -> int:
+    connection.execute(
+        "INSERT OR IGNORE INTO history_import_batches(imported_at) VALUES (?)",
+        (imported_at,),
+    )
+    return connection.execute(
+        "SELECT id FROM history_import_batches WHERE imported_at = ?", (imported_at,)
+    ).fetchone()[0]
+
+
+def migrate_history_batches(connection: sqlite3.Connection) -> None:
+    tables = ("historical_spf", "historical_hhad", "historical_goals")
+    for table in tables:
+        ensure_column(connection, table, "history_batch_id", "INTEGER NOT NULL DEFAULT 0")
+    if connection.execute("PRAGMA user_version").fetchone()[0] >= 7:
+        return
+    # 旧累加文件只保留各自的行序；每日文件利用已保存的首次入库时间恢复批次。
+    timestamps = sorted({
+        row[0] for table in tables for row in connection.execute(
+            f"SELECT DISTINCT imported_at FROM {table} "
+            "WHERE source_file = 'history.xlsx' AND imported_at IS NOT NULL"
+        )
+    })
+    for timestamp in timestamps:
+        batch_id = history_batch(connection, timestamp)
+        for table in tables:
+            connection.execute(
+                f"UPDATE {table} SET history_batch_id = ? "
+                "WHERE source_file = 'history.xlsx' AND imported_at = ? AND history_batch_id = 0",
+                (batch_id, timestamp),
+            )
 
 
 def initialize_database(connection: sqlite3.Connection) -> None:
@@ -490,6 +674,9 @@ def initialize_database(connection: sqlite3.Connection) -> None:
     connection.executescript(SCHEMA)
     migrate_source_order_columns(connection)
     migrate_source_identity_fingerprints(connection)
+    migrate_history_imported_at(connection)
+    migrate_history_content_fingerprints(connection)
+    migrate_history_batches(connection)
     ensure_column(
         connection,
         "current_matches",
@@ -502,7 +689,7 @@ def initialize_database(connection: sqlite3.Connection) -> None:
         ON current_matches (active, match_id)
         """
     )
-    connection.execute("PRAGMA user_version = 6")
+    connection.execute("PRAGMA user_version = 7")
 
 
 def upsert_source_file(
@@ -544,16 +731,15 @@ def upsert_source_file(
 def import_historical_spf(
     connection: sqlite3.Connection,
     records: Iterable[dict[str, Any]],
+    imported_at: str,
 ) -> int:
     before = connection.execute("SELECT COUNT(*) FROM historical_spf").fetchone()[0]
     for row in records:
         initial = row.get("initialOdds") or [None, None, None]
         final = row["odds"]
-        key = fingerprint(
-            "historical_spf",
-            row["sourceFile"],
-            int(row["sourceRow"]),
-        )
+        key = spf_content_fingerprint(row)
+        if connection.execute("SELECT 1 FROM historical_spf WHERE fingerprint = ?", (key,)).fetchone():
+            continue  # 重复记录保留首次来源、赔率与入库批次。
         connection.execute(
             """
             INSERT OR IGNORE INTO historical_spf (
@@ -561,8 +747,9 @@ def import_historical_spf(
                 handicap, total_goals,
                 initial_home_odds, initial_draw_odds, initial_away_odds,
                 final_home_odds, final_draw_odds, final_away_odds, source_name,
-                source_file, source_row, initial_source_file, initial_source_row
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                source_file, source_row, initial_source_file, initial_source_row,
+                imported_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(fingerprint) DO UPDATE SET
                 league = excluded.league,
                 home_team = excluded.home_team,
@@ -599,8 +786,11 @@ def import_historical_spf(
                 row["sourceRow"],
                 row.get("initialSourceFile"),
                 row.get("initialSourceRow"),
+                imported_at,
             ),
         )
+        connection.execute("UPDATE historical_spf SET history_batch_id = ? WHERE fingerprint = ?",
+                           (history_batch(connection, imported_at), key))
     after = connection.execute("SELECT COUNT(*) FROM historical_spf").fetchone()[0]
     return after - before
 
@@ -608,16 +798,15 @@ def import_historical_spf(
 def import_historical_hhad(
     connection: sqlite3.Connection,
     records: Iterable[dict[str, Any]],
+    imported_at: str,
 ) -> int:
     before = connection.execute("SELECT COUNT(*) FROM historical_hhad").fetchone()[0]
     for row in records:
         initial = row.get("initialOdds") or [None, None, None]
         final = row["odds"]
-        key = fingerprint(
-            "historical_hhad",
-            row["sourceFile"],
-            int(row["sourceRow"]),
-        )
+        key = hhad_content_fingerprint(row)
+        if connection.execute("SELECT 1 FROM historical_hhad WHERE fingerprint = ?", (key,)).fetchone():
+            continue
         connection.execute(
             """
             INSERT INTO historical_hhad (
@@ -625,8 +814,9 @@ def import_historical_hhad(
                 handicap, result,
                 initial_home_odds, initial_draw_odds, initial_away_odds,
                 final_home_odds, final_draw_odds, final_away_odds, source_name,
-                source_file, source_row, initial_source_file, initial_source_row
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                source_file, source_row, initial_source_file, initial_source_row,
+                imported_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(fingerprint) DO UPDATE SET
                 league = excluded.league,
                 home_team = excluded.home_team,
@@ -661,8 +851,11 @@ def import_historical_hhad(
                 row["sourceRow"],
                 row.get("initialSourceFile"),
                 row.get("initialSourceRow"),
+                imported_at,
             ),
         )
+        connection.execute("UPDATE historical_hhad SET history_batch_id = ? WHERE fingerprint = ?",
+                           (history_batch(connection, imported_at), key))
     after = connection.execute("SELECT COUNT(*) FROM historical_hhad").fetchone()[0]
     return after - before
 
@@ -670,16 +863,15 @@ def import_historical_hhad(
 def import_historical_goals(
     connection: sqlite3.Connection,
     records: Iterable[dict[str, Any]],
+    imported_at: str,
 ) -> int:
     before = connection.execute("SELECT COUNT(*) FROM historical_goals").fetchone()[0]
     for row in records:
         initial = row.get("initialOdds") or [None] * 8
         final = row["odds"]
-        key = fingerprint(
-            "historical_goals",
-            row["sourceFile"],
-            int(row["sourceRow"]),
-        )
+        key = goals_content_fingerprint(row)
+        if connection.execute("SELECT 1 FROM historical_goals WHERE fingerprint = ?", (key,)).fetchone():
+            continue
         connection.execute(
             """
             INSERT OR IGNORE INTO historical_goals (
@@ -688,12 +880,13 @@ def import_historical_goals(
                 initial_g4, initial_g5, initial_g6, initial_g7plus,
                 final_g0, final_g1, final_g2, final_g3,
                 final_g4, final_g5, final_g6, final_g7plus, source_name,
-                source_file, source_row, initial_source_file, initial_source_row
+                source_file, source_row, initial_source_file, initial_source_row,
+                imported_at
             ) VALUES (
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?
+                ?, ?, ?, ?, ?
             )
             ON CONFLICT(fingerprint) DO UPDATE SET
                 league = excluded.league,
@@ -735,8 +928,11 @@ def import_historical_goals(
                 row["sourceRow"],
                 row.get("initialSourceFile"),
                 row.get("initialSourceRow"),
+                imported_at,
             ),
         )
+        connection.execute("UPDATE historical_goals SET history_batch_id = ? WHERE fingerprint = ?",
+                           (history_batch(connection, imported_at), key))
     after = connection.execute("SELECT COUNT(*) FROM historical_goals").fetchone()[0]
     return after - before
 
@@ -1068,6 +1264,8 @@ def table_counts(connection: sqlite3.Connection) -> dict[str, int]:
         "team_match_history",
         "predictions",
         "prediction_ledger",
+        "shadow_spf_predictions",
+        "shadow_model_state",
         "parlay_ledger",
     ]
     return {
@@ -1117,9 +1315,9 @@ def main(argv: list[str] | None = None) -> None:
                 spf_added = hhad_added = goals_added = 0
                 unified_summary = None
             else:
-                spf_added = import_historical_spf(connection, spf_history or [])
-                hhad_added = import_historical_hhad(connection, hhad_history or [])
-                goals_added = import_historical_goals(connection, goal_history or [])
+                spf_added = import_historical_spf(connection, spf_history or [], imported_at)
+                hhad_added = import_historical_hhad(connection, hhad_history or [], imported_at)
+                goals_added = import_historical_goals(connection, goal_history or [], imported_at)
                 unified_summary = rebuild_historical_matches(connection)
             import_live_json(
                 connection,

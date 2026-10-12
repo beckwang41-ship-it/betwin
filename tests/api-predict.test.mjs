@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";
+import { createDataStore } from "../lib/database.mjs";
+import { buildGoalMultipleDistribution, selectGoalMultiplePrediction } from "../public/goal-multiples.js";
+import { SMOOTHING_VALIDATION_VERSION } from "../lib/smoothing-production.mjs";
+import { HISTORY_TIMELINE_VERSION } from "../lib/history-timeline.mjs";
+import { currentAlgorithmVersions } from "../lib/runtime-configuration.mjs";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -61,6 +66,8 @@ function prepareMarketVariants(databasePath) {
     db.prepare(
       "DELETE FROM spf_odds_snapshots WHERE match_id = 2040725",
     ).run();
+    db.prepare("DELETE FROM shadow_spf_predictions").run();
+    db.prepare("DELETE FROM shadow_model_state").run();
     const parlay = db.prepare(
       "SELECT actual_results_json FROM parlay_ledger WHERE id = 14",
     ).get();
@@ -160,6 +167,20 @@ function pendingLedgerState(databasePath) {
   }
 }
 
+function shadowLedgerState(databasePath) {
+  const db = new DatabaseSync(databasePath, { readOnly: true });
+  try {
+    return db.prepare(`
+      SELECT match_id, model_version, status,
+             baseline_samples, candidate_samples
+      FROM shadow_spf_predictions
+      ORDER BY match_id, model_version
+    `).all();
+  } finally {
+    db.close();
+  }
+}
+
 function selectedStabilitySamples(payload, market) {
   const selected = payload.settings.effectiveThresholds[market];
   return payload.stability[market].points.find(
@@ -167,8 +188,96 @@ function selectedStabilitySamples(payload, market) {
   )?.samples;
 }
 
+test("隔离批准平滑时正式概率与账本版本一致，同联赛不沿用全部联赛批准", { timeout: 60_000 }, async () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "betwin-smoothing-api-"));
+  let child;
+  try {
+    const databasePath = path.join(directory, "test.db");
+    backupDatabase(path.join(ROOT, "betwin.db"), databasePath);
+    const db = new DatabaseSync(databasePath);
+    db.prepare("UPDATE current_matches SET active = CASE WHEN match_id = 2040718 THEN 1 ELSE 0 END").run();
+    db.close();
+    const store = createDataStore(databasePath);
+    const candidate = JSON.parse(readFileSync(path.join(ROOT, "data/smoothing-config.json"), "utf8"));
+    Object.assign(candidate.data, {
+      verifiedMatches: store.getCounts().verifiedHistory,
+      sourceUpdatedAt: store.getHistoricalSourceUpdatedAt(),
+      timelineVersion: HISTORY_TIMELINE_VERSION, validationVersion: SMOOTHING_VALIDATION_VERSION,
+    });
+    store.close();
+    // 仅在临时测试目录模拟批准，以检验开启路径；不代表真实候选通过。
+    candidate.markets.hhad.candidateStrength = 20;
+    candidate.markets.hhad.gate.passed = true;
+    const approval = { runtimeEnabled: true, approvedAt: "2026-10-01T00:00:00Z",
+      approvedArtifact: { generatedAt: candidate.generatedAt, ...candidate.data },
+      markets: { hhad: { enabled: true, strength: 20 } } };
+    const candidatePath = path.join(directory, "candidate.json"), approvalPath = path.join(directory, "approval.json");
+    const reliabilityPath = path.join(directory, "reliability.json");
+    const reliability = JSON.parse(readFileSync(path.join(ROOT, "data/reliability-config.json"), "utf8"));
+    writeFileSync(reliabilityPath, JSON.stringify(reliability));
+    writeFileSync(candidatePath, JSON.stringify(candidate)); writeFileSync(approvalPath, JSON.stringify(approval));
+    const port = await reservePort(); let logs = "";
+    child = spawn(process.execPath, ["server.mjs"], { cwd: ROOT,
+      env: { ...process.env, PORT: String(port), BETWIN_DATABASE_PATH: databasePath,
+        BETWIN_SMOOTHING_CONFIG_PATH: candidatePath, BETWIN_SMOOTHING_PRODUCTION_PATH: approvalPath,
+        BETWIN_RELIABILITY_CONFIG_PATH: reliabilityPath },
+      stdio: ["ignore", "pipe", "pipe"] });
+    child.stdout.on("data", c => { logs += c; }); child.stderr.on("data", c => { logs += c; });
+    await waitForServer(port, child, () => logs);
+    const metadata = await (await fetch(`http://127.0.0.1:${port}/api/matches`)).json();
+    assert.equal(metadata.productionPolicy.smoothing.hhad.enabled, true);
+    const prediction = await predict(port, "2040718");
+    assert.equal(prediction.hhad.smoothing.applied, true);
+    assert.equal(prediction.spf.smoothing.applied, false);
+    const local = await predict(port, "2040718", { sameLeague: "true" });
+    assert.equal(local.hhad.smoothing.applied, false);
+    const manual = await predict(port, "2040718", { hhadTolerance: "0.05" });
+    assert.equal(manual.hhad.smoothing.applied, false);
+    const ledger = await (await fetch(`http://127.0.0.1:${port}/api/ledger?settle=false`)).json();
+    assert.match(ledger.currentPolicyVersions.find(v => v.includes(":hhad:") && v.includes(":all-leagues")), /:smoothing-/);
+    assert.doesNotMatch(ledger.currentPolicyVersions.find(v => v.includes(":hhad:") && v.includes(":same-league")), /:smoothing-/);
+    assert.doesNotMatch(ledger.currentPolicyVersions.find(v => v.includes(":spf:") && v.includes(":all-leagues")), /:smoothing-/);
+    assert.ok(ledger.currentSnapshotPolicyVersions.some(v => v.includes(":hhad:smoothing-")));
+    assert.ok(ledger.currentSnapshotPolicyVersions.filter(v => v.includes(":goalsPair:")).every(v => !v.includes(":smoothing-")));
+    const service = await (await fetch(`http://127.0.0.1:${port}/api/runtime`)).json();
+    assert.equal(currentAlgorithmVersions(service.currentAlgorithmSpec).hhad,
+      ledger.currentPolicyVersions.find(v => v.includes(":hhad:") && v.includes(":all-leagues")));
+    assert.equal(prediction.runtime.revision, service.runtime.revision);
+    assert.equal(prediction.hhad.reliability.validation.status, "stale");
+
+    // 同一个进程中撤销批准，下一次请求必须关闭平滑并同步版本。
+    writeFileSync(approvalPath, JSON.stringify({ ...approval, runtimeEnabled: false }));
+    const disabled = await predict(port, "2040718");
+    assert.equal(disabled.hhad.smoothing.applied, false);
+    assert.notEqual(disabled.runtime.revision, service.runtime.revision);
+    assert.doesNotMatch(currentAlgorithmVersions(disabled.currentAlgorithmSpec).hhad, /:smoothing-/);
+    assert.deepEqual((await predict(port, "2040718")).runtime, disabled.runtime);
+    writeFileSync(reliabilityPath, JSON.stringify({ ...reliability, generatedAt: "2026-10-05T00:00:00Z" }));
+    const refreshedValidation = await predict(port, "2040718");
+    assert.equal(refreshedValidation.configuration.challengerConfig.selection.generatedAt, "2026-10-05T00:00:00Z");
+    assert.notEqual(refreshedValidation.runtime.revision, disabled.runtime.revision);
+    writeFileSync(approvalPath, JSON.stringify(approval));
+    assert.equal((await predict(port, "2040718")).hhad.smoothing.applied, true);
+
+    // 只改变数据库历史水位、不碰配置文件，也要让旧批准失效。
+    const updated = new DatabaseSync(databasePath);
+    updated.prepare("UPDATE source_files SET imported_at = ? WHERE file_type = 'xlsx'").run("2099-01-01T00:00:00Z");
+    updated.close();
+    const stale = await predict(port, "2040718");
+    assert.equal(stale.hhad.smoothing.applied, false);
+    assert.equal(stale.hhad.reliability.validation.status, "stale");
+    assert.notEqual(stale.runtime.revision, disabled.runtime.revision);
+  } finally {
+    if (child && child.exitCode === null) {
+      const exited = new Promise(resolve => child.once("exit", resolve));
+      child.kill("SIGTERM"); await exited;
+    }
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test(
-  "预测接口按实际市场计算，并保持比分净胜球联合一致性",
+  "预测接口用同一批联合样本分别统计两个玩法的原始赛果",
   { timeout: 60_000 },
   async () => {
     const directory = mkdtempSync(path.join(tmpdir(), "betwin-api-"));
@@ -201,6 +310,10 @@ test(
       );
       const matchesPayload = await matchesResponse.json();
       assert.equal(matchesResponse.status, 200);
+      assert.equal(matchesPayload.dataStatus.oddsCollectedAt, null);
+      assert.match(matchesPayload.dataStatus.historyOrder, /首次入库批次/);
+      assert.ok(matchesPayload.dataStatus.currentImportedAt);
+      assert.ok(matchesPayload.dataStatus.historicalUpdatedAt);
       assert.equal(
         matchesPayload.productionPolicy.probabilityPolicy,
         "historical-similarity-v3-zero-floor-m1.5",
@@ -288,31 +401,43 @@ test(
       assert.equal(matchesPayload.productionPolicy.movement.hhad.enabled, false);
       assert.equal(matchesPayload.productionPolicy.movement.goals.enabled, false);
       assert.equal(matchesPayload.smoothingConfig.candidateOnly, true);
-      assert.equal(matchesPayload.smoothingConfig.runtimeEnabled, false);
-      // 未人工批准时为 disabled；若候选报告落后于当前数据水位则为
-      // candidate-stale。两种情况下生产平滑都必须保持关闭。
+      // 未批准为 disabled；候选落后于数据水位为 candidate-stale；
+      // 人工批准且与当前候选一致为 approved（目前只批准了让球）。
+      const smoothingApproval = matchesPayload.smoothingConfig.approval;
       assert.ok(
-        ["disabled", "candidate-stale"].includes(
-          matchesPayload.smoothingConfig.approval.status,
+        ["disabled", "candidate-stale", "approved"].includes(
+          smoothingApproval.status,
         ),
-        `未预期的批准状态：${matchesPayload.smoothingConfig.approval.status}`,
+        `未预期的批准状态：${smoothingApproval.status}`,
       );
-      assert.equal(matchesPayload.smoothingConfig.approval.enabledMarkets.length, 0);
+      assert.equal(
+        matchesPayload.smoothingConfig.runtimeEnabled,
+        smoothingApproval.enabledMarkets.length > 0,
+      );
       for (const market of ["spf", "hhad", "goals"]) {
-        assert.equal(
-          matchesPayload.productionPolicy.smoothing[market].enabled,
-          false,
-        );
-        assert.equal(
-          matchesPayload.productionPolicy.smoothing[market].strength,
-          0,
-        );
+        const policy = matchesPayload.productionPolicy.smoothing[market];
+        const approved = smoothingApproval.enabledMarkets.includes(market);
+        assert.equal(policy.enabled, approved);
+        if (!approved) assert.equal(policy.strength, 0);
+        else {
+          const candidate = matchesPayload.smoothingConfig.markets[market];
+          assert.equal(candidate.gate.passed, true);
+          assert.equal(policy.strength, candidate.candidateStrength);
+        }
       }
+      // 胜平负和总进球未通过门禁，不得被批准。
+      assert.ok(!smoothingApproval.enabledMarkets.includes("spf"));
+      assert.ok(!smoothingApproval.enabledMarkets.includes("goals"));
 
       const ledgerBeforeRead = pendingLedgerState(databasePath);
+      const shadowBeforeRead = shadowLedgerState(databasePath);
       const jointWithoutGoals = await predict(port, "2040718");
+      assert.equal(jointWithoutGoals.recentForm.affectsProduction, false);
+      assert.equal(typeof jointWithoutGoals.recentForm.available, "boolean");
       assert.equal(jointWithoutGoals.ledgerSnapshotInserted, 0);
+      assert.equal(jointWithoutGoals.shadowSnapshotInserted, 0);
       assert.deepEqual(pendingLedgerState(databasePath), ledgerBeforeRead);
+      assert.deepEqual(shadowLedgerState(databasePath), shadowBeforeRead);
 
       const wrongPredictMethod = await fetch(
         `http://127.0.0.1:${port}/api/predict?matchId=2040718`,
@@ -328,10 +453,31 @@ test(
         { method: "POST" },
       );
       assert.equal(explicitSnapshot.status, 200);
+      const explicitSnapshotPayload = await explicitSnapshot.json();
       assert.equal(
-        typeof (await explicitSnapshot.json()).ledgerSnapshotInserted,
+        typeof explicitSnapshotPayload.ledgerSnapshotInserted,
         "number",
       );
+      assert.equal(
+        typeof explicitSnapshotPayload.shadowSnapshotInserted,
+        "number",
+      );
+      assert.equal(explicitSnapshotPayload.shadowSnapshotInserted, 0);
+      const shadowRows = shadowLedgerState(databasePath);
+      const shadowRow = shadowRows.find(
+        (row) => String(row.match_id) === "2040718",
+      );
+      assert.equal(shadowRow, undefined);
+      const shadowResponse = await fetch(
+        `http://127.0.0.1:${port}/api/shadow/spf`,
+      );
+      const shadowPayload = await shadowResponse.json();
+      assert.equal(shadowResponse.status, 200);
+      assert.equal(shadowPayload.reportOnly, true);
+      assert.equal(shadowPayload.affectsProduction, false);
+      assert.equal(shadowPayload.reviewGate.productionChanged, false);
+      assert.equal(shadowPayload.activation.backfillExistingMatches, false);
+      assert.ok(shadowPayload.activation.initialMatchesExcluded > 0);
 
       assert.ok(jointWithoutGoals.spf);
       assert.ok(jointWithoutGoals.hhad);
@@ -339,53 +485,59 @@ test(
       assert.deepEqual(jointWithoutGoals.topScores, []);
       assert.equal(jointWithoutGoals.spf.matchingMode, "joint");
       assert.equal(jointWithoutGoals.hhad.matchingMode, "joint");
-      assert.equal(jointWithoutGoals.spf.coherence.available, true);
-      assert.equal(jointWithoutGoals.hhad.coherence.available, true);
+      assert.equal(jointWithoutGoals.sampleOrigins.spf.mode, "joint");
+      assert.equal(jointWithoutGoals.sampleOrigins.spf.total, jointWithoutGoals.similarSpf.total);
+      assert.equal(jointWithoutGoals.sampleOrigins.hhad.total, jointWithoutGoals.similarHhad.total);
+      assert.equal(jointWithoutGoals.sampleOrigins.goals, null);
+      assert.equal(jointWithoutGoals.sampleOrigins.spf.leagues.reduce((sum, item) => sum + item.count, 0), jointWithoutGoals.spf.stats.total);
+      assert.equal(jointWithoutGoals.spf.jointCounting.available, true);
+      assert.equal(jointWithoutGoals.hhad.jointCounting.available, true);
       assert.equal(
-        jointWithoutGoals.spf.coherence.version,
-        "score-margin-joint-v1",
+        jointWithoutGoals.spf.jointCounting.version,
+        "spf-hhad-paired-direct-results-v3",
       );
-      assert.equal(jointWithoutGoals.spf.coherence.maxResidual, 0);
       assert.equal(
-        jointWithoutGoals.spf.coherence.jointSamples,
-        jointWithoutGoals.hhad.coherence.jointSamples,
+        jointWithoutGoals.spf.jointCounting.method,
+        "paired-market-direct-results",
       );
-      if (jointWithoutGoals.hhad.handicap === -1) {
-        assert.equal(
-          jointWithoutGoals.spf.coherence.displayProbabilities[0],
-          jointWithoutGoals.hhad.coherence.displayProbabilities[0] +
-            jointWithoutGoals.hhad.coherence.displayProbabilities[1],
+      assert.equal(
+        jointWithoutGoals.spf.jointCounting.outcomeBasis,
+        "stored-market-result",
+      );
+      assert.equal(
+        jointWithoutGoals.spf.jointCounting.jointSamples,
+        jointWithoutGoals.hhad.jointCounting.jointSamples,
+      );
+      assert.equal(
+        jointWithoutGoals.spf.stats.total,
+        jointWithoutGoals.hhad.stats.total,
+      );
+      const conditionalGroups =
+        jointWithoutGoals.hhad.jointCounting.conditionalHhadBySpf;
+      assert.deepEqual(Object.keys(conditionalGroups), ["胜", "平", "负"]);
+      const conditionalTotals = { 胜: 0, 平: 0, 负: 0 };
+      let conditionalSamples = 0;
+      for (const spfLabel of ["胜", "平", "负"]) {
+        const group = conditionalGroups[spfLabel];
+        const groupTotal = Object.values(group.counts).reduce(
+          (sum, count) => sum + count,
+          0,
         );
-        assert.ok(
-          Math.abs(
-            jointWithoutGoals.spf.final[0] -
-              jointWithoutGoals.hhad.final[0] -
-              jointWithoutGoals.hhad.final[1],
-          ) < 1e-12,
-        );
-        assert.ok(
-          Math.abs(
-            jointWithoutGoals.spf.final[1] +
-              jointWithoutGoals.spf.final[2] -
-              jointWithoutGoals.hhad.final[2],
-          ) < 1e-12,
-        );
-      } else if (jointWithoutGoals.hhad.handicap === 1) {
-        assert.ok(
-          Math.abs(
-            jointWithoutGoals.spf.final[0] +
-              jointWithoutGoals.spf.final[1] -
-              jointWithoutGoals.hhad.final[0],
-          ) < 1e-12,
-        );
-        assert.ok(
-          Math.abs(
-            jointWithoutGoals.spf.final[2] -
-              jointWithoutGoals.hhad.final[1] -
-              jointWithoutGoals.hhad.final[2],
-          ) < 1e-12,
-        );
+        assert.equal(groupTotal, group.samples);
+        conditionalSamples += group.samples;
+        for (const hhadLabel of ["胜", "平", "负"]) {
+          conditionalTotals[hhadLabel] += group.counts[hhadLabel];
+        }
       }
+      assert.equal(conditionalSamples, jointWithoutGoals.spf.stats.total);
+      assert.deepEqual(
+        conditionalTotals,
+        jointWithoutGoals.hhad.stats.counts,
+      );
+      assert.equal(
+        "displayProbabilities" in jointWithoutGoals.spf.jointCounting,
+        false,
+      );
       assert.equal(jointWithoutGoals.spf.empiricalWeight, 1);
       // empiricalWeight=1 表示完全采用历史分布、不混入赔率先验。
       // 但防零层会先把零样本格抬离 0%，所以 final 等于防零后的
@@ -524,6 +676,9 @@ test(
       assert.equal(bandedGoals.settings.zeroOdds.upper, 23);
       assert.equal(bandedGoals.settings.zeroOdds.usesAllSamples, true);
       assert.equal(bandedGoals.settings.zeroOdds.sampleLimit, null);
+      assert.equal(bandedGoals.sampleOrigins.goals.total, bandedGoals.similarGoals.total);
+      assert.equal(bandedGoals.sampleOrigins.goals.effectiveSamples, bandedGoals.goals.weighting.effectiveSamples);
+      assert.equal(bandedGoals.sampleOrigins.goals.mode, "goals-independent");
       assert.equal(
         bandedGoals.goals.weighting.method,
         "exponential-composite-distance",
@@ -576,6 +731,14 @@ test(
         sameLeague: false,
       });
       assert.equal(typeof goalMultiple.goalMultiple.available, "boolean");
+      const multipleStore = createDataStore(databasePath);
+      try {
+        const expected = selectGoalMultiplePrediction(
+          ["g0", "g1", "g2", "g3", "g4", "g5", "g6", "g7plus"].map(k => goalMultiple.match.goals[k]),
+          buildGoalMultipleDistribution(multipleStore.getGoalHistory()),
+        );
+        assert.deepEqual(goalMultiple.goalMultiple, expected);
+      } finally { multipleStore.close(); }
       if (goalMultiple.goalMultiple.available) {
         assert.equal(
           goalMultiple.goalMultiple.zeroOdds,
@@ -598,8 +761,8 @@ test(
       assert.equal(zeroJoint.hhad.matchingMode, "joint-unavailable");
       assert.equal(zeroJoint.spf.available, false);
       assert.equal(zeroJoint.hhad.available, false);
-      assert.equal(zeroJoint.spf.coherence.available, false);
-      assert.match(zeroJoint.spf.coherence.reason, /没有同时满足/);
+      assert.equal(zeroJoint.spf.jointCounting.available, false);
+      assert.match(zeroJoint.spf.jointCounting.reason, /没有同时满足/);
       assert.equal(zeroJoint.goals, null);
 
       const ledgerResponse = await fetch(
@@ -607,6 +770,9 @@ test(
       );
       const ledgerPayload = await ledgerResponse.json();
       assert.equal(ledgerResponse.status, 200);
+      assert.ok(ledgerPayload.recordContext.all >= ledgerPayload.recordContext.selectedPolicy);
+      assert.ok(ledgerPayload.parlays.recordContext.all >= ledgerPayload.parlays.recordContext.selectedPolicy);
+      assert.ok(ledgerPayload.historicalSourceUpdatedAt);
       assert.equal(ledgerPayload.settledNow, 0);
       assert.equal(ledgerPayload.parlaySettledNow, 0);
       assert.equal(ledgerPayload.parlayBackfilledNow, 0);
@@ -644,7 +810,7 @@ test(
       );
       assert.equal(
         ledgerPayload.overview.oddsBenchmark.byMarketScope.spf.all.liftMethod,
-        "chronological-block-bootstrap",
+        "fixture-chronological-block-bootstrap",
       );
       assert.ok(
         ledgerPayload.overview.oddsBenchmark.byMarketScope.spf.all.lift ===
@@ -731,6 +897,38 @@ test(
           sourceRow: 8488,
         },
       );
+      // Generated cards can query prior archive status without saving anything.
+      const archiveCount = () => {
+        const db = new DatabaseSync(databasePath, { readOnly: true });
+        try { return db.prepare("SELECT COUNT(*) AS n FROM parlay_ledger").get().n; }
+        finally { db.close(); }
+      };
+      const countBeforeLookup = archiveCount();
+      const portfolioQuery = new URLSearchParams({ mode: "goalsPair", legs: "2", limit: "3", maxMatchUses: "1" });
+      const portfolioResponse = await fetch(`http://127.0.0.1:${port}/api/parlay?${portfolioQuery}`);
+      assert.equal(portfolioResponse.status, 200);
+      const portfolio = await portfolioResponse.json();
+      assert.ok(portfolio.combinations.rows.length > 0);
+      assert.equal(portfolio.combinations.settings.maxMatchUses, 1);
+      assert.equal(portfolio.requestSettings.limit, 3);
+      assert.equal(portfolio.requestSettings.maxMatchUses, 1);
+      const allSelected = portfolio.candidates.map(c => c.id).join(",");
+      const limitedQuery = new URLSearchParams({ mode: "goalsPair", legs: "2", limit: "5", maxMatchUses: "2", selected: allSelected });
+      const limited = await (await fetch(`http://127.0.0.1:${port}/api/parlay?${limitedQuery}`)).json();
+      assert.ok(limited.combinations.rows.length <= 5);
+      const uses = new Map();
+      limited.combinations.rows.flatMap(row => row.legs).forEach(leg => uses.set(leg.id, (uses.get(leg.id) || 0) + 1));
+      assert.ok([...uses.values()].every(n => n <= 2));
+      assert.equal(archiveCount(), countBeforeLookup);
+      const firstPortfolio = portfolio.combinations.rows[0];
+      portfolioQuery.set("combinationId", firstPortfolio.id);
+      const savePortfolioResponse = await fetch(`http://127.0.0.1:${port}/api/parlay/save?${portfolioQuery}`, { method: "POST" });
+      assert.ok([200, 201].includes(savePortfolioResponse.status));
+      const savedPortfolio = await savePortfolioResponse.json();
+      assert.equal(savedPortfolio.record.settings.maxMatchUses, 1);
+      assert.equal(savedPortfolio.record.settings.limit, 3);
+      const rereadPortfolio = await (await fetch(`http://127.0.0.1:${port}/api/parlay?${portfolioQuery}`)).json();
+      assert.equal(rereadPortfolio.combinations.rows.find(row => row.id === firstPortfolio.id).recorded.id, savedPortfolio.record.id);
     } finally {
       if (child.exitCode === null) child.kill("SIGTERM");
       await new Promise((resolve) => child.once("exit", resolve));

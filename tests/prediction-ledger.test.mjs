@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { createPredictionLedger } from "../lib/prediction-ledger.mjs";
+import { DatabaseSync } from "node:sqlite";
 
 function snapshot(overrides = {}) {
   return {
@@ -41,6 +42,21 @@ function snapshot(overrides = {}) {
     ...overrides,
   };
 }
+
+test("战绩快照随留档冻结，结算后不得用新近况覆盖", () => {
+  const directory=mkdtempSync(path.join(tmpdir(),"betwin-form-freeze-")), dbPath=path.join(directory,"ledger.db");
+  const ledger=createPredictionLedger(dbPath);
+  try {
+    const form={version:"recent-form-v1-five-matches",detailHash:"prematch"};
+    ledger.record(snapshot({settings:{sameLeague:false,recentForm:form}}));
+    const [row]=ledger.pending();
+    assert.deepEqual(JSON.parse(row.settings_json).recentForm,form);
+    ledger.settle(row.id,{actualResult:"胜",score:"2:0",sourceFile:"历史.xlsx",sourceRow:101,settledAt:"2026-07-27T03:00:00Z"});
+    assert.equal(ledger.record(snapshot({settings:{sameLeague:false,recentForm:{...form,detailHash:"after-result"}}})),false);
+    const db=new DatabaseSync(dbPath,{readOnly:true});
+    try {assert.deepEqual(JSON.parse(db.prepare("SELECT settings_json FROM prediction_ledger").get().settings_json).recentForm,form);} finally {db.close();}
+  } finally {ledger.close();rmSync(directory,{recursive:true,force:true});}
+});
 
 test("账本快照不可重复，并能结算命中与模拟盈亏", () => {
   const directory = mkdtempSync(path.join(tmpdir(), "betwin-ledger-"));
@@ -125,7 +141,7 @@ test("账本快照不可重复，并能结算命中与模拟盈亏", () => {
     assert.equal(summary.oddsBenchmark.byMarketScope.spf.all.lift, 1);
     assert.equal(
       summary.oddsBenchmark.byMarketScope.spf.all.liftMethod,
-      "chronological-block-bootstrap",
+      "fixture-chronological-block-bootstrap",
     );
     assert.equal(
       summary.oddsBenchmark.byMarketScope.spf.all.liftIterations,
@@ -204,6 +220,51 @@ test("更新待结算预测时保留首次留档的历史行水位", () => {
   }
 });
 
+test("总览日期筛选会联动汇总指标与资金轨迹，流水筛选仍保留全量汇总", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "betwin-ledger-overview-range-"));
+  const ledger = createPredictionLedger(path.join(directory, "ledger.db"));
+  try {
+    ["2026-08-01", "2026-08-15", "2026-08-31"].forEach((date, index) => {
+      ledger.record(snapshot({
+        matchId: `fixture-${index}`,
+        capturedAt: `${date}T01:00:00.000Z`,
+      }));
+    });
+    for (const pending of ledger.pending()) {
+      ledger.settle(pending.id, {
+        actualResult: "胜",
+        score: "1:0",
+        correct: true,
+        selectedOdds: pending.selected_odds,
+        sourceFile: "历史进球.xlsx",
+        sourceRow: 101,
+        settledAt: "2026-09-01T01:00:00.000Z",
+      });
+    }
+
+    const listFiltered = ledger.summary({
+      from: "2026-08-10",
+      to: "2026-08-20",
+    });
+    assert.equal(listFiltered.totals.fixtures, 3);
+    assert.equal(listFiltered.filtered.fixtures, 1);
+
+    const overviewFiltered = ledger.summary({
+      from: "2026-08-10",
+      to: "2026-08-20",
+      applyFiltersToSummary: true,
+    });
+    assert.equal(overviewFiltered.totals.fixtures, 1);
+    assert.equal(overviewFiltered.overall.settled, 1);
+    assert.equal(overviewFiltered.byMarketScope.spf.all.settled, 1);
+    assert.equal(overviewFiltered.performanceEvents.length, 1);
+    assert.equal(overviewFiltered.performanceEvents[0].capturedAt.slice(0, 10), "2026-08-15");
+  } finally {
+    ledger.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("单场账本按比赛筛选并分页，汇总数字使用同一筛选结果", () => {
   const directory = mkdtempSync(path.join(tmpdir(), "betwin-ledger-page-"));
   const ledger = createPredictionLedger(path.join(directory, "ledger.db"));
@@ -244,6 +305,7 @@ test("单场账本可只统计当前预测模型版本", () => {
       snapshot({
         matchId: "current-fixture",
         policyVersion: "historical-similarity-v2:selection-v3@test:all-leagues",
+        algorithmVersion: "historical-similarity-v2:selection-v3@test:all-leagues",
       }),
     );
     ledger.record(
@@ -290,7 +352,7 @@ test("当前算法跨数据和验证版本累计，但排除不同生产阈值",
         matchId: "current-validated",
         policyVersion:
           "historical-similarity-v3:selection-v1@old:all-leagues",
-        algorithmVersion: null,
+        algorithmVersion: stableVersion,
         threshold: 0.07,
         validationStatus: "validated",
       }),
@@ -300,7 +362,7 @@ test("当前算法跨数据和验证版本累计，但排除不同生产阈值",
         matchId: "current-pending-validation",
         policyVersion:
           "historical-similarity-v3:selection-v1@new:pending-validation:all-leagues",
-        algorithmVersion: null,
+        algorithmVersion: stableVersion,
         threshold: 0.07,
         validationStatus: "pending_revalidation",
       }),
@@ -342,6 +404,26 @@ test("当前算法跨数据和验证版本累计，但排除不同生产阈值",
     ledger.close();
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("明确旧算法不会按同族前缀混入当前，缺失版本可单独查询", () => {
+  const ledger = createPredictionLedger(":memory:");
+  try {
+    ledger.record(snapshot({ matchId: "old", policyVersion: "family:selection-v1@old", algorithmVersion: "old-v1" }));
+    ledger.record(snapshot({ matchId: "unknown", policyVersion: "family:selection-v1@new", algorithmVersion: null }));
+    const options = { policyVersion: "current", currentPolicyVersions: ["new-v2"], currentAlgorithmSpec: { probabilityPolicy: "family", thresholds: { spf: .07 } } };
+    assert.equal(ledger.summary(options).rows.length, 0);
+    assert.equal(ledger.summary({ policyVersion: "unknown" }).rows[0].algorithmVersion, null);
+  } finally { ledger.close(); }
+});
+
+test("上海凌晨留档按上海日期筛选", () => {
+  const ledger = createPredictionLedger(":memory:");
+  try {
+    ledger.record(snapshot({ capturedAt: "2026-09-04T17:00:00.000Z" }));
+    assert.equal(ledger.summary({ from: "2026-09-05", to: "2026-09-05" }).rows.length, 1);
+    assert.equal(ledger.summary({ from: "2026-09-04", to: "2026-09-04" }).rows.length, 0);
+  } finally { ledger.close(); }
 });
 
 test("三个玩法在同一比赛中分别留档", () => {

@@ -15,11 +15,15 @@ test("普通数据库导入不再运行0球区间研究器", () => {
   assert.equal(pkg.scripts["model:tune-zero-goals"], undefined);
 });
 
-test("当前比赛更新命令只启用JSON模式", () => {
+test("当前比赛更新命令只导入JSON并自动冻结四组状态预测", () => {
   assert.equal(
     pkg.scripts["db:update-matches"],
-    "python3 scripts/import_sqlite.py --json-only",
+    "node --disable-warning=ExperimentalWarning scripts/update_matches.mjs",
   );
+  const source = readFileSync(path.join(ROOT,"scripts","update_matches.mjs"),"utf8");
+  assert.match(source,/import_sqlite\.py/);assert.match(source,/predict_context_pilot\.mjs/);
+  assert.match(source,/temporary=spawn/);assert.match(source,/temporary\.kill\("SIGTERM"\)/);
+  assert.match(source,/BETWIN_VERBOSE/);assert.match(source,/capture:!verbose/);
 });
 
 test("轻量历史更新只导入数据并按需重跑正式规则验证", () => {
@@ -33,6 +37,9 @@ test("轻量历史更新只导入数据并按需重跑正式规则验证", () =>
   );
   assert.match(source, /scripts\/import_sqlite\.py/);
   assert.match(source, /scripts\/tune_reliability\.mjs/);
+  assert.match(source, /scripts\/report_prediction_audit\.mjs/);
+  assert.ok(source.indexOf('["scripts/import_sqlite.py"]') < source.indexOf('"scripts/report_prediction_audit.mjs"'));
+  assert.doesNotMatch(source, /scripts\/(predict_context_pilot|typesafe_pilot)\.mjs/);
   assert.doesNotMatch(
     source,
     /scripts\/(tune_parameters|train_challenger|tune_goal_zero_odds|generate_goal_multiple_report)|npm test/,
@@ -111,11 +118,25 @@ test("平滑重验只生成候选报告且不能由完整刷新自动上线", ()
       "utf8",
     ),
   );
-  assert.equal(approval.runtimeEnabled, false);
-  assert.equal(approval.approvedArtifact, null);
+  // 批准文件只能人工写入；若已批准，必须绑定候选版本且只启用通过门禁的玩法。
+  const candidate = JSON.parse(
+    readFileSync(path.join(ROOT, "data", "smoothing-config.json"), "utf8"),
+  );
+  if (approval.runtimeEnabled !== true) {
+    assert.equal(approval.approvedArtifact, null);
+  } else {
+    assert.ok(approval.approvedAt);
+    assert.ok(approval.approvedArtifact?.generatedAt);
+  }
   for (const market of ["spf", "hhad", "goals"]) {
-    assert.equal(approval.markets[market].enabled, false);
-    assert.equal(approval.markets[market].strength, 0);
+    const item = approval.markets[market];
+    if (item.enabled !== true) {
+      assert.equal(item.strength, 0);
+      continue;
+    }
+    assert.equal(approval.runtimeEnabled, true);
+    assert.equal(candidate.markets[market].gate.passed, true);
+    assert.equal(item.strength, candidate.markets[market].candidateStrength);
   }
 });
 

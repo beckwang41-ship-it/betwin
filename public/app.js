@@ -8,11 +8,19 @@ import {
   capitalLedgerMetrics,
   calculateDoubleChance,
   crossValidateScoreAndGoals,
+  formatStakeProfit,
   formatOddsWithMovement,
+  ledgerPerformanceMetrics,
   matchHasOddsMovement,
   settledLedgerCounts,
   timelineHasOddsMovement,
 } from "./ledger-metrics.js";
+import { recommendedParlaySelection, goalCoverageRanks, standardProbabilityRanks, parlaySelectionSummary } from "./parlay-selection.js";
+import { ledgerCalendarDate, LEDGER_TIME_ZONE } from "./ledger-date.js";
+import { createLatestRequestGate, ledgerEmptyState } from "./presentation.js";
+import { summarizeParlayPortfolio } from "./parlay-portfolio.js";
+import { VALIDATION_LABELS, validationState, verdictSummary, marketEvidence } from "./reliability-presentation.js";
+import { auditCohortLabel, renderAuditTable, renderAuditIssues } from "./prediction-audit.js";
 
 const state = {
   matches: [],
@@ -39,6 +47,10 @@ const state = {
   ledgerExpandedParlays: new Set(),
   ledgerDrilldown: null,
   parlayLoaded: false,
+  portfolioRows: [],
+  portfolioSelected: new Set(),
+  portfolioMode: "standard",
+  portfolioRevision: 0,
   parlayCandidates: [],
   parlaySelected: new Set(),
   parlayMarkets: new Map(),
@@ -56,10 +68,14 @@ const state = {
   smoothingConfig: null,
   challengerConfig: null,
   productionPolicy: null,
+  matchListMode: "timeline",
+  collapsedLeagues: new Set(),
+  matchDetailTab: "archive",
 };
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+const ledgerRequestGate = createLatestRequestGate();
 const MIN_PARLAY_LEG_ODDS = 1.7;
 const MARKET_BASELINE_SINGLE_LEG_RTP = 0.886;
 const GOAL_DISPLAY_LABELS = [
@@ -121,16 +137,37 @@ function marketComparisonMarkup(prediction, market, { detailed = false } = {}) {
   const details = detailed
     ? `<p>${escapeHtml(comparison.reason)}；正差值仍需由账本滚动验证，当前不构成优势信号。</p>`
     : `<p>${escapeHtml(comparison.reason)}</p>`;
+  // 历史与市场放在同一刻度上并排成条，一眼看出谁高、差多少。
+  const historicalValue = Math.max(0, Math.min(1, Number(selected.historicalProbability) || 0));
+  const marketValue = Math.max(0, Math.min(1, Number(selected.marketProbability) || 0));
+  const scale = Math.max(historicalValue, marketValue, 0.01);
+  const delta = Number(selected.probabilityDelta) || 0;
+  const deltaClass = Math.abs(delta) < 0.03 ? "flat" : delta > 0 ? "up" : "down";
+  const deltaText = deltaClass === "flat"
+    ? "与市场基本持平"
+    : delta > 0
+      ? `历史高出市场 ${signedPp(delta)}`
+      : `历史低于市场 ${signedPp(delta)}`;
   return `
     <div class="market-comparison-head">
-      <strong class="market-comparison-status ${statusClass}">${escapeHtml(comparison.label)}</strong>
+      <strong class="market-comparison-status ${statusClass}">${statusClass === "divergent" ? "⚠ " : "✓ "}${escapeHtml(comparison.label)}</strong>
       <span>市场 ${escapeHtml(marketLabel)} · 历史 ${escapeHtml(historicalLabel)}</span>
     </div>
-    <div class="market-comparison-metrics">
-      <span><small>历史概率</small><strong>${pct(selected.historicalProbability)}</strong></span>
-      <span><small>去水市场</small><strong>${pct(selected.marketProbability)}</strong></span>
-      <span><small>历史－市场</small><strong>${signedPp(selected.probabilityDelta)}</strong></span>
-      ${breakEven}
+    <div class="market-versus" aria-label="历史概率 ${pct(historicalValue)}，去水市场 ${pct(marketValue)}">
+      <div class="market-versus-row historical">
+        <small>历史</small>
+        <div class="market-versus-track"><i style="width:${(historicalValue / scale) * 100}%"></i></div>
+        <strong>${pct(historicalValue)}</strong>
+      </div>
+      <div class="market-versus-row market">
+        <small>市场</small>
+        <div class="market-versus-track"><i style="width:${(marketValue / scale) * 100}%"></i></div>
+        <strong>${pct(marketValue)}</strong>
+      </div>
+      <div class="market-versus-delta ${deltaClass}">
+        <span>${escapeHtml(deltaText)}</span>
+        ${breakEven ? `<em>保本线差 ${signedPp(selected.breakEvenDelta)}</em>` : ""}
+      </div>
     </div>
     ${details}`;
 }
@@ -410,6 +447,37 @@ function reliabilityDisplay(prediction) {
   };
 }
 
+// 可靠性门禁 v2（market-edge-v2）要求筛出场次比去水市场概率更准。
+// 某玩法未通过时，「历史稳定」不会出现，相关筛选入口应隐藏而不是显示 0。
+function reliabilityMarketValidated(market) {
+  const selection = state.challengerConfig?.selection;
+  if (!selection || state.challengerConfig?.selectionStale) return false;
+  return Boolean(selection.markets?.[market]?.enabled);
+}
+
+function anyStandardMarketValidated() {
+  return reliabilityMarketValidated("spf") || reliabilityMarketValidated("hhad");
+}
+
+// 最新 20% 回测段：筛出场次实际命中 vs 去水市场概率。
+function marketEdgeSummary(test, significance) {
+  if (!test || test.marketEdge === null || test.marketEdge === undefined) return null;
+  const edge = Number(test.marketEdge);
+  const lower = significance?.lower == null ? NaN : Number(significance.lower);
+  const upper = significance?.upper == null ? NaN : Number(significance.upper);
+  const interval = Number.isFinite(lower) && Number.isFinite(upper)
+    ? `95% 区间 ${signedPp(lower)} ~ ${signedPp(upper)}`
+    : "未计算区间";
+  return {
+    edge,
+    market: Number(test.selectedMarketProbability || 0),
+    actual: Number(test.selectedAccuracy || 0),
+    interval,
+    significant: Number.isFinite(lower) && lower > 0,
+    label: marketEvidence(significance).label,
+  };
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -437,9 +505,13 @@ async function fetchJson(url, options) {
 }
 
 async function loadMatches() {
+  if (state.portfolioRows.length) invalidateParlayAudit();
   setLoading(true);
+  $("#refresh-current-data").disabled = true;
+  $("#source-connection-label").textContent = "正在读取本地数据";
   try {
     const payload = await fetchJson("/api/matches");
+    $("#source-connection-label").textContent = "本地数据读取成功";
     if (!state.modelConfig && payload.modelConfig) {
       applyModelConfig(
         payload.modelConfig,
@@ -454,14 +526,62 @@ async function loadMatches() {
       );
     }
     state.matches = payload.matches;
-    state.selectedId = state.selectedId || state.matches[0]?.id;
+    if (!state.matches.some((match) => match.id === state.selectedId)) {
+      state.selectedId = state.matches[0]?.id || null;
+    }
     $("#match-count").textContent = `${state.matches.length} 场`;
     renderMatchList();
     if (state.selectedId) await loadPrediction();
     void loadMatchReliability();
   } catch (error) {
+    $("#source-connection-label").textContent = "本地数据读取失败";
     showError(error);
+  } finally {
+    $("#refresh-current-data").disabled = false;
   }
+}
+
+function renderRecentForm() {
+  const form = state.data.recentForm;
+  const summary = $("#recent-form-summary"), grid = $("#recent-form-grid");
+  summary.textContent = form?.available ? [form.home, form.away].map(side => {
+    const s = side?.recent;
+    return s ? `${side.team} ${s.wins}胜${s.draws}平${s.losses}负` : `${side?.team || "球队"} 暂无明细`;
+  }).join(" · ") : "本场暂无可用战绩";
+  $("#recent-form-note").textContent = (form?.notes || ["当前导入批次没有本场战绩资料"]).join("；") + "。数据按赛前采集理解，未核验精确开赛时间；留档时保存本次战绩，供后续与纯赔率预测对照。";
+  grid.innerHTML = !form?.available ? "" : [form.home, form.away].map(side => {
+    const s = side.recent, reported = side.sourceSummary;
+    if (!s) return `<article><h4>${escapeHtml(side.team)}</h4><p>没有可核对的近期比分明细</p></article>`;
+    const venue = side === form.home ? side.homeVenue : side.awayVenue;
+    return `<article><header><h4>${escapeHtml(side.team)}</h4><small>最近 ${s.matches} 场有效明细</small></header>
+      <p><b>${s.wins}胜 ${s.draws}平 ${s.losses}负</b> · 场均积分 ${s.pointsPerGame.toFixed(2)}</p>
+      <p>场均进球 ${s.goalsForPerGame.toFixed(2)} · 失球 ${s.goalsAgainstPerGame.toFixed(2)} · 总进球 ${s.totalGoalsPerGame.toFixed(2)}</p>
+      <p>净胜≥2球 ${s.winsByTwoPlus} 场 · 净负≥2球 ${s.lossesByTwoPlus} 场</p>
+      <p>其中同主客场 ${venue?.matches || 0} 场${venue ? `：${venue.wins}胜${venue.draws}平${venue.losses}负` : ""} · 同联赛 ${side.sameLeague?.matches || 0} 场</p>
+      <ul>${s.rows.map(r => `<li><span>${escapeHtml(r.date)} · ${escapeHtml(r.home)} vs ${escapeHtml(r.away)}</span><strong>${escapeHtml(r.score)}</strong></li>`).join("")}</ul>
+      <p>总进球次数：${s.goalsDistribution.map((count,i) => count ? `${i===7?"7+":i}球 ${count}场` : "").filter(Boolean).join(" · ")}</p>
+      ${reported ? `<p>上游另报 ${reported.reportedMatches} 场汇总：${reported.wins}胜${reported.draws}平${reported.losses}负，进${reported.goalsFor}/失${reported.goalsAgainst}；未与5场明细混算。</p>` : ""}</article>`;
+  }).join("") + `<article><h4>交锋与使用边界</h4><p>${form.headToHead ? `有效交锋 ${form.headToHead.matches} 场，以当前主队视角：${form.headToHead.wins}胜${form.headToHead.draws}平${form.headToHead.losses}负，场均总进球 ${form.headToHead.totalGoalsPerGame.toFixed(2)}` : "暂无可核对的双方交锋"}</p><p>战绩用于观察胜平负状态、净胜球幅度与进球分布，不等于本场结果概率。</p><p>正式概率暂不加权；需用已冻结的赛前战绩检验是否带来增益。</p></article>`;
+}
+
+function renderSampleOrigins() {
+  const data = state.data;
+  const origins = data.sampleOrigins || {};
+  const names = { spf: "胜平负", hhad: "让球胜平负", goals: "总进球" };
+  const modes = { joint: "双盘口联合匹配", "joint-unavailable": "联合匹配无样本", standalone: "单盘口独立匹配", "goals-independent": "总进球独立匹配" };
+  $("#sample-origins-summary").textContent = Object.entries(names)
+    .map(([key, name]) => `${name} ${origins[key]?.total ?? "—"} 场`).join(" · ");
+  $("#sample-origins-grid").innerHTML = Object.entries(names).map(([key, name]) => {
+    const origin = origins[key];
+    if (!origin) return `<article><h4>${name}</h4><p>${data[key] ? "样本来源暂不可用，请重新读取。" : "本场未提供该玩法赔率。"}</p></article>`;
+    const top = origin.leagues.slice(0, 4);
+    const remainder = origin.total - top.reduce((sum, entry) => sum + entry.count, 0);
+    return `<article><header><h4>${name}</h4><small>${escapeHtml(modes[origin.mode] || "独立匹配")}</small></header>
+      <p><b>${origin.total.toLocaleString()} 场</b> 原始样本${origin.effectiveSamples == null ? "" : ` · 加权有效 <b>${origin.effectiveSamples.toFixed(1)}</b> 场`}</p>
+      <p>本联赛 ${origin.sameLeague} 场 · 其他联赛 ${origin.otherLeagues} 场</p>
+      ${origin.total ? `<ul>${top.map((entry) => `<li><span>${escapeHtml(entry.league)}</span><strong>${entry.count} 场 · ${pct(entry.share)}</strong></li>`).join("")}${remainder ? `<li><span>其余 ${origin.leagues.length - top.length} 个联赛</span><strong>${remainder} 场 · ${pct(remainder / origin.total)}</strong></li>` : ""}</ul>` : "<p>未找到符合当前条件的历史样本，不生成先验预测。</p>"}
+    </article>`;
+  }).join("");
 }
 
 function setView(view) {
@@ -503,6 +623,7 @@ const ledgerMarketNames = {
 function ledgerDate(value) {
   if (!value) return "—";
   return new Intl.DateTimeFormat("zh-CN", {
+    timeZone: LEDGER_TIME_ZONE,
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
@@ -580,6 +701,169 @@ function renderLedgerMarkets(data) {
     .join("");
 }
 
+function roiTone(value) {
+  if (value === null || value === undefined) return "unavailable";
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "unavailable";
+  if (number > 0) return "positive";
+  if (number < 0) return "negative";
+  return "neutral";
+}
+
+function renderLedgerRoiMatrix(data) {
+  const matrix = $("#ledger-roi-matrix");
+  if (!matrix) return;
+  matrix.innerHTML = ["spf", "hhad", "goals", "goalsPair", "goalMultiple"]
+    .map((market) => {
+      const scopes = data.byMarketScope?.[market] || {};
+      const scopeCard = (metrics, label) => {
+        const stake = Number(metrics?.stakeUnits || 0);
+        const roi = metrics?.roi;
+        const available = roi !== null && roi !== undefined && stake > 0;
+        const detail = available
+          ? `盈亏 ${ledgerProfit(metrics.simulatedProfit)} 注 · 成本 ${stake.toFixed(0)} 注`
+          : market === "goalMultiple"
+            ? "观察指标，不参与盈亏模拟"
+            : "当前范围暂无可计算注数";
+        return `<div class="ledger-roi-scope ${roiTone(roi)}">
+          <span>${escapeHtml(label)}</span>
+          <strong>${available ? ledgerMetric(roi) : "—"}</strong>
+          <small>${escapeHtml(detail)}</small>
+        </div>`;
+      };
+      return `<article class="ledger-roi-card">
+        <header><span>${escapeHtml(ledgerMarketNames[market])}</span><small>模拟 ROI</small></header>
+        <div>
+          ${scopeCard(scopes.all || {}, "全部联赛")}
+          ${scopeCard(scopes.sameLeague || {}, "同联赛")}
+        </div>
+      </article>`;
+    })
+    .join("");
+}
+
+function performanceMoney(units) {
+  const amount = Number(units || 0);
+  const sign = amount > 0 ? "+" : "";
+  return `${sign}${(amount * 2).toFixed(2)} 元 (${sign}${amount.toFixed(2)} 注)`;
+}
+
+function performanceChart(rows, valueKey, { kind, emptyText }) {
+  const points = rows.filter((row) => Number.isFinite(Number(row[valueKey])));
+  if (!points.length) {
+    return `<div class="ledger-performance-empty">${escapeHtml(emptyText)}</div>`;
+  }
+  const width = 760;
+  const height = 220;
+  const padding = { top: 18, right: 18, bottom: 28, left: 48 };
+  const values = points.map((row) => Number(row[valueKey]));
+  let min = Math.min(0, ...values);
+  let max = Math.max(0, ...values);
+  if (Math.abs(max - min) < 1e-9) {
+    min -= 1;
+    max += 1;
+  }
+  const x = (index) =>
+    padding.left +
+    (points.length === 1
+      ? (width - padding.left - padding.right) / 2
+      : (index / (points.length - 1)) * (width - padding.left - padding.right));
+  const y = (value) =>
+    padding.top +
+    ((max - value) / (max - min)) * (height - padding.top - padding.bottom);
+  const path = points
+    .map((row, index) => `${index ? "L" : "M"}${x(index).toFixed(2)},${y(Number(row[valueKey])).toFixed(2)}`)
+    .join(" ");
+  const zeroY = y(0).toFixed(2);
+  const formatAxis = (value) =>
+    kind === "roi" ? `${(value * 100).toFixed(0)}%` : `${value.toFixed(1)}注`;
+  const circles = points
+    .map((row, index) => {
+      const value = Number(row[valueKey]);
+      const title = kind === "roi"
+        ? `${row.date} · 滚动30笔 ROI ${(value * 100).toFixed(1)}%`
+        : `${row.date} · 累计盈亏 ${value.toFixed(2)}注`;
+      const cx = x(index).toFixed(2);
+      const cy = y(value).toFixed(2);
+      return `<g class="ledger-performance-node" tabindex="0" role="button" aria-label="${escapeHtml(title)}" data-chart-kind="${kind}" data-date="${escapeHtml(row.date)}" data-value="${value}" data-entries="${Number(row.entries || 0)}" data-daily-profit="${Number(row.dailyProfit || 0)}">
+        <circle class="ledger-performance-hit" cx="${cx}" cy="${cy}" r="14" fill="transparent"></circle>
+        <circle class="ledger-performance-point" cx="${cx}" cy="${cy}" r="4"><title>${escapeHtml(title)}</title></circle>
+      </g>`;
+    })
+    .join("");
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${kind === "roi" ? "滚动30笔ROI走势" : "累计模拟盈亏曲线"}">
+    <line class="ledger-performance-zero" x1="${padding.left}" y1="${zeroY}" x2="${width - padding.right}" y2="${zeroY}"></line>
+    <text class="ledger-performance-axis" x="${padding.left - 8}" y="${padding.top + 4}" text-anchor="end">${escapeHtml(formatAxis(max))}</text>
+    <text class="ledger-performance-axis" x="${padding.left - 8}" y="${height - padding.bottom}" text-anchor="end">${escapeHtml(formatAxis(min))}</text>
+    <text class="ledger-performance-axis date" x="${padding.left}" y="${height - 7}">${escapeHtml(points[0].date.slice(5))}</text>
+    <text class="ledger-performance-axis date" x="${width - padding.right}" y="${height - 7}" text-anchor="end">${escapeHtml(points.at(-1).date.slice(5))}</text>
+    <path class="ledger-performance-line ${kind}" d="${path}"></path>
+    ${circles}
+  </svg>`;
+}
+
+function bindPerformancePoints() {
+  const detail = $("#ledger-performance-detail");
+  const nodes = $$(".ledger-performance-node");
+  nodes.forEach((node) => {
+    const update = () => {
+      nodes.forEach((n) => n.classList.remove("active"));
+      node.classList.add("active");
+      const date = node.dataset.date;
+      const entries = Number(node.dataset.entries || 0);
+      const value = Number(node.dataset.value || 0);
+      const dailyProfit = Number(node.dataset.dailyProfit || 0);
+      detail.textContent = node.dataset.chartKind === "roi"
+        ? `📍 ${date} · 滚动30笔模拟 ROI ${pct(value)} · 当日已结算 ${entries} 笔`
+        : `📍 ${date} · 当日 ${entries} 笔，单日盈亏 ${ledgerProfit(dailyProfit)} 注 · 累计盈亏 ${ledgerProfit(value)} 注 (${(value * 2).toFixed(2)} 元)`;
+    };
+    node.addEventListener("pointerenter", update);
+    node.addEventListener("click", update);
+    node.addEventListener("focus", update);
+    node.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      update();
+    });
+  });
+}
+
+function renderLedgerPerformance(data, parlays) {
+  const performance = ledgerPerformanceMetrics([
+    ...(data.performanceEvents || []),
+    ...(parlays?.performanceEvents || []),
+  ]);
+  const rangeFrom = $("#ledger-overview-from")?.value || "";
+  const rangeTo = $("#ledger-overview-to")?.value || "";
+  $("#ledger-performance-period").textContent = rangeFrom || rangeTo
+    ? `留档日期 ${rangeFrom || "最早"} 至 ${rangeTo || "今天"}；只统计已结算且实际产生注数成本的记录。`
+    : "全部留档时间；只统计已结算且实际产生注数成本的记录。";
+  $("#ledger-performance-kpis").innerHTML = [
+    ["已结算投注", `${performance.entries.toLocaleString()} 笔`, "单场与已保存串关合并"],
+    ["滚动30笔 ROI", performance.rollingReady ? ledgerMetric(performance.rollingRoi) : "样本不足", performance.rollingReady ? "按最近30笔实际成本计算" : `还需 ${Math.max(0, 30 - performance.entries)} 笔`],
+    ["最大回撤", performanceMoney(-performance.maximumDrawdown), `当前回撤 ${performanceMoney(-performance.currentDrawdown)}`],
+    ["最长连续未中", `${performance.longestMissStreak} 笔`, `当前连续未中 ${performance.currentMissStreak} 笔`],
+  ].map(([label, value, detail]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(detail)}</small></article>`).join("");
+  $("#ledger-equity-value").textContent = performanceMoney(performance.cumulativeProfit);
+  $("#ledger-rolling-roi-value").textContent = performance.rollingReady
+    ? ledgerMetric(performance.rollingRoi)
+    : "不足30笔";
+  $("#ledger-equity-chart").innerHTML = performanceChart(
+    performance.daily,
+    "cumulativeProfit",
+    { kind: "equity", emptyText: "当前时间范围内还没有可绘制的已结算投注。" },
+  );
+  $("#ledger-roi-chart").innerHTML = performanceChart(
+    performance.daily,
+    "rollingRoi",
+    { kind: "roi", emptyText: "累计满30笔已结算投注后显示滚动 ROI。" },
+  );
+  $("#ledger-performance-detail").textContent = performance.entries
+    ? "将鼠标移到曲线节点可核对当日数据。"
+    : "当前统计口径暂无已结算投注。";
+  bindPerformancePoints();
+}
+
 function ledgerLift(value) {
   if (value === null || value === undefined) return "—";
   const points = Number(value) * 100;
@@ -624,7 +908,7 @@ function renderLedgerBenchmarkPriority(data) {
         </div>
         <div class="ledger-benchmark-lift">
           <strong>${ledgerLift(all.lift)}</strong>
-          <span>相对提升 · ${Number(all.compared || 0).toLocaleString()}条同场对照</span>
+          <span>相对提升 · ${Number(all.fixtures || 0)}场独立比赛 / ${Number(all.compared || 0).toLocaleString()}条预测</span>
         </div>
         <p>时间分块95%区间 ${escapeHtml(interval)} · 优于基准概率 ${escapeHtml(ledgerProbability(all.liftImprovementProbability))}</p>
         <small class="ledger-benchmark-same">${escapeHtml(sameLift)}</small>
@@ -1117,7 +1401,7 @@ function renderLedgerEvidence(data) {
   $("#ledger-evidence-history").textContent =
     `${historyMatches.toLocaleString()} 场`;
   $("#ledger-evidence-history-detail").textContent =
-    `${verifiedHistory.toLocaleString()} 场通过完整性校验，可按时间顺序用于匹配和独立验证。`;
+    `${verifiedHistory.toLocaleString()} 场通过完整性校验，可按历史行顺序用于匹配和回测；已研究的末段不算新的独立验证。`;
   const historyStatus = $("#ledger-evidence-history-status");
   historyStatus.className = historical.stale ? "stale" : "verified";
   historyStatus.textContent = historical.stale ? "报告待重验" : "滚动验证有效";
@@ -1139,7 +1423,7 @@ function renderLedgerEvidence(data) {
           <span>
             <b>${escapeHtml(validationLabels[market])}</b>
             <strong>${ledgerMetric(metrics.accuracy)}</strong>
-            <small>最新独立段 ${Number(metrics.evaluated || 0).toLocaleString()} 场</small>
+            <small>历史末段 ${Number(metrics.evaluated || 0).toLocaleString()} 场</small>
           </span>`)
         .join("")
     : '<small class="ledger-evidence-validation-empty">尚无与当前历史库一致的滚动验证报告。</small>';
@@ -1187,8 +1471,7 @@ function renderLedgerMaturity(data) {
 function renderLedgerRows(rows) {
   const body = $("#ledger-rows");
   if (!rows.length) {
-    body.innerHTML =
-      '<div class="ledger-empty">还没有赛前快照。系统会在使用验证后的默认规则时自动留档。</div>';
+    body.innerHTML = renderLedgerEmpty("single", state.ledgerData?.recordContext);
     return;
   }
 
@@ -1403,15 +1686,14 @@ function renderParlayLedger(parlays) {
     </article>
     <article>
       <span>组合累计盈亏</span>
-      <strong>${totals.settled ? ledgerProfit(totals.simulatedProfit) : "—"}</strong>
+      <strong>${totals.settled ? formatStakeProfit(totals.simulatedProfit) : "—"}</strong>
       <small>ROI ${ledgerMetric(totals.roi)}</small>
     </article>`;
 
   const rows = parlays?.rows || [];
   const body = $("#ledger-parlay-rows");
   if (!rows.length) {
-    body.innerHTML =
-      '<div class="ledger-empty">还没有保存串关。生成组合后，点击“记录此组合”才会进入这里。</div>';
+    body.innerHTML = renderLedgerEmpty("parlay", parlays?.recordContext);
     return;
   }
   body.innerHTML = rows
@@ -1433,8 +1715,8 @@ function renderParlayLedger(parlays) {
         row.status !== "settled"
           ? "⏳ 待结算"
           : row.correct
-            ? `🎉 已红单 +${(row.simulatedProfit || 0).toFixed(2)}元`
-            : `❌ 未中 (-${(row.stake || 1).toFixed(0)}注)`;
+            ? `🎉 已红单 ${formatStakeProfit(row.simulatedProfit)}`
+            : `❌ 未中 ${formatStakeProfit(row.simulatedProfit)}`;
       const sourceText =
         row.selectionSource === "system_default" ? "测算默认" : "自选规则";
       const modeText =
@@ -1484,10 +1766,10 @@ function renderParlayLedger(parlays) {
           <div class="ledger-parlay-details" ${expanded ? "" : "hidden"}>
             <div class="ledger-parlay-legs">${legs}</div>
             <footer>
-              <span>成本 <strong>${Number(row.totalStake).toFixed(0)} 注</strong></span>
+              <span>成本 <strong>${Number(row.totalStake).toFixed(0)} 注（${(Number(row.totalStake) * 2).toFixed(2)} 元）</strong></span>
               <span>赛前估算 <strong>${pct(row.hitProbability, 2)}</strong></span>
               <span>回报指数 <strong>${Number(row.valueIndex).toFixed(3)}</strong></span>
-              <span>实际盈亏 <strong>${row.status === "settled" ? ledgerProfit(row.simulatedProfit) : "待结算"}</strong></span>
+              <span>实际盈亏 <strong>${row.status === "settled" ? formatStakeProfit(row.simulatedProfit) : "待结算"}</strong></span>
             </footer>
           </div>
         </article>`;
@@ -1505,7 +1787,7 @@ function renderParlayLedger(parlays) {
 }
 
 function setLedgerTab(tab) {
-  state.ledgerTab = ["overview", "single", "parlay"].includes(tab)
+  state.ledgerTab = ["overview", "single", "parlay", "comparison"].includes(tab)
     ? tab
     : "overview";
   $$('[data-ledger-tab]').forEach((button) => {
@@ -1516,6 +1798,36 @@ function setLedgerTab(tab) {
   $$('[data-ledger-panel]').forEach((panel) => {
     panel.hidden = panel.dataset.ledgerPanel !== state.ledgerTab;
   });
+  if (state.ledgerTab === "comparison" && !state.predictionAudit && !state.auditLoading) loadPredictionAudit();
+}
+
+function renderPredictionAudit() {
+  const report = state.predictionAudit;
+  if (!report) return;
+  const group = report.cohorts.find(g => g.id === $("#audit-cohort").value);
+  $("#audit-table").innerHTML = renderAuditTable(group, $("#audit-window").value);
+}
+
+async function loadPredictionAudit() {
+  if (state.auditLoading) return;
+  state.auditLoading = true;
+  $("#audit-refresh").disabled = true;
+  $("#audit-error").hidden = true;
+  $("#audit-status").textContent = "正在读取冻结档案并核对数据库赛果…";
+  try {
+    const report = await fetchJson("/api/prediction-audit");
+    state.predictionAudit = report;
+    const select = $("#audit-cohort"), previous = select.value;
+    select.innerHTML = report.cohorts.map(g => `<option value="${escapeHtml(g.id)}">${escapeHtml(auditCohortLabel(g))}</option>`).join("");
+    if (report.cohorts.some(g => g.id === previous)) select.value = previous;
+    $("#audit-status").textContent = `核对时间 ${ledgerDate(report.generatedAt)} · ${report.summary.evaluatedFixtures} 场不同比赛已核对 · ${report.summary.cohorts} 个独立分组`;
+    $("#audit-issues").innerHTML = renderAuditIssues(report.issues, report.attempts);
+    renderPredictionAudit();
+  } catch (error) {
+    $("#audit-error").hidden = false;
+    $("#audit-error").textContent = `复盘读取失败：${error.message}。请点击重新核对赛果重试。`;
+    $("#audit-status").textContent = state.predictionAudit ? "以下保留上次成功结果，当前数据尚未核对。" : "尚无可展示的复盘结果。";
+  } finally { state.auditLoading = false; $("#audit-refresh").disabled = false; }
 }
 
 function populateLedgerLeagues(leagues = []) {
@@ -1544,6 +1856,8 @@ function ledgerRequestParams() {
   return new URLSearchParams({
     pageSize: "20",
     overviewPolicy: $("#ledger-overview-policy").value,
+    overviewFrom: $("#ledger-overview-from").value,
+    overviewTo: $("#ledger-overview-to").value,
     singleStatus: $("#ledger-single-status").value,
     singlePolicy: $("#ledger-single-policy").value,
     singleMarket: $("#ledger-single-market").value,
@@ -1572,12 +1886,14 @@ function renderLedger(data) {
   const overviewParlays = overview.parlays || data.parlays || {};
   $("#ledger-policy-version").textContent = data.policyVersion || "—";
   $("#ledger-policy-version").title = data.policyVersion || "";
-  $("#ledger-source-updated").textContent = data.sourceUpdatedAt
-    ? `历史库更新 ${ledgerDate(data.sourceUpdatedAt)}`
+  $("#ledger-source-updated").textContent = data.historicalSourceUpdatedAt
+    ? `历史库更新 ${ledgerDate(data.historicalSourceUpdatedAt)}`
     : "历史库时间未知";
   renderLedgerEvidence(overview);
   renderLedgerMaturity(overview);
   renderLedgerMarkets(overview);
+  renderLedgerRoiMatrix(overview);
+  renderLedgerPerformance(overview, overviewParlays);
   renderLedgerBenchmarkPriority(overview);
   renderLedgerKeyFindings(overview);
   renderLedgerScopeComparison(overview);
@@ -1597,16 +1913,37 @@ function renderLedger(data) {
     $("#capital-accuracy-detail").textContent =
       `${capital.correct.toLocaleString()} 中 / ${capital.settled.toLocaleString()} 已结算`;
     const profitEl = $("#capital-profit");
+    const profitCard = profitEl?.closest(".capital-card");
     if (profitEl) {
-      const sign = capital.simulatedProfit > 0 ? "+" : "";
-      const profitYuan = (capital.simulatedProfit * 2).toFixed(2);
-      profitEl.textContent = `${sign}${profitYuan} 元 (${sign}${capital.simulatedProfit.toFixed(2)} 注)`;
+      profitEl.textContent = formatStakeProfit(capital.simulatedProfit);
+      profitEl.classList.remove("positive", "negative");
+      profitCard?.classList.remove("profit-positive", "profit-negative");
+      if (Number(capital.simulatedProfit) > 0) {
+        profitEl.classList.add("positive");
+        profitCard?.classList.add("profit-positive");
+      } else if (Number(capital.simulatedProfit) < 0) {
+        profitEl.classList.add("negative");
+        profitCard?.classList.add("profit-negative");
+      }
     }
     const returnYuan = (capital.simulatedReturn * 2).toFixed(2);
     const stakeYuan = (capital.stakeUnits * 2).toFixed(0);
     $("#capital-return").textContent =
       `总返奖 ${returnYuan} 元 (${capital.simulatedReturn.toFixed(2)} 注) / 本金 ${stakeYuan} 元 (${capital.stakeUnits.toLocaleString()} 注)`;
-    $("#capital-roi").textContent = ledgerMetric(capital.roi);
+    const roiEl = $("#capital-roi");
+    const roiCard = roiEl?.closest(".capital-card");
+    if (roiEl) {
+      roiEl.textContent = ledgerMetric(capital.roi);
+      roiEl.classList.remove("positive", "negative");
+      roiCard?.classList.remove("roi-positive", "roi-negative");
+      if (Number(capital.roi) > 0) {
+        roiEl.classList.add("positive");
+        roiCard?.classList.add("roi-positive");
+      } else if (Number(capital.roi) < 0) {
+        roiEl.classList.add("negative");
+        roiCard?.classList.add("roi-negative");
+      }
+    }
     $("#capital-roi-detail").textContent = capital.stakeUnits
       ? `按 ${capital.stakeUnits.toLocaleString()} 注 (${(capital.stakeUnits * 2).toLocaleString()} 元) 成本计算`
       : "暂无已结算投注成本";
@@ -1652,24 +1989,50 @@ function renderLedger(data) {
   setLedgerTab(state.ledgerTab);
 }
 
-async function loadLedger({ settle = false } = {}) {
-  const refresh = $("#ledger-refresh");
-  refresh.disabled = true;
-  refresh.classList.add("busy");
+function renderLedgerEmpty(section, context) {
+  const empty = ledgerEmptyState(context, section);
+  const policy = $(`#ledger-${section}-policy`).value;
+  return `<div class="ledger-empty ledger-empty-action"><strong>${empty.title}</strong><p>${escapeHtml(empty.message)}</p>
+    ${empty.kind !== "empty" ? `<div><button type="button" data-ledger-empty-section="${section}" data-ledger-empty-action="clear">清除筛选</button>${policy !== "all" ? `<button type="button" data-ledger-empty-section="${section}" data-ledger-empty-action="all">查看全部版本</button>` : ""}</div>` : ""}</div>`;
+}
+
+function showLedgerLoading() {
+  $("#ledger-refresh").disabled = true;
+  $("#ledger-refresh").classList.add("busy");
   $("#ledger-loading").hidden = false;
+  $("#ledger-loading").textContent = state.ledgerLoaded
+    ? "正在按当前条件读取；下方暂为上次成功加载的结果…"
+    : "正在读取实战账本…";
+  $("#ledger-request-error").hidden = true;
+  $(".ledger-workspace").setAttribute("aria-busy", "true");
+}
+
+async function loadLedger({ settle = false } = {}) {
+  if (state.ledgerTab === "comparison") return loadPredictionAudit();
+  clearTimeout(ledgerFilterTimer);
+  const request = ledgerRequestGate.begin();
+  const refresh = $("#ledger-refresh");
+  showLedgerLoading();
   try {
     const endpoint = settle ? "/api/ledger/settle" : "/api/ledger";
     const data = await fetchJson(`${endpoint}?${ledgerRequestParams()}`, {
       method: settle ? "POST" : "GET",
     });
+    if (!request.isCurrent()) return;
     state.ledgerLoaded = true;
     renderLedger(data);
   } catch (error) {
-    $("#ledger-loading").textContent = `实战账本读取失败：${error.message}`;
+    if (!request.isCurrent()) return;
+    $("#ledger-request-error").hidden = false;
+    $("#ledger-request-error-text").textContent = `账本读取失败：${error.message}。${state.ledgerLoaded ? "当前显示的是上次成功加载的数据，可能不符合新筛选条件。" : "请确认本地服务正常后重试。"}`;
+    $("#ledger-request-error").scrollIntoView({ block: "center", behavior: "instant" });
   } finally {
-    $("#ledger-loading").hidden = state.ledgerLoaded;
-    refresh.disabled = false;
-    refresh.classList.remove("busy");
+    if (request.isCurrent()) {
+      $("#ledger-loading").hidden = true;
+      refresh.disabled = false;
+      refresh.classList.remove("busy");
+      $(".ledger-workspace").setAttribute("aria-busy", "false");
+    }
   }
 }
 
@@ -1711,7 +2074,13 @@ function matchesReliabilityFilter(match, filter) {
 function matchReliabilityBadges(match) {
   const summary = matchReliabilitySummary(match.id);
   const badges = [];
-  if (!summary) {
+  // 没有玩法通过市场门禁时，每场都挂「暂无稳定项」只是噪音，省掉这枚徽章。
+  const reliabilityBadgeUseful = !state.challengerConfig || anyStandardMarketValidated();
+  if (!reliabilityBadgeUseful) {
+    if (state.matchReliabilityError) {
+      badges.push('<em class="match-reliability-badge">评估暂不可用</em>');
+    }
+  } else if (!summary) {
     const label = state.matchReliabilityError
       ? "评估暂不可用"
       : state.matchReliabilityLoaded
@@ -1720,10 +2089,10 @@ function matchReliabilityBadges(match) {
     badges.push(`<em class="match-reliability-badge">${label}</em>`);
   } else {
     if (isRecommendedMarket(summary, "spf")) {
-      badges.push('<em class="match-reliability-badge recommended">胜平负 · 稳定</em>');
+      badges.push('<em class="match-reliability-badge recommended">🔥 胜平负稳定</em>');
     }
     if (isRecommendedMarket(summary, "hhad")) {
-      badges.push('<em class="match-reliability-badge recommended">让球 · 稳定</em>');
+      badges.push('<em class="match-reliability-badge recommended">🔥 让球稳定</em>');
     }
     if (!badges.length) {
       badges.push('<em class="match-reliability-badge">暂无稳定项</em>');
@@ -1733,17 +2102,17 @@ function matchReliabilityBadges(match) {
   if (relations.length) {
     const multiples = [...new Set(relations.map((relation) => `×${relation.multiple}`))];
     badges.push(
-      `<em class="match-reliability-badge multiple">倍数 · ${escapeHtml(multiples.join(" / "))}</em>`,
+      `<em class="match-reliability-badge multiple">⚽ 0球倍数 · ${escapeHtml(multiples.join(" / "))}</em>`,
     );
   }
   const equalities = matchGoalEqualities(match);
   if (equalities.length) {
     badges.push(
-      `<em class="match-reliability-badge equal">同赔 · ${escapeHtml(equalities.map((item) => item.label).join(" / "))}</em>`,
+      `<em class="match-reliability-badge equal">＝ 同赔 · ${escapeHtml(equalities.map((item) => item.label).join(" / "))}</em>`,
     );
   }
   if (matchHasOddsMovement(match)) {
-    badges.push('<em class="match-reliability-badge movement">变盘</em>');
+    badges.push('<em class="match-reliability-badge movement">📉 变盘</em>');
   }
   return `<div class="match-reliability-badges">${badges.join("")}</div>`;
 }
@@ -1802,11 +2171,47 @@ function updateMatchFilterControls() {
     const needsReliability = ["recommended", "spf", "hhad"].includes(
       filterKey,
     );
+    // 门禁 v2 下未通过的玩法不会出现「历史稳定」，常驻 0 的胶囊只会误导，直接隐藏。
+    if (needsReliability && state.challengerConfig) {
+      const validated = filterKey === "recommended"
+        ? anyStandardMarketValidated()
+        : reliabilityMarketValidated(filterKey);
+      button.hidden = !validated;
+      if (!validated && active) state.matchReliabilityFilter = "all";
+    }
     button.disabled =
       needsReliability &&
       (!state.matchReliabilityLoaded || state.matchReliabilityLoading) &&
       filterKey !== "all";
   });
+}
+
+function renderSingleMatchButton(match) {
+  const active = match.id === state.selectedId ? "active" : "";
+  const hasSpf = Boolean(match.had);
+  const fallback = match.hhad;
+  const odds = hasSpf
+    ? [match.had.h, match.had.d, match.had.a]
+    : fallback
+      ? [fallback.h, fallback.d, fallback.a]
+      : [];
+  const handicap = Number(fallback?.goalLine);
+  const marketText = hasSpf
+    ? oddsText(odds)
+    : fallback
+      ? `仅让球 ${handicap > 0 ? "+" : ""}${handicap}　${oddsText(odds)}`
+      : "普通胜平负未开售";
+  return `
+    <button class="match-button ${active} ${hasSpf ? "" : "limited-market"}" data-id="${escapeHtml(match.id)}">
+      <span class="league-monogram">${escapeHtml(match.league.slice(0, 2))}</span>
+      <span>
+        <strong>${escapeHtml(match.home)} · ${escapeHtml(match.away)}</strong>
+        <small>${escapeHtml(match.league)}　${escapeHtml(marketText)}</small>
+        ${matchQuickPicksHtml(match)}
+        ${hasSpf ? "" : '<em class="market-status">普通胜平负未开售</em>'}
+        ${matchReliabilityBadges(match)}
+      </span>
+    </button>`;
 }
 
 function renderMatchList(query = $("#match-search")?.value || "") {
@@ -1817,45 +2222,57 @@ function renderMatchList(query = $("#match-search")?.value || "") {
     )
     .filter((match) => matchesReliabilityFilter(match, state.matchReliabilityFilter));
   updateMatchFilterControls();
-  $("#match-list").innerHTML = matches.length
-    ? matches
-    .map((match) => {
-      const active = match.id === state.selectedId ? "active" : "";
-      const hasSpf = Boolean(match.had);
-      const fallback = match.hhad;
-      const odds = hasSpf
-        ? [match.had.h, match.had.d, match.had.a]
-        : fallback
-          ? [fallback.h, fallback.d, fallback.a]
-          : [];
-      const handicap = Number(fallback?.goalLine);
-      const marketText = hasSpf
-        ? oddsText(odds)
-        : fallback
-          ? `仅让球 ${handicap > 0 ? "+" : ""}${handicap}　${oddsText(odds)}`
-          : "普通胜平负未开售";
-      return `
-        <button class="match-button ${active} ${hasSpf ? "" : "limited-market"}" data-id="${escapeHtml(match.id)}">
-          <span class="league-monogram">${escapeHtml(match.league.slice(0, 2))}</span>
-          <span>
-            <strong>${escapeHtml(match.home)} · ${escapeHtml(match.away)}</strong>
-            <small>${escapeHtml(match.league)}　${escapeHtml(marketText)}</small>
-            ${matchQuickPicksHtml(match)}
-            ${hasSpf ? "" : '<em class="market-status">普通胜平负未开售</em>'}
-            ${matchReliabilityBadges(match)}
-          </span>
-        </button>`;
-    })
-    .join("")
-    : `<p class="match-list-empty">${
-        state.matchReliabilityFilter === "all"
-          ? "没有找到符合搜索条件的比赛。"
-          : state.matchReliabilityFilter === "multiple"
-            ? "当前没有0球赔率存在整数倍关系的比赛。"
-            : state.matchReliabilityFilter === "equal"
-              ? "当前没有总进球赔率存在同赔关系的比赛。"
-            : "当前条件下没有历史方向足够稳定的比赛。"
-      }</p>`;
+
+  if (!matches.length) {
+    $("#match-list").innerHTML = `<p class="match-list-empty">${
+      state.matchReliabilityFilter === "all"
+        ? "没有找到符合搜索条件的比赛。"
+        : state.matchReliabilityFilter === "multiple"
+          ? "当前没有0球赔率存在整数倍关系的比赛。"
+          : state.matchReliabilityFilter === "equal"
+            ? "当前没有总进球赔率存在同赔关系的比赛。"
+          : "当前条件下没有历史方向足够稳定的比赛。"
+    }</p>`;
+    return;
+  }
+
+  if (state.matchListMode === "league") {
+    if (state.selectedId) {
+      const selectedMatch = matches.find((m) => m.id === state.selectedId);
+      if (selectedMatch && state.collapsedLeagues.has(selectedMatch.league)) {
+        state.collapsedLeagues.delete(selectedMatch.league);
+      }
+    }
+
+    const leagueMap = new Map();
+    matches.forEach((match) => {
+      const list = leagueMap.get(match.league) || [];
+      list.push(match);
+      leagueMap.set(match.league, list);
+    });
+
+    $("#match-list").innerHTML = Array.from(leagueMap.entries())
+      .map(([league, leagueMatches]) => {
+        const isCollapsed = state.collapsedLeagues.has(league);
+        const items = leagueMatches.map(renderSingleMatchButton).join("");
+        return `
+          <div class="league-group ${isCollapsed ? "collapsed" : ""}">
+            <button class="league-group-header" type="button" data-league-toggle="${escapeHtml(league)}" aria-expanded="${!isCollapsed}">
+              <span class="league-group-title">
+                <strong class="league-name">${escapeHtml(league)}</strong>
+                <span class="league-group-count">${leagueMatches.length}</span>
+              </span>
+              <span class="league-group-arrow" aria-hidden="true">${isCollapsed ? "▸" : "▾"}</span>
+            </button>
+            <div class="league-group-body" ${isCollapsed ? "hidden" : ""}>
+              ${items}
+            </div>
+          </div>`;
+      })
+      .join("");
+  } else {
+    $("#match-list").innerHTML = matches.map(renderSingleMatchButton).join("");
+  }
 
   $$(".match-button").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1863,8 +2280,20 @@ function renderMatchList(query = $("#match-search")?.value || "") {
       state.spfPage = 1;
       state.hhadPage = 1;
       state.goalPage = 1;
-      renderMatchList($("#match-search").value);
+      renderMatchList($("#match-search")?.value || "");
       loadPrediction();
+    });
+  });
+
+  $$("[data-league-toggle]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const league = btn.dataset.leagueToggle;
+      if (state.collapsedLeagues.has(league)) {
+        state.collapsedLeagues.delete(league);
+      } else {
+        state.collapsedLeagues.add(league);
+      }
+      renderMatchList($("#match-search")?.value || "");
     });
   });
 }
@@ -2178,6 +2607,9 @@ function applyModelConfig(
   state.movementConfig = movementConfig;
   state.smoothingConfig = smoothingConfig;
   state.challengerConfig = challengerConfig;
+  if (state.matches?.length) renderMatchList();
+  else updateMatchFilterControls();
+  syncRecommendedSelectButton();
   const recommended = recommendationValues();
   if (!recommended) return;
   $("#spf-tolerance").value = recommended.spf;
@@ -2212,6 +2644,7 @@ async function loadPrediction({ quiet = false } = {}) {
       signal: state.requestController.signal,
     });
     state.data = payload;
+    if (payload.configuration) Object.assign(state, payload.configuration);
     updateSelectedMatchReliability(payload);
     renderMatchList();
     renderDashboard();
@@ -2265,6 +2698,8 @@ function renderDashboard() {
     method,
     dataStats,
   } = state.data;
+  renderSampleOrigins();
+  renderRecentForm();
   updateModelConfigStatus();
   const primary = spf;
   const primaryMarket = "spf";
@@ -2283,7 +2718,7 @@ function renderDashboard() {
   $("#confidence-label").textContent = primaryAvailable
     ? `样本置信度：${spf.confidence}`
     : spf
-      ? "联合比分样本不足"
+      ? "双盘口联合样本不足"
       : "普通胜平负未开售";
   $("#spf-hero-sample").textContent =
     spf?.weighting?.enabled
@@ -2294,8 +2729,8 @@ function renderDashboard() {
   const leadingIndex = primaryAvailable && primary?.final
     ? primary.final.indexOf(Math.max(...primary.final))
     : -1;
-  const primaryDisplayProbabilities =
-    primary?.coherence?.displayProbabilities || primary?.final;
+  const primaryDisplayProbabilities = primary?.final;
+  const outcomeLabels = ["胜", "平", "负"];
   ["win", "draw", "loss"].forEach((key, index) => {
     $(`#prob-label-${key}`).textContent = primaryLabels[index];
     const probVal = primaryAvailable && primaryDisplayProbabilities
@@ -2304,6 +2739,9 @@ function renderDashboard() {
     $(`#prob-${key}`).textContent = primaryAvailable
       ? pct(probVal)
       : "—";
+    $(`#prob-count-${key}`).textContent = primaryAvailable
+      ? `${Number(primary?.stats?.counts?.[outcomeLabels[index]] || 0).toLocaleString()} 场`
+      : "— 场";
     const bar = $(`#prob-bar-${key}`);
     if (bar) {
       bar.style.width = primaryAvailable ? `${Math.min(100, Math.max(0, probVal * 100))}%` : "0%";
@@ -2563,13 +3001,7 @@ function renderDashboard() {
   }
   $("#spf-sample-chip").textContent = sampleText(primary);
   $("#goal-sample-chip").textContent = sampleText(goals);
-  const deepResearchBadge = $("#deep-research-badge");
-  if (deepResearchBadge) {
-    const primarySamples = primary?.stats?.total || 0;
-    deepResearchBadge.textContent = primarySamples > 0
-      ? `查看历史明细 (${primarySamples.toLocaleString()} 场) ▾`
-      : "点击展开图表与明细 ▾";
-  }
+  updateDeepResearchBadge(primary?.stats?.total || 0);
   $("#control-spf-samples").textContent = ledgerSampleText(spf);
   $("#control-hhad-samples").textContent = hhad
     ? ledgerSampleText(hhad)
@@ -2590,9 +3022,10 @@ function renderDashboard() {
   $("#spf-tolerance").disabled = !spf;
   syncHistoryTabs({ spf: Boolean(spf), hhad: Boolean(hhad), goals: Boolean(goals) });
 
-  renderHhad(hhad, match.hhad);
+  renderHhad(hhad, match.hhad, spf);
   renderMarketComparisons(spf, hhad, goals);
   renderDecisionReliability(spf, hhad, goals);
+  renderVerdictStrip(spf, hhad, goals);
   renderReliability(spf, hhad, goals);
   renderStability(stability);
   renderProbabilityBars(chartPrediction, chartMarket);
@@ -2623,6 +3056,47 @@ function renderDashboard() {
   }
 }
 
+// 首屏结论条：把「本场能不能参考」放在最显眼的位置，避免把历史最高项误读成推荐。
+function renderVerdictStrip(spf, hhad, goals) {
+  const strip = $("#match-verdict-strip");
+  if (!strip) return;
+  const items = [
+    { key: "spf", name: "胜平负", prediction: spf, pick: $("#prediction-label")?.textContent },
+    { key: "hhad", name: "让球", prediction: hhad, pick: $("#hhad-prediction-label")?.textContent },
+    { key: "goals", name: "总进球双选", prediction: goals, pick: $("#goal-pair-label")?.textContent },
+  ].filter((item) => item.prediction && item.prediction.available !== false)
+    .map(item => ({ ...item,
+      validation: item.key === "goals" ? item.prediction.goalPair?.validation || { status: "unvalidated" }
+        : validationState(item.prediction, state.challengerConfig, item.key),
+      comparison: item.key === "goals" ? item.prediction.goalPair?.marketComparison : item.prediction.marketComparison,
+    }));
+  if (!items.length) {
+    strip.hidden = true;
+    return;
+  }
+  const summary = verdictSummary(items);
+  const recommended = summary.passed;
+  const level = recommended.length ? "pass" : "observe";
+  strip.className = `match-verdict-strip ${level} reveal`;
+  $("#verdict-strip-icon").textContent = recommended.length ? "✓" : "!";
+  $("#verdict-strip-title").textContent = summary.title;
+  $("#verdict-strip-text").textContent = summary.text;
+  $("#verdict-strip-markets").innerHTML = items
+    .map((item) => {
+      const comparison = item.comparison;
+      const passed = recommended.includes(item);
+      const tone = passed ? "pass" : comparison?.status === "historical-divergence" ? "warn" : "neutral";
+      const tag = VALIDATION_LABELS[item.validation.status] || "尚未验证";
+      return `<span class="verdict-chip ${tone}">
+          <small>${escapeHtml(item.name)}</small>
+          <b>${escapeHtml(String(item.pick || "—").trim())}</b>
+          <em>${escapeHtml(tag)}</em>
+        </span>`;
+    })
+    .join("");
+  strip.hidden = false;
+}
+
 function renderDecisionReliability(primary, hhad, goals) {
   [
     ["spf", primary],
@@ -2632,8 +3106,9 @@ function renderDecisionReliability(primary, hhad, goals) {
     const display = reliabilityDisplay(prediction);
     const badge = $(`#${key}-decision-reliability`);
     const reason = $(`#${key}-decision-reason`);
-    badge.textContent = display.label;
+    badge.textContent = display.level === "recommended" ? "✓ 历史稳定" : display.level === "skip" ? "✕ 样本不足" : "仅供观察";
     badge.className = `decision-reliability-badge ${display.level}`;
+    badge.closest(".market-decision")?.classList.toggle("observe-only", display.level !== "recommended");
     badge.setAttribute("aria-label", `可靠性：${display.label}`);
     reason.textContent = display.reason;
     reason.title = display.reason;
@@ -2681,11 +3156,11 @@ function reliabilityCard(title, prediction, { suppressStaleReason = false } = {}
     state.data?.dataStats?.verifiedHistory || 0,
   );
   const addedMatches = Math.max(0, currentVerified - oldVerified);
-  const stale = String(reliability.reason || "").includes("历史数据已更新");
+  const stale = reliability.validation?.status === "stale";
   const plainReason = stale
     ? addedMatches
       ? `历史库比上次验证新增了 ${addedMatches} 场比赛，这套筛选规则还没用新数据重新验证。`
-      : "历史库已经更新，这套筛选规则还没用新数据重新验证。"
+      : "历史数据或生产配置已经变化，这套筛选规则需要重新验证。"
     : reliability.reason;
   const statusText = reliabilityDisplay(prediction).label;
   const oldMetrics = test
@@ -2693,6 +3168,15 @@ function reliabilityCard(title, prediction, { suppressStaleReason = false } = {}
        <div><span>上次测试命中</span><strong>${pct(test.selectedAccuracy || 0, 1)}</strong></div>
        <div><span>筛选覆盖范围</span><strong>${pct(test.coverage || 0, 1)}</strong></div>`
     : `<div><span>历史验证</span><strong>尚无可用结果</strong></div>`;
+  // 门禁 v2 的核心证据：筛出场次命中率是否高于赔率本身已给出的概率。
+  const edge = marketEdgeSummary(test, reliability.marketSignificance);
+  const edgeMarkup = edge
+    ? `<div class="reliability-market-edge ${edge.significant ? "positive" : "neutral"}">
+        <span>回测筛出 ${Number(test.selected || 0).toLocaleString()} 场</span>
+        <strong>市场给 ${pct(edge.market, 1)} · 实际 ${pct(edge.actual, 1)}</strong>
+        <em>${escapeHtml(edge.label)} · 增量 ${signedPp(edge.edge)}（${escapeHtml(edge.interval)}）</em>
+      </div>`
+    : "";
   return `
     <article class="reliability-card ${escapeHtml(reliability.level)}">
       <header>
@@ -2714,6 +3198,7 @@ function reliabilityCard(title, prediction, { suppressStaleReason = false } = {}
         </div>
       </div>
       ${suppressStaleReason && stale ? "" : `<p class="reliability-plain-reason">${escapeHtml(plainReason)}</p>`}
+      ${edgeMarkup}
       <details class="reliability-details">
         <summary>查看验证详情</summary>
         <p>以下是筛选规则的历史验证，不是本场比赛的预测概率。</p>
@@ -2728,26 +3213,16 @@ function reliabilityCard(title, prediction, { suppressStaleReason = false } = {}
 }
 
 function renderReliability(spf, hhad, goals) {
-  const predictions = [spf, hhad, goals];
-  const hasStaleReliability = predictions.some((prediction) =>
-    String(prediction?.reliability?.reason || "").includes("历史数据已更新"),
-  );
+  const statuses = [["spf", spf], ["hhad", hhad], ["goals", goals]]
+    .filter(([, prediction]) => prediction)
+    .map(([market, prediction]) => validationState(prediction, state.challengerConfig, market).status);
+  const hasStaleReliability = statuses.includes("stale");
   const globalNote = $("#reliability-global-note");
-  globalNote.hidden = !hasStaleReliability;
-  if (hasStaleReliability) {
-    const oldVerified = Number(
-      state.challengerConfig?.selection?.data?.verifiedMatches ||
-        state.challengerConfig?.data?.verifiedMatches ||
-        0,
-    );
-    const currentVerified = Number(
-      state.data?.dataStats?.verifiedHistory || 0,
-    );
-    const addedMatches = Math.max(0, currentVerified - oldVerified);
-    globalNote.textContent = addedMatches
-      ? `统一提示：历史库比上次可靠性训练新增了 ${addedMatches} 场比赛；基础相似范围已经重新验证并继续使用，但“重点参考 / 谨慎 / 跳过”的筛选等级尚未重训，因此统一降级。`
-      : "统一提示：基础相似范围已经重新验证并继续使用，但“重点参考 / 谨慎 / 跳过”的筛选等级尚未重训，因此统一降级。";
-  }
+  const labels = [...new Set(statuses.filter(status => status !== "passed").map(status => VALIDATION_LABELS[status]))];
+  globalNote.hidden = !labels.length;
+  globalNote.textContent = hasStaleReliability
+    ? "历史数据或生产配置已变化，旧验证不能继续作为当前参考等级的依据；重新验证前仅作观察。"
+    : `当前单选验证状态：${labels.join("、")}。未通过完整验证不等于已证明与市场持平，具体原因及证据见下方；进球双选独立判断。`;
   $("#reliability-cards").innerHTML = [
     reliabilityCard("胜平负", spf, { suppressStaleReason: hasStaleReliability }),
     reliabilityCard("让球胜平负", hhad, { suppressStaleReason: hasStaleReliability }),
@@ -2861,7 +3336,49 @@ function renderStability(stability) {
   ].join("");
 }
 
-function renderHhad(hhad, market) {
+function renderHhadConditional(hhad, spf) {
+  const panel = $("#hhad-conditional");
+  const spfResult = !spf?.isTie ? String(spf?.predicted || "") : "";
+  const conditional = hhad?.jointCounting?.conditionalHhadBySpf?.[spfResult];
+  const samples = Number(conditional?.samples || 0);
+  if (!panel || !spfResult || !samples) {
+    if (panel) panel.hidden = true;
+    return;
+  }
+
+  const spfLabels = { 胜: "主胜", 平: "平局", 负: "客胜" };
+  const hhadLabels = ["胜", "平", "负"];
+  const entries = hhadLabels.map((label) => ({
+    label,
+    count: Number(conditional.counts?.[label] || 0),
+    probability: Number(conditional.probabilities?.[label] || 0),
+  }));
+  const highest = Math.max(...entries.map((entry) => entry.count));
+  const leaders = entries
+    .filter((entry) => entry.count === highest)
+    .map((entry) => `让${entry.label}`);
+  const conditionLabel = spfLabels[spfResult];
+
+  panel.hidden = false;
+  $("#hhad-conditional-title").textContent = `${conditionLabel}成立时的让球分布`;
+  $("#hhad-conditional-samples").textContent =
+    `${samples.toLocaleString()} 场条件样本`;
+  $("#hhad-conditional-options").innerHTML = entries
+    .map(
+      (entry) => `
+        <span class="${entry.count === highest ? "leading" : ""}">
+          <small>让${entry.label}</small>
+          <strong>${pct(entry.probability)}</strong>
+          <em>${entry.count.toLocaleString()} 场</em>
+        </span>`,
+    )
+    .join("");
+  $("#hhad-conditional-verdict").textContent = leaders.length === 1
+    ? `${conditionLabel}成立时，历史更偏向${leaders[0]}`
+    : `${conditionLabel}成立时，${leaders.join(" / ")}并列最高`;
+}
+
+function renderHhad(hhad, market, spf) {
   $("#hhad-deck").hidden = !hhad || !market;
   if (!hhad || !market) return;
   const available = hhad.available !== false;
@@ -2875,13 +3392,16 @@ function renderHhad(hhad, market) {
   const hhadLeadingIndex = available && hhad?.final
     ? hhad.final.indexOf(Math.max(...hhad.final))
     : -1;
-  const hhadDisplayProbabilities =
-    hhad?.coherence?.displayProbabilities || hhad?.final;
+  const hhadDisplayProbabilities = hhad?.final;
+  const outcomeLabels = ["胜", "平", "负"];
   ["win", "draw", "loss"].forEach((key, index) => {
     const probVal = available && hhadDisplayProbabilities
       ? Number(hhadDisplayProbabilities[index])
       : 0;
     $(`#hhad-prob-${key}`).textContent = available ? pct(probVal) : "—";
+    $(`#hhad-count-${key}`).textContent = available
+      ? `${Number(hhad?.stats?.counts?.[outcomeLabels[index]] || 0).toLocaleString()} 场`
+      : "— 场";
     const bar = $(`#hhad-prob-bar-${key}`);
     if (bar) {
       bar.style.width = available ? `${Math.min(100, Math.max(0, probVal * 100))}%` : "0%";
@@ -2904,6 +3424,7 @@ function renderHhad(hhad, market) {
       }
     }
   });
+  renderHhadConditional(hhad, spf);
 
   const hhadDouble = calculateDoubleChance(hhad, market, true);
   const hhadDoubleEl = $("#hhad-double-chance");
@@ -3866,6 +4387,8 @@ function parlaySettings() {
           minLegOdds,
         }),
     sort: $("#parlay-sort").value,
+    limit: Math.max(1, Math.min(50, Math.trunc(Number($("#parlay-limit").value) || 5))),
+    maxMatchUses: Number($("#parlay-max-match-uses").value),
     sameLeague: $("#same-league").checked,
   };
 }
@@ -3947,7 +4470,24 @@ function defaultParlaySelection(
   };
 }
 
+// 标准串关里「选稳定场」依赖胜平负/让球的「历史稳定」；两者都没过市场门禁时隐藏按钮。
+// 进球双选的「前两名稳定」是另一套口径，不受影响。
+function syncRecommendedSelectButton() {
+  const button = $("#select-recommended-matches");
+  if (!button) return;
+  const goalPairMode = state.parlayMode === "goalsPair";
+  button.hidden = !goalPairMode && Boolean(state.challengerConfig) && !anyStandardMarketValidated();
+  button.textContent = goalPairMode ? "选前两名稳定" : "选稳定场";
+  button.title = goalPairMode
+    ? "只勾选四档相似范围都指向同一组进球前两名的比赛"
+    : "只勾选达到「历史稳定」且符合当前赔率规则的比赛";
+}
+
 function renderCandidates() {
+  syncRecommendedSelectButton();
+  const goalPairMode = state.parlayMode === "goalsPair";
+  const ranks = goalPairMode ? goalCoverageRanks(state.parlayCandidates)
+    : standardProbabilityRanks(state.parlayCandidates, { minLegOdds: parlaySettings().minLegOdds, currentMarkets: state.parlayMarkets });
   $("#candidate-list").innerHTML = state.parlayCandidates
     .map((candidate, index) => {
       const goalPairMode = state.parlayMode === "goalsPair";
@@ -3965,10 +4505,14 @@ function renderCandidates() {
             candidate.markets.hhad?.market;
       const pick =
         candidate.markets[selectedMarket] ||
+        (goalPairMode
+          ? candidate.markets.goalsPair
+          : candidate.markets.had || candidate.markets.hhad) ||
         candidate.markets.had ||
-        candidate.markets.hhad;
+        candidate.markets.hhad ||
+        candidate.markets.goalsPair;
       const selectable = goalPairMode
-        ? Boolean(pick?.eligible)
+        ? Boolean(candidate.markets?.goalsPair?.eligible)
         : eligibleMarkets.length > 0;
       const checked =
         selectable && state.parlaySelected.has(candidate.id);
@@ -3986,7 +4530,7 @@ function renderCandidates() {
           ? `走势 ${pick.movement.sampleSize.toLocaleString()} 场 · 权重 ${pct(pick.movement.weight)}`
           : "走势回退基础模型";
       const movementText = String(rawMovement).replace(/\n+/g, "；");
-      const sampleStats = `${pick.sampleScope || "全部联赛"}相似 ${pick.samples.toLocaleString()} 场 · 置信度 ${escapeHtml(pick.confidence)}`;
+      const sampleStats = `${pick?.sampleScope || "全部联赛"}相似 ${Number(pick?.samples || 0).toLocaleString()} 场 · 置信度 ${escapeHtml(pick?.confidence || "—")}`;
       const sampleDetail = !goalPairMode && !selectable
         ? `所有可用玩法赔率均低于 ${minLegOdds.toFixed(2)}，不参与串关`
         : `${sampleStats} · ${escapeHtml(movementText)}`;
@@ -4004,7 +4548,7 @@ function renderCandidates() {
         ? "divergent"
         : "aligned";
       const marketSignal = marketComparison?.available
-        ? `<b class="candidate-market-signal ${marketSignalClass}" title="${escapeHtml(marketComparison.reason)}">${escapeHtml(marketComparison.label)} · ${signedPp(pick.probabilityDelta)}</b>`
+        ? `<b class="candidate-market-signal ${marketSignalClass}" title="${escapeHtml(marketComparison.reason)}">${escapeHtml(marketComparison.label)} · ${signedPp(pick?.probabilityDelta || 0)}</b>`
         : '<b class="candidate-market-signal unknown">未完成市场比较</b>';
       const marketControl = goalPairMode
         ? '<span class="candidate-market-fixed">总进球双选</span>'
@@ -4013,11 +4557,11 @@ function renderCandidates() {
               ${hadOption}
               ${hhadOption}
             </select>`;
-      const oddsText = goalPairMode
-        ? (pick?.odds || [])
-            .map((value) => Number(value).toFixed(2))
-            .join(" / ")
-        : Number(pick.odds).toFixed(2);
+      const oddsText = Array.isArray(pick?.odds)
+        ? pick.odds.map((value) => Number(value).toFixed(2)).join(" / ")
+        : Number.isFinite(Number(pick?.odds))
+          ? Number(pick.odds).toFixed(2)
+          : "—";
       return `
         <label class="candidate-card ${checked ? "selected" : ""} ${selectable ? "" : "unavailable"} ${goalPairMode ? "goal-pair" : ""}" style="--order:${index}">
           <input
@@ -4039,11 +4583,11 @@ function renderCandidates() {
           </span>
           <span class="candidate-pick">
             ${marketControl}
-            <strong class="${goalPairMode ? "goal-pair-result" : resultClass(pick.predicted)}">${escapeHtml(pick.predicted)}</strong>
+            <strong class="${goalPairMode ? "goal-pair-result" : resultClass(pick?.predicted)}">${escapeHtml(pick?.predicted || "—")}</strong>
           </span>
           <span class="candidate-metric">
             <small>${goalPairMode ? "双选覆盖" : "概率"}</small>
-            <strong>${pct(pick.probability)}</strong>
+            <strong title="${goalPairMode ? "当前有效候选的双选覆盖率排名" : "当前有效候选所选玩法的概率排名；切换玩法后更新"}；按显示值并列，勾选不影响排名">${pct(pick?.probability || 0)}${ranks.has(String(candidate.id)) ? `（${ranks.get(String(candidate.id))}）` : ""}</strong>
           </span>
           <span class="candidate-metric">
             <small>${goalPairMode ? "两档赔率" : "赔率"}</small>
@@ -4051,7 +4595,7 @@ function renderCandidates() {
           </span>
           <span class="candidate-metric candidate-value">
             <small>${goalPairMode ? "双注指数" : "单场指数"}</small>
-            <strong>${Number(pick.valueIndex).toFixed(2)}</strong>
+            <strong>${Number(pick?.valueIndex || 0).toFixed(2)}</strong>
           </span>
         </label>`;
     })
@@ -4070,6 +4614,7 @@ function renderCandidates() {
     select.addEventListener("change", (event) => {
       event.stopPropagation();
       state.parlayMarkets.set(select.dataset.id, select.value);
+      invalidateParlayAudit();
       renderCandidates();
     });
   });
@@ -4077,6 +4622,10 @@ function renderCandidates() {
 }
 
 function showParlayEmpty(title, detail) {
+  state.portfolioRevision += 1;
+  state.portfolioRows = [];
+  state.portfolioSelected.clear();
+  $("#parlay-portfolio").hidden = true;
   $("#combination-list").innerHTML = `
     <div class="parlay-empty">
       <span>1 × 2</span>
@@ -4162,8 +4711,10 @@ async function loadParlayCandidates() {
     const params = new URLSearchParams({
       mode: state.parlayMode,
       legs: parlaySettings().legs,
+      sort: parlaySettings().sort,
       targetOdds: 1.8,
-      limit: 20,
+      limit: parlaySettings().limit,
+      maxMatchUses: parlaySettings().maxMatchUses,
       spfTolerance: Number($("#spf-tolerance").value) / 100,
       hhadTolerance: Number($("#hhad-tolerance").value) / 100,
       goalTolerance: Number($("#goal-tolerance").value) / 1000,
@@ -4186,6 +4737,14 @@ async function loadParlayCandidates() {
     $("#parlay-rule-note").textContent =
       `${payload.method.scope}；${payload.method.probability}；市场一致不表示优势，历史偏离也只作待验证观察。`;
     renderCandidates();
+    if (payload.combinations?.rows?.length) {
+      params.set("selected", [...defaults.selected].join(","));
+      params.set(
+        "markets",
+        [...defaults.markets].map(([id, market]) => `${id}:${market}`).join(","),
+      );
+      renderCombinations(payload, params);
+    }
   } catch (error) {
     $("#candidate-loading").hidden = true;
     $("#parlay-error").hidden = false;
@@ -4233,6 +4792,7 @@ function isDefaultParlayCombination(index) {
 }
 
 async function saveParlayCombination(button, query) {
+  const savedRevision = state.portfolioRevision;
   const params = new URLSearchParams(query);
   params.set("combinationId", button.dataset.combinationId);
   params.set("selectionSource", button.dataset.selectionSource);
@@ -4246,6 +4806,13 @@ async function saveParlayCombination(button, query) {
     button.classList.remove("busy");
     button.classList.add("saved");
     button.textContent = payload.duplicate ? "已存在账本" : "已记录待结算";
+    const index = state.portfolioRows.findIndex(row => row.id === button.dataset.combinationId);
+    if (index >= 0 && savedRevision === state.portfolioRevision) {
+      state.portfolioRows[index].recorded = payload.record;
+      const marker = $(`[data-portfolio-saved="${index}"]`);
+      if (marker) marker.textContent = `已留档 #${payload.record.id} · ${payload.record.status === "settled" ? "已结算" : "待结算"}`;
+      renderParlayPortfolio();
+    }
     state.ledgerLoaded = false;
     showToast(
       payload.duplicate
@@ -4277,15 +4844,54 @@ function bindCombinationSaveButtons(query) {
   });
 }
 
+function portfolioChoice(combination, index) {
+  const saved = combination.recorded;
+  return `<div class="portfolio-card-tools"><label><input type="checkbox" class="portfolio-checkbox" data-portfolio-index="${index}" />纳入核对 <small>组合 ${String(index + 1).padStart(2, "0")}</small></label>
+    <span data-portfolio-saved="${index}">${saved ? `已留档 #${saved.id} · ${saved.status === "settled" ? "已结算" : "待结算"}` : "本版本尚未留档"}</span></div>`;
+}
+
+function renderParlayPortfolio() {
+  const result = summarizeParlayPortfolio(state.portfolioRows, state.portfolioSelected, state.portfolioMode);
+  $("#portfolio-totals").innerHTML = [
+    ["纳入核对", `${result.groups} 组`], ["总注数", `${result.ticketCount} 注`],
+    ["总成本", `${result.costYuan.toFixed(2)} 元`], ["重复使用比赛", `${result.repeatedFixtures} 场`],
+    ["其中已留档", `${result.recordedGroups} 组`],
+  ].map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join("");
+  $("#portfolio-note").textContent = result.groups
+    ? `涉及 ${result.fixtures.length} 场不同比赛；全部未中时，本次核对的本金损失为 ${result.costYuan.toFixed(2)} 元。下面是逐项失效情景，不是同时发生的损失预测，不能把各行金额相加。${result.repeatedFixtures ? "重复比赛可能造成多组同时失效。" : "没有重复比赛，也不代表各场风险独立。"}`
+    : "尚未勾选组合。只统计本次生成且被你纳入核对的组合，不包含其他批次或账本中的全部记录。";
+  $("#portfolio-impact").hidden = !result.groups;
+  $("#portfolio-fixtures").innerHTML = result.fixtures.map(fixture => `<article class="portfolio-fixture ${fixture.combinations.length > 1 ? "repeated" : ""}">
+    <header><div><small>${escapeHtml(fixture.league || "")} · 比赛 ${escapeHtml(fixture.id)}</small><h4>${escapeHtml(fixture.home)} vs ${escapeHtml(fixture.away)}</h4></div><strong>${fixture.combinations.length} 组使用${fixture.combinations.length > 1 ? " · 重复" : ""}</strong></header>
+    ${fixture.conditions.length > 1 ? "<p class=portfolio-note>同场选择不同：以下条件分别判断，不能把一个玩法未中直接套到另一个玩法。</p>" : ""}
+    ${fixture.conditions.map(condition => {
+      const market = condition.market === "goalsPair" ? "总进球双选" : condition.market === "hhad" ? `让球胜平负（主队 ${condition.handicap > 0 ? "+" : ""}${condition.handicap}）` : "胜平负";
+      return `<div class="portfolio-condition"><p>若 <b>${escapeHtml(market)} · ${escapeHtml(condition.labels.join(" / "))}</b> ${condition.market === "goalsPair" ? "两项均未命中" : "未命中"}：</p><div>${condition.combinations.map(index => `<a href="#portfolio-combination-${index}">组合 ${String(index + 1).padStart(2, "0")}</a>`).join(" ")} <span>将失效，对应本金 <b>${condition.costYuan.toFixed(2)} 元</b></span></div></div>`;
+    }).join("")}</article>`).join("");
+  $$(".portfolio-checkbox").forEach(input => {
+    input.checked = state.portfolioSelected.has(Number(input.dataset.portfolioIndex));
+    input.closest(".combination-card").classList.toggle("in-portfolio", input.checked);
+  });
+}
+
 function renderCombinations(payload, saveQuery) {
+  state.portfolioRows = payload.combinations.rows;
+  state.portfolioMode = payload.mode;
+  state.portfolioSelected = new Set();
+  $("#parlay-portfolio").hidden = !state.portfolioRows.length;
   if (payload.mode === "goalsPair") {
     renderGoalPairCombinations(payload);
     bindCombinationSaveButtons(saveQuery);
+    renderParlayPortfolio();
     return;
   }
   const { rows, total, eligible, settings } = payload.combinations;
+  const ranks = standardProbabilityRanks(payload.candidates, {
+    minLegOdds: settings.minLegOdds,
+    currentMarkets: new Map(Object.entries(payload.requestSettings?.markets || {})),
+  });
   $("#combination-summary").textContent =
-    `仅作组合测算：每关赔率 ≥ ${settings.minLegOdds.toFixed(2)}；共计算 ${total.toLocaleString()} 种，${eligible.toLocaleString()} 种达到组合赔率 ${settings.targetOdds.toFixed(2)}，展示前 ${rows.length} 种。`;
+    `仅作组合测算：每关赔率 ≥ ${settings.minLegOdds.toFixed(2)}；共计算 ${total.toLocaleString()} 种，${eligible.toLocaleString()} 种达到组合赔率 ${settings.targetOdds.toFixed(2)}。${parlaySelectionSummary(settings, rows.length)}`;
 
   if (!rows.length) {
     showParlayEmpty(
@@ -4307,13 +4913,14 @@ function renderCombinations(payload, saveQuery) {
       const divergentLegs = Number(assessment.historicalDivergenceLegs || 0);
       const alignedLegs = Number(assessment.marketAlignedLegs || 0);
       return `
-        <article class="combination-card" style="--order:${index}">
+        <article id="portfolio-combination-${index}" class="combination-card" style="--order:${index}">
+          ${portfolioChoice(combination, index)}
           <header>
             <span class="combination-rank">组合 ${String(index + 1).padStart(2, "0")}</span>
             <span class="combination-type">${settings.legs} 串 1</span>
             <span class="combination-confidence level-${confidenceClass(combination.confidenceLevel)}"
-                  title="按各关是否通过所属玩法的已验证筛选规则统计；含建议跳过关时只显示低信心">
-              历史稳定 ${escapeHtml(combination.confidenceLevel || "—")} · 规则通过 ${Number(combination.recommendedLegs || 0)}/${Number(combination.totalLegs || settings.legs)}
+                  title="按各关是否通过所属玩法的已验证筛选规则统计；回测中筛选规则未比赔率更准的玩法不会计入通过">
+              筛选规则通过 ${Number(combination.recommendedLegs || 0)}/${Number(combination.totalLegs || settings.legs)} · ${escapeHtml(combination.confidenceLevel || "—")}
             </span>
           </header>
           <div class="combination-market-note ${divergentLegs ? "divergent" : "aligned"}">
@@ -4332,7 +4939,7 @@ function renderCombinations(payload, saveQuery) {
                     <span class="leg-market">${escapeHtml(leg.marketLabel)} · ${escapeHtml(leg.marketComparison?.label || "未比较")}</span>
                   </span>
                   <span class="leg-result ${resultClass(leg.predicted)}">${escapeHtml(leg.predicted)}</span>
-                  <span class="leg-stat"><small>概率</small>${pct(leg.probability)}</span>
+                  <span class="leg-stat" title="生成时全部有效候选所选玩法的概率排名；相同显示值并列"><small>概率</small>${pct(leg.probability)}${ranks.has(String(leg.id)) ? `（${ranks.get(String(leg.id))}）` : ""}</span>
                   <span class="leg-stat"><small>赔率</small>${Number(leg.odds).toFixed(2)}</span>
                   ${
                     leg.id === combination.weakestLegId
@@ -4368,9 +4975,10 @@ function renderCombinations(payload, saveQuery) {
               <button
                 class="combination-save-button"
                 type="button"
+                ${combination.recorded ? "disabled" : ""}
                 data-combination-id="${escapeHtml(combination.id)}"
                 data-selection-source="${isDefaultParlayCombination(index) ? "system_default" : "user_saved"}"
-              >记录此组合</button>
+              >${combination.recorded ? `已留档 #${combination.recorded.id}` : "记录此组合"}</button>
               <small>${isDefaultParlayCombination(index) ? "测算默认" : "自选规则"}</small>
             </div>
           </footer>
@@ -4378,16 +4986,18 @@ function renderCombinations(payload, saveQuery) {
     })
     .join("");
   bindCombinationSaveButtons(saveQuery);
+  renderParlayPortfolio();
 }
 
 function renderGoalPairCombinations(payload) {
+  const coverageRanks = goalCoverageRanks(payload.candidates);
   const { rows, total, settings } = payload.combinations;
   const sortLabel = settings?.sort === "value" ? "回报指数排序" : "历史联合概率排序";
   const legCount = Number(settings?.legs || 2);
   const stakeUnits = Number(settings?.stakePerCombination || 2 ** legCount);
   const stakeYuan = stakeUnits * 2;
   $("#combination-summary").textContent =
-    `仅作组合测算：共计算 ${total.toLocaleString()} 组双选${legCount}串1 · ${sortLabel}；每组投入${stakeUnits}注（${stakeYuan}元），展示前 ${rows.length} 种。`;
+    `仅作组合测算：共计算 ${total.toLocaleString()} 组双选${legCount}串1 · ${sortLabel}；每组投入${stakeUnits}注（${stakeYuan}元）。${parlaySelectionSummary(settings, rows.length)}`;
   if (!rows.length) {
     showParlayEmpty(
       "暂时无法生成总进球双选组合",
@@ -4423,7 +5033,8 @@ function renderGoalPairCombinations(payload) {
       }).join("");
 
       return `
-        <article class="combination-card goal-pair-combination" style="--order:${index}">
+        <article id="portfolio-combination-${index}" class="combination-card goal-pair-combination" style="--order:${index}">
+          ${portfolioChoice(combination, index)}
           <header>
             <span class="combination-rank">双选组合 ${String(index + 1).padStart(2, "0")}</span>
             <span class="combination-type">${legCount} 串 1 · 双选${stakeUnits}注</span>
@@ -4444,7 +5055,7 @@ function renderGoalPairCombinations(payload) {
                     <span class="leg-market">总进球双选 · ${escapeHtml(leg.marketComparison?.label || "未比较")} · ${Number(leg.samples).toLocaleString()}场相似</span>
                   </span>
                   <span class="leg-result goal-pair-result">${escapeHtml(leg.predicted)}</span>
-                  <span class="leg-stat"><small>覆盖率</small>${pct(leg.probability)}</span>
+                  <span class="leg-stat" title="当前候选比赛的双选覆盖率排名；相同显示值并列"><small>覆盖率</small>${pct(leg.probability)}${coverageRanks.has(String(leg.id)) ? `（${coverageRanks.get(String(leg.id))}）` : ""}</span>
                   <span class="leg-stat"><small>两档赔率</small>${leg.odds.map((odd) => Number(odd).toFixed(2)).join(" / ")}</span>
                 </div>`,
               )
@@ -4482,9 +5093,10 @@ function renderGoalPairCombinations(payload) {
               <button
                 class="combination-save-button"
                 type="button"
+                ${combination.recorded ? "disabled" : ""}
                 data-combination-id="${escapeHtml(combination.id)}"
                 data-selection-source="${isDefaultParlayCombination(index) ? "system_default" : "user_saved"}"
-              >记录此组合</button>
+              >${combination.recorded ? `已留档 #${combination.recorded.id}` : "记录此组合"}</button>
               <small>${isDefaultParlayCombination(index) ? "测算默认" : "自选规则"}</small>
             </div>
           </footer>
@@ -4511,7 +5123,8 @@ async function generateParlay() {
     mode: settings.mode,
     legs: settings.legs,
     sort: settings.sort,
-    limit: 20,
+    limit: settings.limit,
+    maxMatchUses: settings.maxMatchUses,
     spfTolerance: Number($("#spf-tolerance").value) / 100,
     hhadTolerance: Number($("#hhad-tolerance").value) / 100,
     goalTolerance: Number($("#goal-tolerance").value) / 1000,
@@ -4526,17 +5139,20 @@ async function generateParlay() {
     params.set("minLegOdds", settings.minLegOdds);
   }
   const button = $("#generate-parlay");
+  showParlayEmpty("正在重新生成组合…", "上次核对已清空，生成后可重新勾选。");
+  const revision = state.portfolioRevision;
   button.disabled = true;
   button.classList.add("busy");
   try {
     const payload = await fetchJson(`/api/parlay?${params}`);
+    if (revision !== state.portfolioRevision) return;
     renderCombinations(payload, params);
     const comboSection = $(".combination-section");
     if (comboSection) {
       comboSection.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   } catch (error) {
-    showParlayEmpty("组合生成失败", error.message);
+    if (revision === state.portfolioRevision) showParlayEmpty("组合生成失败", error.message);
   } finally {
     button.disabled = false;
     button.classList.remove("busy");
@@ -4549,6 +5165,8 @@ function resetParlay() {
   $('input[name="parlay-legs"][value="2"]').checked = true;
   $("#parlay-min-leg-odds").value = String(MIN_PARLAY_LEG_ODDS);
   $("#parlay-target-odds").value = "1.8";
+  $("#parlay-limit").value = "5";
+  $("#parlay-max-match-uses").value = "2";
   // 正式默认仍使用组合命中率；最弱一环保留为未经时间验证的研究排序。
   $("#parlay-sort").value = "probability";
   applyParlayMode("standard");
@@ -4556,6 +5174,7 @@ function resetParlay() {
 
 let controlTimer;
 function refreshFromControls() {
+  if (state.portfolioRows.length) invalidateParlayAudit();
   updateToleranceLabels();
   state.spfPage = 1;
   state.hhadPage = 1;
@@ -4566,6 +5185,38 @@ function refreshFromControls() {
     loadPrediction({ quiet: true }).then(() => loadMatchReliability());
     if (state.activeView === "parlay") loadParlayCandidates();
   }, 180);
+}
+
+function localDateInputValue(date) {
+  return ledgerCalendarDate(date);
+}
+
+function applyLedgerOverviewRange(range) {
+  const from = $("#ledger-overview-from");
+  const to = $("#ledger-overview-to");
+  const custom = range === "custom";
+  from.disabled = !custom;
+  to.disabled = !custom;
+  if (range === "all") {
+    from.value = "";
+    to.value = "";
+    return;
+  }
+  if (range === "7" || range === "30") {
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(start.getDate() - (Number(range) - 1));
+    from.value = localDateInputValue(start);
+    to.value = localDateInputValue(end);
+    return;
+  }
+  if (!from.value && !to.value) {
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(start.getDate() - 29);
+    from.value = localDateInputValue(start);
+    to.value = localDateInputValue(end);
+  }
 }
 
 $("#match-search").addEventListener("input", (event) => renderMatchList(event.target.value));
@@ -4597,23 +5248,60 @@ $("#parlay-min-leg-odds").addEventListener("change", () => {
   loadParlayCandidates();
 });
 $("#retry-button").addEventListener("click", loadMatches);
+$("#refresh-current-data").addEventListener("click", loadMatches);
+$("#ledger-retry").addEventListener("click", () => loadLedger());
 $("#parlay-retry").addEventListener("click", loadParlayCandidates);
 $("#ledger-refresh").addEventListener("click", () => loadLedger({ settle: true }));
 $("#ledger-overview-policy").addEventListener("change", () =>
   loadLedger({ settle: false }),
 );
+$("#ledger-overview-range").addEventListener("change", (event) => {
+  applyLedgerOverviewRange(event.target.value);
+  loadLedger({ settle: false });
+});
+$("#ledger-overview-from").addEventListener("change", () => {
+  const from = $("#ledger-overview-from");
+  const to = $("#ledger-overview-to");
+  if (from.value && to.value && from.value > to.value) to.value = from.value;
+  loadLedger({ settle: false });
+});
+$("#ledger-overview-to").addEventListener("change", () => {
+  const from = $("#ledger-overview-from");
+  const to = $("#ledger-overview-to");
+  if (from.value && to.value && to.value < from.value) from.value = to.value;
+  loadLedger({ settle: false });
+});
 $$('[data-ledger-tab]').forEach((button) => {
   button.addEventListener("click", () => setLedgerTab(button.dataset.ledgerTab));
 });
+$("#audit-refresh").addEventListener("click", loadPredictionAudit);
+$("#audit-cohort").addEventListener("change", renderPredictionAudit);
+$("#audit-window").addEventListener("change", renderPredictionAudit);
 
 let ledgerFilterTimer;
 function reloadLedgerSection(section, { delayed = false } = {}) {
+  ledgerRequestGate.invalidate();
+  showLedgerLoading();
   if (section === "single") state.ledgerSinglePage = 1;
   else state.ledgerParlayPage = 1;
   clearTimeout(ledgerFilterTimer);
   const run = () => loadLedger({ settle: false });
   if (delayed) ledgerFilterTimer = setTimeout(run, 220);
   else run();
+}
+
+for (const container of [$("#ledger-rows"), $("#ledger-parlay-rows")]) {
+  container.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-ledger-empty-action]");
+    if (!button) return;
+    const section = button.dataset.ledgerEmptySection;
+    if (button.dataset.ledgerEmptyAction === "all") $(`#ledger-${section}-policy`).value = "all";
+    const fields = section === "single" ? ["status", "market", "scope", "league"] : ["status", "mode", "source"];
+    fields.forEach((field) => { $(`#ledger-${section}-${field}`).value = "all"; });
+    ["query", "from", "to"].forEach((field) => { $(`#ledger-${section}-${field}`).value = ""; });
+    if (section === "single") state.ledgerDrilldown = null;
+    reloadLedgerSection(section);
+  });
 }
 
 [
@@ -4688,7 +5376,55 @@ $("#ledger-parlay-next").addEventListener("click", () => {
   loadLedger({ settle: false });
 });
 $("#generate-parlay").addEventListener("click", generateParlay);
+$("#combination-list").addEventListener("change", event => {
+  if (!event.target.matches(".portfolio-checkbox")) return;
+  const index = Number(event.target.dataset.portfolioIndex);
+  if (event.target.checked) state.portfolioSelected.add(index);
+  else state.portfolioSelected.delete(index);
+  renderParlayPortfolio();
+});
+$("#portfolio-select-all").addEventListener("click", () => {
+  state.portfolioSelected = new Set(state.portfolioRows.map((_, index) => index));
+  renderParlayPortfolio();
+});
+$("#portfolio-clear").addEventListener("click", () => {
+  state.portfolioSelected.clear();
+  renderParlayPortfolio();
+});
+function invalidateParlayAudit() {
+  showParlayEmpty("选场或规则已变化", "请重新生成组合；此前的核对选择已清空，不会沿用旧组合成本。");
+}
+$("#parlay-view").addEventListener("change", event => {
+  if (event.target.matches('.candidate-checkbox, .candidate-market-select, .rule-panel input, .rule-panel select')) invalidateParlayAudit();
+});
+$("#parlay-view").addEventListener("click", event => {
+  if (event.target.closest("#select-recommended-matches, #select-all-matches, #clear-all-matches")) invalidateParlayAudit();
+});
 $("#reset-parlay").addEventListener("click", resetParlay);
+$("#select-recommended-matches")?.addEventListener("click", () => {
+  const settings = parlaySettings();
+  const recommended = recommendedParlaySelection(state.parlayCandidates, {
+    mode: state.parlayMode,
+    minLegOdds: settings.minLegOdds,
+    currentMarkets: state.parlayMarkets,
+  });
+
+  if (!recommended.selected.size) {
+    const oddsRule = state.parlayMode === "goalsPair"
+      ? ""
+      : `且赔率不低于 ${settings.minLegOdds.toFixed(2)}`;
+    showToast(`当前没有达到「历史稳定」${oddsRule}的候选比赛`, {
+      type: "warning",
+    });
+    return;
+  }
+  state.parlaySelected = recommended.selected;
+  state.parlayMarkets = recommended.markets;
+  renderCandidates();
+  showToast(`已为您自动勾选 ${recommended.selected.size} 场历史稳定的比赛`, {
+    type: "success",
+  });
+});
 $("#select-all-matches").addEventListener("click", () => {
   state.parlaySelected = new Set(
     state.parlayCandidates
@@ -4726,8 +5462,11 @@ $$('input[name="parlay-mode"]').forEach((input) => {
 
 $$('input[name="parlay-legs"]').forEach((input) => {
   input.addEventListener("change", () => {
-    if (input.checked && state.parlayMode === "goalsPair") {
-      applyParlayMode("goalsPair");
+    if (input.checked) {
+      if (state.parlayMode === "goalsPair") {
+        applyParlayMode("goalsPair");
+      }
+      generateParlay();
     }
   });
 });
@@ -4758,8 +5497,107 @@ $("#next-page").addEventListener("click", () => {
   loadPrediction({ quiet: true });
 });
 
+function updateDeepResearchBadge(sampleCount) {
+  const drawer = $("#deep-research-drawer");
+  const badge = $("#deep-research-badge");
+  if (!drawer || !badge) return;
+  if (sampleCount !== undefined) {
+    badge.dataset.sampleCount = String(Number(sampleCount) || 0);
+  }
+  const samples = Number(badge.dataset.sampleCount || 0);
+  badge.textContent = drawer.open
+    ? samples > 0
+      ? `收起历史明细 (${samples.toLocaleString()} 场) ▴`
+      : "点击收起 ▴"
+    : samples > 0
+      ? `查看历史明细 (${samples.toLocaleString()} 场) ▾`
+      : "点击展开图表与明细 ▾";
+}
+
+function initDeepResearchDrawer() {
+  const drawer = $("#deep-research-drawer");
+  if (!drawer) return;
+
+  const savedOpen = localStorage.getItem("betwin_drawer_open");
+  if (savedOpen === "true") {
+    drawer.open = true;
+  }
+  updateDeepResearchBadge();
+
+  drawer.addEventListener("toggle", () => {
+    updateDeepResearchBadge();
+    localStorage.setItem(
+      "betwin_drawer_open",
+      drawer.open ? "true" : "false",
+    );
+  });
+}
+
+function initMatchModeToggle() {
+  const timelineBtn = $("#match-mode-timeline");
+  const leagueBtn = $("#match-mode-league");
+  if (!timelineBtn || !leagueBtn) return;
+
+  const updateModeButtons = () => {
+    timelineBtn.classList.toggle("active", state.matchListMode === "timeline");
+    leagueBtn.classList.toggle("active", state.matchListMode === "league");
+  };
+
+  timelineBtn.addEventListener("click", () => {
+    if (state.matchListMode === "timeline") return;
+    state.matchListMode = "timeline";
+    localStorage.setItem("betwin_match_mode", "timeline");
+    updateModeButtons();
+    renderMatchList($("#match-search")?.value || "");
+  });
+
+  leagueBtn.addEventListener("click", () => {
+    if (state.matchListMode === "league") return;
+    state.matchListMode = "league";
+    localStorage.setItem("betwin_match_mode", "league");
+    updateModeButtons();
+    renderMatchList($("#match-search")?.value || "");
+  });
+
+  const savedMode = localStorage.getItem("betwin_match_mode");
+  if (savedMode === "league" || savedMode === "timeline") {
+    state.matchListMode = savedMode;
+  }
+  updateModeButtons();
+}
+
+function switchMatchDetailTab(tabKey) {
+  state.matchDetailTab = tabKey;
+  $$(".match-tab-btn").forEach((btn) => {
+    const isActive = btn.dataset.matchTab === tabKey;
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-selected", String(isActive));
+  });
+  $$(".match-tab-panel").forEach((panel) => {
+    const isActive = panel.dataset.matchPanel === tabKey;
+    panel.classList.toggle("active", isActive);
+    panel.hidden = !isActive;
+  });
+}
+
+function initMatchDetailTabs() {
+  const tabContainer = $("#match-detail-tabs");
+  if (!tabContainer) return;
+
+  $$(".match-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      switchMatchDetailTab(btn.dataset.matchTab);
+    });
+  });
+
+  switchMatchDetailTab(state.matchDetailTab || "archive");
+}
+
 $("#theme-toggle-btn")?.addEventListener("click", toggleTheme);
 initTheme();
+initDeepResearchDrawer();
+initMatchModeToggle();
+initMatchDetailTabs();
 
 document.addEventListener("click", (event) => {
   const tip = event.target.closest(".term-tip");

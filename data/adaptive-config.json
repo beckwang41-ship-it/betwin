@@ -1,20 +1,20 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-28T05:14:59.983Z",
+  "generatedAt": "2026-09-16T15:56:09.959Z",
   "candidateOnly": true,
   "runtimeEnabled": false,
   "data": {
     "database": "betwin.db",
-    "verifiedMatches": 9021,
-    "sourceUpdatedAt": "2026-08-28T05:00:08+00:00",
-    "spfHistory": 9198,
-    "hhadHistory": 9599,
-    "pairedHistory": 9196,
+    "verifiedMatches": 9303,
+    "sourceUpdatedAt": "2026-09-16T15:34:06+00:00",
+    "spfHistory": 9481,
+    "hhadHistory": 9908,
+    "pairedHistory": 9479,
     "thresholdSource": "locked-formal-production-rules",
     "goalMatchingVersion": "goal-zero-composite-v1"
   },
   "methodology": {
-    "matchingVersion": "spf-hhad-joint-v1",
+    "matchingVersion": "spf-hhad-paired-direct-results-v3",
     "goalMatchingVersion": "goal-zero-composite-v1",
     "ordering": "每个来源文件按source_row逐场回测，每场只使用它之前的数据",
     "selection": "前80%选择最低样本数，最新20%只验证；调参与验证均优于固定范围才启用",
@@ -39,112 +39,262 @@
       ],
       "baselineThreshold": 0.07,
       "minSamples": null,
-      "selected": null,
+      "selected": {
+        "minSamples": 100,
+        "tuning": {
+          "targets": 7048,
+          "evaluated": 6928,
+          "accuracy": 0.4951164357197845,
+          "topTwoCoverage": 0.763135103926097,
+          "logLoss": 1.036042182834235,
+          "brier": 0.6168248897037659,
+          "coverage": 0.9829738933030647,
+          "medianSamples": 35,
+          "thresholdCounts": {
+            "0.07": 6927,
+            "0.05": 1
+          }
+        },
+        "validation": {
+          "targets": 1860,
+          "evaluated": 1843,
+          "accuracy": 0.5094049556881896,
+          "topTwoCoverage": 0.7802495930548019,
+          "logLoss": 1.005400911824128,
+          "brier": 0.6005532069985298,
+          "coverage": 0.9908602150537634,
+          "medianSamples": 84,
+          "thresholdCounts": {
+            "0.07": 1795,
+            "0.05": 48
+          }
+        },
+        "tuningComparison": {
+          "evaluated": 6928,
+          "adaptive": {
+            "targets": 6928,
+            "evaluated": 6928,
+            "accuracy": 0.4951164357197845,
+            "topTwoCoverage": 0.763135103926097,
+            "logLoss": 1.036042182834235,
+            "brier": 0.6168248897037659,
+            "coverage": 1,
+            "medianSamples": 35,
+            "thresholdCounts": {
+              "0.07": 6927,
+              "0.05": 1
+            }
+          },
+          "baseline": {
+            "targets": 6928,
+            "evaluated": 6928,
+            "accuracy": 0.4951164357197845,
+            "topTwoCoverage": 0.763135103926097,
+            "logLoss": 1.036043649934461,
+            "brier": 0.6168260183241598,
+            "coverage": 1,
+            "medianSamples": 35,
+            "thresholdCounts": {
+              "0.07": 6928
+            }
+          },
+          "delta": {
+            "accuracy": 0,
+            "topTwoCoverage": 0,
+            "logLoss": -0.0000014671002259714072,
+            "brier": -0.0000011286203939198103
+          }
+        },
+        "validationComparison": {
+          "evaluated": 1843,
+          "adaptive": {
+            "targets": 1843,
+            "evaluated": 1843,
+            "accuracy": 0.5094049556881896,
+            "topTwoCoverage": 0.7802495930548019,
+            "logLoss": 1.005400911824128,
+            "brier": 0.6005532069985298,
+            "coverage": 1,
+            "medianSamples": 84,
+            "thresholdCounts": {
+              "0.07": 1795,
+              "0.05": 48
+            }
+          },
+          "baseline": {
+            "targets": 1843,
+            "evaluated": 1843,
+            "accuracy": 0.5099475492855852,
+            "topTwoCoverage": 0.7780792186652198,
+            "logLoss": 1.0054059612808788,
+            "brier": 0.6005435538698979,
+            "coverage": 1,
+            "medianSamples": 84,
+            "thresholdCounts": {
+              "0.07": 1843
+            }
+          },
+          "delta": {
+            "accuracy": -0.0005425935973956131,
+            "topTwoCoverage": 0.0021703743895821193,
+            "logLoss": -0.000005049456750727543,
+            "brier": 0.00000965312863188128
+          }
+        },
+        "strategy": {
+          "status": "uncertain",
+          "reason": "候选相对基线的ROI提升区间包含0",
+          "passed": false,
+          "positiveEdge": false,
+          "evaluated": 1843,
+          "iterations": 1000,
+          "blockSize": 20,
+          "confidence": 0.95,
+          "candidate": {
+            "evaluatedMatches": 1843,
+            "bettingMatches": 1839,
+            "noPredictionMatches": 4,
+            "wins": 957,
+            "multiSelectionMatches": 45,
+            "stakeUnits": 1884,
+            "returnUnits": 1652.3100000000002,
+            "profitUnits": -231.68999999999983,
+            "roi": -0.12297770700636934
+          },
+          "baseline": {
+            "evaluatedMatches": 1843,
+            "bettingMatches": 1839,
+            "noPredictionMatches": 4,
+            "wins": 958,
+            "multiSelectionMatches": 45,
+            "stakeUnits": 1884,
+            "returnUnits": 1653.0700000000002,
+            "profitUnits": -230.92999999999984,
+            "roi": -0.12257430997876849
+          },
+          "roiDelta": -0.00040339702760085194,
+          "intervals": {
+            "candidate": {
+              "lower": -0.16481756512727738,
+              "upper": -0.07922050004881791
+            },
+            "baseline": {
+              "lower": -0.16542531788982823,
+              "upper": -0.07918709985686831
+            },
+            "delta": {
+              "lower": -0.00440683804442554,
+              "upper": 0.00433891204580846
+            }
+          },
+          "improvementProbability": 0.379
+        }
+      },
       "candidates": [
         {
           "minSamples": 30,
           "tuning": {
-            "targets": 6822,
-            "evaluated": 6793,
-            "accuracy": 0.4974483536974337,
-            "topTwoCoverage": 0.7634329456793758,
-            "logLoss": 1.0354833869573588,
-            "brier": 0.6158963423153088,
-            "coverage": 0.9957490472002345,
+            "targets": 7048,
+            "evaluated": 6928,
+            "accuracy": 0.4939857582755967,
+            "topTwoCoverage": 0.7609699769053118,
+            "logLoss": 1.0384980978843286,
+            "brier": 0.618044628017083,
+            "coverage": 0.9829738933030647,
             "medianSamples": 32,
             "thresholdCounts": {
-              "0.07": 5158,
-              "0.05": 1581,
-              "0.03": 54
+              "0.07": 5251,
+              "0.05": 1671,
+              "0.03": 6
             }
           },
           "validation": {
-            "targets": 1815,
-            "evaluated": 1811,
-            "accuracy": 0.49898766795508925,
-            "topTwoCoverage": 0.7702926559911651,
-            "logLoss": 1.0182662545227863,
-            "brier": 0.6082667566683762,
-            "coverage": 0.9977961432506887,
+            "targets": 1860,
+            "evaluated": 1843,
+            "accuracy": 0.5052450714414903,
+            "topTwoCoverage": 0.7759088442756376,
+            "logLoss": 1.009095706864657,
+            "brier": 0.6025053735957664,
+            "coverage": 0.9908602150537634,
             "medianSamples": 47,
             "thresholdCounts": {
-              "0.07": 816,
-              "0.05": 921,
-              "0.03": 74
+              "0.05": 938,
+              "0.07": 863,
+              "0.03": 42
             }
           },
           "tuningComparison": {
-            "evaluated": 6793,
+            "evaluated": 6928,
             "adaptive": {
-              "targets": 6793,
-              "evaluated": 6793,
-              "accuracy": 0.4974483536974337,
-              "topTwoCoverage": 0.7634329456793758,
-              "logLoss": 1.0354833869573588,
-              "brier": 0.6158963423153088,
+              "targets": 6928,
+              "evaluated": 6928,
+              "accuracy": 0.4939857582755967,
+              "topTwoCoverage": 0.7609699769053118,
+              "logLoss": 1.0384980978843286,
+              "brier": 0.618044628017083,
               "coverage": 1,
               "medianSamples": 32,
               "thresholdCounts": {
-                "0.07": 5158,
-                "0.05": 1581,
-                "0.03": 54
+                "0.07": 5251,
+                "0.05": 1671,
+                "0.03": 6
               }
             },
             "baseline": {
-              "targets": 6793,
-              "evaluated": 6793,
-              "accuracy": 0.4976691692428481,
-              "topTwoCoverage": 0.7656411011335198,
-              "logLoss": 1.0343236014964405,
-              "brier": 0.6154577658445184,
+              "targets": 6928,
+              "evaluated": 6928,
+              "accuracy": 0.4951164357197845,
+              "topTwoCoverage": 0.763135103926097,
+              "logLoss": 1.036043649934461,
+              "brier": 0.6168260183241598,
               "coverage": 1,
-              "medianSamples": 34,
+              "medianSamples": 35,
               "thresholdCounts": {
-                "0.07": 6793
+                "0.07": 6928
               }
             },
             "delta": {
-              "accuracy": -0.00022081554541442117,
-              "topTwoCoverage": -0.0022081554541439896,
-              "logLoss": 0.0011597854609182168,
-              "brier": 0.000438576470790375
+              "accuracy": -0.0011306774441877665,
+              "topTwoCoverage": -0.002165127020785196,
+              "logLoss": 0.0024544479498675997,
+              "brier": 0.0012186096929232004
             }
           },
           "validationComparison": {
-            "evaluated": 1811,
+            "evaluated": 1843,
             "adaptive": {
-              "targets": 1811,
-              "evaluated": 1811,
-              "accuracy": 0.49898766795508925,
-              "topTwoCoverage": 0.7702926559911651,
-              "logLoss": 1.0182662545227863,
-              "brier": 0.6082667566683762,
+              "targets": 1843,
+              "evaluated": 1843,
+              "accuracy": 0.5052450714414903,
+              "topTwoCoverage": 0.7759088442756376,
+              "logLoss": 1.009095706864657,
+              "brier": 0.6025053735957664,
               "coverage": 1,
               "medianSamples": 47,
               "thresholdCounts": {
-                "0.07": 816,
-                "0.05": 921,
-                "0.03": 74
+                "0.05": 938,
+                "0.07": 863,
+                "0.03": 42
               }
             },
             "baseline": {
-              "targets": 1811,
-              "evaluated": 1811,
-              "accuracy": 0.504233388551445,
-              "topTwoCoverage": 0.774157923799006,
-              "logLoss": 1.0135662113311674,
-              "brier": 0.6059605510715518,
+              "targets": 1843,
+              "evaluated": 1843,
+              "accuracy": 0.5099475492855852,
+              "topTwoCoverage": 0.7780792186652198,
+              "logLoss": 1.0054059612808788,
+              "brier": 0.6005435538698979,
               "coverage": 1,
-              "medianSamples": 83,
+              "medianSamples": 84,
               "thresholdCounts": {
-                "0.07": 1811
+                "0.07": 1843
               }
             },
             "delta": {
-              "accuracy": -0.005245720596355696,
-              "topTwoCoverage": -0.003865267807840911,
-              "logLoss": 0.0047000431916188745,
-              "brier": 0.0023062055968243733
+              "accuracy": -0.004702477844094832,
+              "topTwoCoverage": -0.0021703743895822303,
+              "logLoss": 0.0036897455837783255,
+              "brier": 0.0019618197258685077
             }
           },
           "strategy": {
@@ -152,154 +302,150 @@
             "reason": "候选相对基线的ROI提升区间包含0",
             "passed": false,
             "positiveEdge": false,
-            "evaluated": 1811,
+            "evaluated": 1843,
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
             "candidate": {
-              "evaluatedMatches": 1811,
-              "bettingMatches": 1809,
-              "noPredictionMatches": 2,
-              "wins": 927,
+              "evaluatedMatches": 1843,
+              "bettingMatches": 1838,
+              "noPredictionMatches": 5,
+              "wins": 954,
               "multiSelectionMatches": 61,
-              "stakeUnits": 1870,
-              "returnUnits": 1617.3799999999985,
-              "profitUnits": -252.62000000000148,
-              "roi": -0.13509090909090987
+              "stakeUnits": 1899,
+              "returnUnits": 1665.9700000000005,
+              "profitUnits": -233.02999999999952,
+              "roi": -0.12271195365982071
             },
             "baseline": {
-              "evaluatedMatches": 1811,
-              "bettingMatches": 1809,
-              "noPredictionMatches": 2,
-              "wins": 932,
-              "multiSelectionMatches": 46,
-              "stakeUnits": 1855,
-              "returnUnits": 1612.0599999999984,
-              "profitUnits": -242.94000000000165,
-              "roi": -0.13096495956873405
+              "evaluatedMatches": 1843,
+              "bettingMatches": 1839,
+              "noPredictionMatches": 4,
+              "wins": 958,
+              "multiSelectionMatches": 45,
+              "stakeUnits": 1884,
+              "returnUnits": 1653.0700000000002,
+              "profitUnits": -230.92999999999984,
+              "roi": -0.12257430997876849
             },
-            "roiDelta": -0.00412594952217582,
+            "roiDelta": -0.00013764368105222136,
             "intervals": {
               "candidate": {
-                "lower": -0.17705510086961035,
-                "upper": -0.09424029982288264
+                "lower": -0.1648572175732229,
+                "upper": -0.08154578822494973
               },
               "baseline": {
-                "lower": -0.1736270793812931,
-                "upper": -0.08876813839733075
+                "lower": -0.16542531788982823,
+                "upper": -0.07918709985686831
               },
               "delta": {
-                "lower": -0.026265699527550534,
-                "upper": 0.017931254425366635
+                "lower": -0.020527496380462203,
+                "upper": 0.02082852189192378
               }
             },
-            "improvementProbability": 0.375
+            "improvementProbability": 0.492
           }
         },
         {
           "minSamples": 50,
           "tuning": {
-            "targets": 6822,
-            "evaluated": 6793,
-            "accuracy": 0.4971539329702145,
-            "topTwoCoverage": 0.766671573678787,
-            "logLoss": 1.0343208941777995,
-            "brier": 0.6154196543551612,
-            "coverage": 0.9957490472002345,
-            "medianSamples": 34,
+            "targets": 7048,
+            "evaluated": 6928,
+            "accuracy": 0.49468341031562746,
+            "topTwoCoverage": 0.7644341801385681,
+            "logLoss": 1.0361747813826823,
+            "brier": 0.6168835342620984,
+            "coverage": 0.9829738933030647,
+            "medianSamples": 35,
             "thresholdCounts": {
-              "0.07": 6275,
-              "0.05": 513,
-              "0.03": 5
+              "0.07": 6375,
+              "0.05": 553
             }
           },
           "validation": {
-            "targets": 1815,
-            "evaluated": 1811,
-            "accuracy": 0.5003681207436039,
-            "topTwoCoverage": 0.7752622860298177,
-            "logLoss": 1.0154349619478167,
-            "brier": 0.6070948669567202,
-            "coverage": 0.9977961432506887,
+            "targets": 1860,
+            "evaluated": 1843,
+            "accuracy": 0.5071441490323748,
+            "topTwoCoverage": 0.7769940314704287,
+            "logLoss": 1.0074966190208319,
+            "brier": 0.6017295377851368,
+            "coverage": 0.9908602150537634,
             "medianSamples": 63,
             "thresholdCounts": {
-              "0.07": 1230,
-              "0.05": 558,
-              "0.03": 23
+              "0.07": 1242,
+              "0.05": 601
             }
           },
           "tuningComparison": {
-            "evaluated": 6793,
+            "evaluated": 6928,
             "adaptive": {
-              "targets": 6793,
-              "evaluated": 6793,
-              "accuracy": 0.4971539329702145,
-              "topTwoCoverage": 0.766671573678787,
-              "logLoss": 1.0343208941777995,
-              "brier": 0.6154196543551612,
+              "targets": 6928,
+              "evaluated": 6928,
+              "accuracy": 0.49468341031562746,
+              "topTwoCoverage": 0.7644341801385681,
+              "logLoss": 1.0361747813826823,
+              "brier": 0.6168835342620984,
               "coverage": 1,
-              "medianSamples": 34,
+              "medianSamples": 35,
               "thresholdCounts": {
-                "0.07": 6275,
-                "0.05": 513,
-                "0.03": 5
+                "0.07": 6375,
+                "0.05": 553
               }
             },
             "baseline": {
-              "targets": 6793,
-              "evaluated": 6793,
-              "accuracy": 0.4976691692428481,
-              "topTwoCoverage": 0.7656411011335198,
-              "logLoss": 1.0343236014964405,
-              "brier": 0.6154577658445184,
+              "targets": 6928,
+              "evaluated": 6928,
+              "accuracy": 0.4951164357197845,
+              "topTwoCoverage": 0.763135103926097,
+              "logLoss": 1.036043649934461,
+              "brier": 0.6168260183241598,
               "coverage": 1,
-              "medianSamples": 34,
+              "medianSamples": 35,
               "thresholdCounts": {
-                "0.07": 6793
+                "0.07": 6928
               }
             },
             "delta": {
-              "accuracy": -0.0005152362726336124,
-              "topTwoCoverage": 0.0010304725452672248,
-              "logLoss": -0.0000027073186410486727,
-              "brier": -0.000038111489357173234
+              "accuracy": -0.00043302540415701696,
+              "topTwoCoverage": 0.001299076212471162,
+              "logLoss": 0.00013113144822129996,
+              "brier": 0.00005751593793856813
             }
           },
           "validationComparison": {
-            "evaluated": 1811,
+            "evaluated": 1843,
             "adaptive": {
-              "targets": 1811,
-              "evaluated": 1811,
-              "accuracy": 0.5003681207436039,
-              "topTwoCoverage": 0.7752622860298177,
-              "logLoss": 1.0154349619478167,
-              "brier": 0.6070948669567202,
+              "targets": 1843,
+              "evaluated": 1843,
+              "accuracy": 0.5071441490323748,
+              "topTwoCoverage": 0.7769940314704287,
+              "logLoss": 1.0074966190208319,
+              "brier": 0.6017295377851368,
               "coverage": 1,
               "medianSamples": 63,
               "thresholdCounts": {
-                "0.07": 1230,
-                "0.05": 558,
-                "0.03": 23
+                "0.07": 1242,
+                "0.05": 601
               }
             },
             "baseline": {
-              "targets": 1811,
-              "evaluated": 1811,
-              "accuracy": 0.504233388551445,
-              "topTwoCoverage": 0.774157923799006,
-              "logLoss": 1.0135662113311674,
-              "brier": 0.6059605510715518,
+              "targets": 1843,
+              "evaluated": 1843,
+              "accuracy": 0.5099475492855852,
+              "topTwoCoverage": 0.7780792186652198,
+              "logLoss": 1.0054059612808788,
+              "brier": 0.6005435538698979,
               "coverage": 1,
-              "medianSamples": 83,
+              "medianSamples": 84,
               "thresholdCounts": {
-                "0.07": 1811
+                "0.07": 1843
               }
             },
             "delta": {
-              "accuracy": -0.003865267807841022,
-              "topTwoCoverage": 0.001104362230811673,
-              "logLoss": 0.0018687506166492618,
-              "brier": 0.0011343158851684354
+              "accuracy": -0.002803400253210353,
+              "topTwoCoverage": -0.0010851871947911151,
+              "logLoss": 0.0020906577399530946,
+              "brier": 0.0011859839152389418
             }
           },
           "strategy": {
@@ -307,150 +453,150 @@
             "reason": "候选相对基线的ROI提升区间包含0",
             "passed": false,
             "positiveEdge": false,
-            "evaluated": 1811,
+            "evaluated": 1843,
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
             "candidate": {
-              "evaluatedMatches": 1811,
-              "bettingMatches": 1809,
-              "noPredictionMatches": 2,
-              "wins": 925,
-              "multiSelectionMatches": 48,
-              "stakeUnits": 1857,
-              "returnUnits": 1600.5199999999988,
-              "profitUnits": -256.48000000000116,
-              "roi": -0.1381152396338186
+              "evaluatedMatches": 1843,
+              "bettingMatches": 1838,
+              "noPredictionMatches": 5,
+              "wins": 953,
+              "multiSelectionMatches": 49,
+              "stakeUnits": 1887,
+              "returnUnits": 1649.7900000000004,
+              "profitUnits": -237.20999999999958,
+              "roi": -0.1257074721780602
             },
             "baseline": {
-              "evaluatedMatches": 1811,
-              "bettingMatches": 1809,
-              "noPredictionMatches": 2,
-              "wins": 932,
-              "multiSelectionMatches": 46,
-              "stakeUnits": 1855,
-              "returnUnits": 1612.0599999999984,
-              "profitUnits": -242.94000000000165,
-              "roi": -0.13096495956873405
+              "evaluatedMatches": 1843,
+              "bettingMatches": 1839,
+              "noPredictionMatches": 4,
+              "wins": 958,
+              "multiSelectionMatches": 45,
+              "stakeUnits": 1884,
+              "returnUnits": 1653.0700000000002,
+              "profitUnits": -230.92999999999984,
+              "roi": -0.12257430997876849
             },
-            "roiDelta": -0.007150280065084558,
+            "roiDelta": -0.003133162199291703,
             "intervals": {
               "candidate": {
-                "lower": -0.1795635579440628,
-                "upper": -0.0975834403456368
+                "lower": -0.16961162785175182,
+                "upper": -0.08394879752150505
               },
               "baseline": {
-                "lower": -0.1736270793812931,
-                "upper": -0.08876813839733075
+                "lower": -0.16542531788982823,
+                "upper": -0.07918709985686831
               },
               "delta": {
-                "lower": -0.024389454663512205,
-                "upper": 0.0073184374832435724
+                "lower": -0.016990258510190922,
+                "upper": 0.010885602869373564
               }
             },
-            "improvementProbability": 0.188
+            "improvementProbability": 0.322
           }
         },
         {
           "minSamples": 100,
           "tuning": {
-            "targets": 6822,
-            "evaluated": 6793,
-            "accuracy": 0.49759556406104327,
-            "topTwoCoverage": 0.7657883114971294,
-            "logLoss": 1.0342305738534463,
-            "brier": 0.6154312692847668,
-            "coverage": 0.9957490472002345,
-            "medianSamples": 34,
+            "targets": 7048,
+            "evaluated": 6928,
+            "accuracy": 0.4951164357197845,
+            "topTwoCoverage": 0.763135103926097,
+            "logLoss": 1.036042182834235,
+            "brier": 0.6168248897037659,
+            "coverage": 0.9829738933030647,
+            "medianSamples": 35,
             "thresholdCounts": {
-              "0.07": 6788,
-              "0.05": 5
+              "0.07": 6927,
+              "0.05": 1
             }
           },
           "validation": {
-            "targets": 1815,
-            "evaluated": 1811,
-            "accuracy": 0.5043254187373458,
-            "topTwoCoverage": 0.774710104914412,
-            "logLoss": 1.013878292373531,
-            "brier": 0.6061351324980029,
-            "coverage": 0.9977961432506887,
-            "medianSamples": 83,
+            "targets": 1860,
+            "evaluated": 1843,
+            "accuracy": 0.5094049556881896,
+            "topTwoCoverage": 0.7802495930548019,
+            "logLoss": 1.005400911824128,
+            "brier": 0.6005532069985298,
+            "coverage": 0.9908602150537634,
+            "medianSamples": 84,
             "thresholdCounts": {
-              "0.07": 1773,
-              "0.05": 38
+              "0.07": 1795,
+              "0.05": 48
             }
           },
           "tuningComparison": {
-            "evaluated": 6793,
+            "evaluated": 6928,
             "adaptive": {
-              "targets": 6793,
-              "evaluated": 6793,
-              "accuracy": 0.49759556406104327,
-              "topTwoCoverage": 0.7657883114971294,
-              "logLoss": 1.0342305738534463,
-              "brier": 0.6154312692847668,
+              "targets": 6928,
+              "evaluated": 6928,
+              "accuracy": 0.4951164357197845,
+              "topTwoCoverage": 0.763135103926097,
+              "logLoss": 1.036042182834235,
+              "brier": 0.6168248897037659,
               "coverage": 1,
-              "medianSamples": 34,
+              "medianSamples": 35,
               "thresholdCounts": {
-                "0.07": 6788,
-                "0.05": 5
+                "0.07": 6927,
+                "0.05": 1
               }
             },
             "baseline": {
-              "targets": 6793,
-              "evaluated": 6793,
-              "accuracy": 0.4976691692428481,
-              "topTwoCoverage": 0.7656411011335198,
-              "logLoss": 1.0343236014964405,
-              "brier": 0.6154577658445184,
+              "targets": 6928,
+              "evaluated": 6928,
+              "accuracy": 0.4951164357197845,
+              "topTwoCoverage": 0.763135103926097,
+              "logLoss": 1.036043649934461,
+              "brier": 0.6168260183241598,
               "coverage": 1,
-              "medianSamples": 34,
+              "medianSamples": 35,
               "thresholdCounts": {
-                "0.07": 6793
+                "0.07": 6928
               }
             },
             "delta": {
-              "accuracy": -0.00007360518180482556,
-              "topTwoCoverage": 0.00014721036360965112,
-              "logLoss": -0.00009302764299423671,
-              "brier": -0.000026496559751620907
+              "accuracy": 0,
+              "topTwoCoverage": 0,
+              "logLoss": -0.0000014671002259714072,
+              "brier": -0.0000011286203939198103
             }
           },
           "validationComparison": {
-            "evaluated": 1811,
+            "evaluated": 1843,
             "adaptive": {
-              "targets": 1811,
-              "evaluated": 1811,
-              "accuracy": 0.5043254187373458,
-              "topTwoCoverage": 0.774710104914412,
-              "logLoss": 1.013878292373531,
-              "brier": 0.6061351324980029,
+              "targets": 1843,
+              "evaluated": 1843,
+              "accuracy": 0.5094049556881896,
+              "topTwoCoverage": 0.7802495930548019,
+              "logLoss": 1.005400911824128,
+              "brier": 0.6005532069985298,
               "coverage": 1,
-              "medianSamples": 83,
+              "medianSamples": 84,
               "thresholdCounts": {
-                "0.07": 1773,
-                "0.05": 38
+                "0.07": 1795,
+                "0.05": 48
               }
             },
             "baseline": {
-              "targets": 1811,
-              "evaluated": 1811,
-              "accuracy": 0.504233388551445,
-              "topTwoCoverage": 0.774157923799006,
-              "logLoss": 1.0135662113311674,
-              "brier": 0.6059605510715518,
+              "targets": 1843,
+              "evaluated": 1843,
+              "accuracy": 0.5099475492855852,
+              "topTwoCoverage": 0.7780792186652198,
+              "logLoss": 1.0054059612808788,
+              "brier": 0.6005435538698979,
               "coverage": 1,
-              "medianSamples": 83,
+              "medianSamples": 84,
               "thresholdCounts": {
-                "0.07": 1811
+                "0.07": 1843
               }
             },
             "delta": {
-              "accuracy": 0.00009203018590087098,
-              "topTwoCoverage": 0.000552181115405892,
-              "logLoss": 0.0003120810423635767,
-              "brier": 0.00017458142645110364
+              "accuracy": -0.0005425935973956131,
+              "topTwoCoverage": 0.0021703743895821193,
+              "logLoss": -0.000005049456750727543,
+              "brier": 0.00000965312863188128
             }
           },
           "strategy": {
@@ -458,105 +604,104 @@
             "reason": "候选相对基线的ROI提升区间包含0",
             "passed": false,
             "positiveEdge": false,
-            "evaluated": 1811,
+            "evaluated": 1843,
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
             "candidate": {
-              "evaluatedMatches": 1811,
-              "bettingMatches": 1810,
-              "noPredictionMatches": 1,
-              "wins": 932,
+              "evaluatedMatches": 1843,
+              "bettingMatches": 1839,
+              "noPredictionMatches": 4,
+              "wins": 957,
               "multiSelectionMatches": 45,
-              "stakeUnits": 1855,
-              "returnUnits": 1612.1499999999985,
-              "profitUnits": -242.8500000000015,
-              "roi": -0.13091644204851832
+              "stakeUnits": 1884,
+              "returnUnits": 1652.3100000000002,
+              "profitUnits": -231.68999999999983,
+              "roi": -0.12297770700636934
             },
             "baseline": {
-              "evaluatedMatches": 1811,
-              "bettingMatches": 1809,
-              "noPredictionMatches": 2,
-              "wins": 932,
-              "multiSelectionMatches": 46,
-              "stakeUnits": 1855,
-              "returnUnits": 1612.0599999999984,
-              "profitUnits": -242.94000000000165,
-              "roi": -0.13096495956873405
+              "evaluatedMatches": 1843,
+              "bettingMatches": 1839,
+              "noPredictionMatches": 4,
+              "wins": 958,
+              "multiSelectionMatches": 45,
+              "stakeUnits": 1884,
+              "returnUnits": 1653.0700000000002,
+              "profitUnits": -230.92999999999984,
+              "roi": -0.12257430997876849
             },
-            "roiDelta": 0.000048517520215729526,
+            "roiDelta": -0.00040339702760085194,
             "intervals": {
               "candidate": {
-                "lower": -0.17254724080870748,
-                "upper": -0.08978933208696523
+                "lower": -0.16481756512727738,
+                "upper": -0.07922050004881791
               },
               "baseline": {
-                "lower": -0.1736270793812931,
-                "upper": -0.08876813839733075
+                "lower": -0.16542531788982823,
+                "upper": -0.07918709985686831
               },
               "delta": {
-                "lower": -0.0030249961082818295,
-                "upper": 0.0034018276557567116
+                "lower": -0.00440683804442554,
+                "upper": 0.00433891204580846
               }
             },
-            "improvementProbability": 0.523
+            "improvementProbability": 0.379
           }
         },
         {
           "minSamples": 150,
           "tuning": {
-            "targets": 6822,
-            "evaluated": 6793,
-            "accuracy": 0.4976691692428481,
-            "topTwoCoverage": 0.7656411011335198,
-            "logLoss": 1.0343236014964405,
-            "brier": 0.6154577658445184,
-            "coverage": 0.9957490472002345,
-            "medianSamples": 34,
+            "targets": 7048,
+            "evaluated": 6928,
+            "accuracy": 0.4951164357197845,
+            "topTwoCoverage": 0.763135103926097,
+            "logLoss": 1.036043649934461,
+            "brier": 0.6168260183241598,
+            "coverage": 0.9829738933030647,
+            "medianSamples": 35,
             "thresholdCounts": {
-              "0.07": 6793
+              "0.07": 6928
             }
           },
           "validation": {
-            "targets": 1815,
-            "evaluated": 1811,
-            "accuracy": 0.504233388551445,
-            "topTwoCoverage": 0.774157923799006,
-            "logLoss": 1.0134349600345114,
-            "brier": 0.6058592665991879,
-            "coverage": 0.9977961432506887,
-            "medianSamples": 83,
+            "targets": 1860,
+            "evaluated": 1843,
+            "accuracy": 0.5099475492855852,
+            "topTwoCoverage": 0.7780792186652198,
+            "logLoss": 1.0054059612808788,
+            "brier": 0.6005435538698979,
+            "coverage": 0.9908602150537634,
+            "medianSamples": 84,
             "thresholdCounts": {
-              "0.07": 1809,
-              "0.05": 2
+              "0.07": 1843
             }
           },
           "tuningComparison": {
-            "evaluated": 6793,
+            "evaluated": 6928,
             "adaptive": {
-              "targets": 6793,
-              "evaluated": 6793,
-              "accuracy": 0.4976691692428481,
-              "topTwoCoverage": 0.7656411011335198,
-              "logLoss": 1.0343236014964405,
-              "brier": 0.6154577658445184,
+              "targets": 6928,
+              "evaluated": 6928,
+              "accuracy": 0.4951164357197845,
+              "topTwoCoverage": 0.763135103926097,
+              "logLoss": 1.036043649934461,
+              "brier": 0.6168260183241598,
               "coverage": 1,
-              "medianSamples": 34,
+              "medianSamples": 35,
               "thresholdCounts": {
-                "0.07": 6793
+                "0.07": 6928
               }
             },
             "baseline": {
-              "targets": 6793,
-              "evaluated": 6793,
-              "accuracy": 0.4976691692428481,
-              "topTwoCoverage": 0.7656411011335198,
-              "logLoss": 1.0343236014964405,
-              "brier": 0.6154577658445184,
+              "targets": 6928,
+              "evaluated": 6928,
+              "accuracy": 0.4951164357197845,
+              "topTwoCoverage": 0.763135103926097,
+              "logLoss": 1.036043649934461,
+              "brier": 0.6168260183241598,
               "coverage": 1,
-              "medianSamples": 34,
+              "medianSamples": 35,
               "thresholdCounts": {
-                "0.07": 6793
+                "0.07": 6928
               }
             },
             "delta": {
@@ -567,39 +712,38 @@
             }
           },
           "validationComparison": {
-            "evaluated": 1811,
+            "evaluated": 1843,
             "adaptive": {
-              "targets": 1811,
-              "evaluated": 1811,
-              "accuracy": 0.504233388551445,
-              "topTwoCoverage": 0.774157923799006,
-              "logLoss": 1.0134349600345114,
-              "brier": 0.6058592665991879,
+              "targets": 1843,
+              "evaluated": 1843,
+              "accuracy": 0.5099475492855852,
+              "topTwoCoverage": 0.7780792186652198,
+              "logLoss": 1.0054059612808788,
+              "brier": 0.6005435538698979,
               "coverage": 1,
-              "medianSamples": 83,
+              "medianSamples": 84,
               "thresholdCounts": {
-                "0.07": 1809,
-                "0.05": 2
+                "0.07": 1843
               }
             },
             "baseline": {
-              "targets": 1811,
-              "evaluated": 1811,
-              "accuracy": 0.504233388551445,
-              "topTwoCoverage": 0.774157923799006,
-              "logLoss": 1.0135662113311674,
-              "brier": 0.6059605510715518,
+              "targets": 1843,
+              "evaluated": 1843,
+              "accuracy": 0.5099475492855852,
+              "topTwoCoverage": 0.7780792186652198,
+              "logLoss": 1.0054059612808788,
+              "brier": 0.6005435538698979,
               "coverage": 1,
-              "medianSamples": 83,
+              "medianSamples": 84,
               "thresholdCounts": {
-                "0.07": 1811
+                "0.07": 1843
               }
             },
             "delta": {
               "accuracy": 0,
               "topTwoCoverage": 0,
-              "logLoss": -0.00013125129665603197,
-              "brier": -0.00010128447236390503
+              "logLoss": 0,
+              "brier": 0
             }
           },
           "strategy": {
@@ -607,41 +751,41 @@
             "reason": "候选相对基线的ROI提升区间包含0",
             "passed": false,
             "positiveEdge": false,
-            "evaluated": 1811,
+            "evaluated": 1843,
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
             "candidate": {
-              "evaluatedMatches": 1811,
-              "bettingMatches": 1809,
-              "noPredictionMatches": 2,
-              "wins": 932,
-              "multiSelectionMatches": 46,
-              "stakeUnits": 1855,
-              "returnUnits": 1612.0599999999984,
-              "profitUnits": -242.94000000000165,
-              "roi": -0.13096495956873405
+              "evaluatedMatches": 1843,
+              "bettingMatches": 1839,
+              "noPredictionMatches": 4,
+              "wins": 958,
+              "multiSelectionMatches": 45,
+              "stakeUnits": 1884,
+              "returnUnits": 1653.0700000000002,
+              "profitUnits": -230.92999999999984,
+              "roi": -0.12257430997876849
             },
             "baseline": {
-              "evaluatedMatches": 1811,
-              "bettingMatches": 1809,
-              "noPredictionMatches": 2,
-              "wins": 932,
-              "multiSelectionMatches": 46,
-              "stakeUnits": 1855,
-              "returnUnits": 1612.0599999999984,
-              "profitUnits": -242.94000000000165,
-              "roi": -0.13096495956873405
+              "evaluatedMatches": 1843,
+              "bettingMatches": 1839,
+              "noPredictionMatches": 4,
+              "wins": 958,
+              "multiSelectionMatches": 45,
+              "stakeUnits": 1884,
+              "returnUnits": 1653.0700000000002,
+              "profitUnits": -230.92999999999984,
+              "roi": -0.12257430997876849
             },
             "roiDelta": 0,
             "intervals": {
               "candidate": {
-                "lower": -0.1736270793812931,
-                "upper": -0.08876813839733075
+                "lower": -0.16542531788982823,
+                "upper": -0.07918709985686831
               },
               "baseline": {
-                "lower": -0.1736270793812931,
-                "upper": -0.08876813839733075
+                "lower": -0.16542531788982823,
+                "upper": -0.07918709985686831
               },
               "delta": {
                 "lower": 0,
@@ -654,58 +798,57 @@
         {
           "minSamples": 200,
           "tuning": {
-            "targets": 6822,
-            "evaluated": 6793,
-            "accuracy": 0.4976691692428481,
-            "topTwoCoverage": 0.7656411011335198,
-            "logLoss": 1.0343236014964405,
-            "brier": 0.6154577658445184,
-            "coverage": 0.9957490472002345,
-            "medianSamples": 34,
+            "targets": 7048,
+            "evaluated": 6928,
+            "accuracy": 0.4951164357197845,
+            "topTwoCoverage": 0.763135103926097,
+            "logLoss": 1.036043649934461,
+            "brier": 0.6168260183241598,
+            "coverage": 0.9829738933030647,
+            "medianSamples": 35,
             "thresholdCounts": {
-              "0.07": 6793
+              "0.07": 6928
             }
           },
           "validation": {
-            "targets": 1815,
-            "evaluated": 1811,
-            "accuracy": 0.504233388551445,
-            "topTwoCoverage": 0.774157923799006,
-            "logLoss": 1.0136013694909094,
-            "brier": 0.6059881793841624,
-            "coverage": 0.9977961432506887,
-            "medianSamples": 83,
+            "targets": 1860,
+            "evaluated": 1843,
+            "accuracy": 0.5099475492855852,
+            "topTwoCoverage": 0.7780792186652198,
+            "logLoss": 1.0054059612808788,
+            "brier": 0.6005435538698979,
+            "coverage": 0.9908602150537634,
+            "medianSamples": 84,
             "thresholdCounts": {
-              "0.07": 1810,
-              "0.05": 1
+              "0.07": 1843
             }
           },
           "tuningComparison": {
-            "evaluated": 6793,
+            "evaluated": 6928,
             "adaptive": {
-              "targets": 6793,
-              "evaluated": 6793,
-              "accuracy": 0.4976691692428481,
-              "topTwoCoverage": 0.7656411011335198,
-              "logLoss": 1.0343236014964405,
-              "brier": 0.6154577658445184,
+              "targets": 6928,
+              "evaluated": 6928,
+              "accuracy": 0.4951164357197845,
+              "topTwoCoverage": 0.763135103926097,
+              "logLoss": 1.036043649934461,
+              "brier": 0.6168260183241598,
               "coverage": 1,
-              "medianSamples": 34,
+              "medianSamples": 35,
               "thresholdCounts": {
-                "0.07": 6793
+                "0.07": 6928
               }
             },
             "baseline": {
-              "targets": 6793,
-              "evaluated": 6793,
-              "accuracy": 0.4976691692428481,
-              "topTwoCoverage": 0.7656411011335198,
-              "logLoss": 1.0343236014964405,
-              "brier": 0.6154577658445184,
+              "targets": 6928,
+              "evaluated": 6928,
+              "accuracy": 0.4951164357197845,
+              "topTwoCoverage": 0.763135103926097,
+              "logLoss": 1.036043649934461,
+              "brier": 0.6168260183241598,
               "coverage": 1,
-              "medianSamples": 34,
+              "medianSamples": 35,
               "thresholdCounts": {
-                "0.07": 6793
+                "0.07": 6928
               }
             },
             "delta": {
@@ -716,39 +859,38 @@
             }
           },
           "validationComparison": {
-            "evaluated": 1811,
+            "evaluated": 1843,
             "adaptive": {
-              "targets": 1811,
-              "evaluated": 1811,
-              "accuracy": 0.504233388551445,
-              "topTwoCoverage": 0.774157923799006,
-              "logLoss": 1.0136013694909094,
-              "brier": 0.6059881793841624,
+              "targets": 1843,
+              "evaluated": 1843,
+              "accuracy": 0.5099475492855852,
+              "topTwoCoverage": 0.7780792186652198,
+              "logLoss": 1.0054059612808788,
+              "brier": 0.6005435538698979,
               "coverage": 1,
-              "medianSamples": 83,
+              "medianSamples": 84,
               "thresholdCounts": {
-                "0.07": 1810,
-                "0.05": 1
+                "0.07": 1843
               }
             },
             "baseline": {
-              "targets": 1811,
-              "evaluated": 1811,
-              "accuracy": 0.504233388551445,
-              "topTwoCoverage": 0.774157923799006,
-              "logLoss": 1.0135662113311674,
-              "brier": 0.6059605510715518,
+              "targets": 1843,
+              "evaluated": 1843,
+              "accuracy": 0.5099475492855852,
+              "topTwoCoverage": 0.7780792186652198,
+              "logLoss": 1.0054059612808788,
+              "brier": 0.6005435538698979,
               "coverage": 1,
-              "medianSamples": 83,
+              "medianSamples": 84,
               "thresholdCounts": {
-                "0.07": 1811
+                "0.07": 1843
               }
             },
             "delta": {
               "accuracy": 0,
               "topTwoCoverage": 0,
-              "logLoss": 0.000035158159741977,
-              "brier": 0.000027628312610605832
+              "logLoss": 0,
+              "brier": 0
             }
           },
           "strategy": {
@@ -756,41 +898,41 @@
             "reason": "候选相对基线的ROI提升区间包含0",
             "passed": false,
             "positiveEdge": false,
-            "evaluated": 1811,
+            "evaluated": 1843,
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
             "candidate": {
-              "evaluatedMatches": 1811,
-              "bettingMatches": 1809,
-              "noPredictionMatches": 2,
-              "wins": 932,
-              "multiSelectionMatches": 46,
-              "stakeUnits": 1855,
-              "returnUnits": 1612.0599999999984,
-              "profitUnits": -242.94000000000165,
-              "roi": -0.13096495956873405
+              "evaluatedMatches": 1843,
+              "bettingMatches": 1839,
+              "noPredictionMatches": 4,
+              "wins": 958,
+              "multiSelectionMatches": 45,
+              "stakeUnits": 1884,
+              "returnUnits": 1653.0700000000002,
+              "profitUnits": -230.92999999999984,
+              "roi": -0.12257430997876849
             },
             "baseline": {
-              "evaluatedMatches": 1811,
-              "bettingMatches": 1809,
-              "noPredictionMatches": 2,
-              "wins": 932,
-              "multiSelectionMatches": 46,
-              "stakeUnits": 1855,
-              "returnUnits": 1612.0599999999984,
-              "profitUnits": -242.94000000000165,
-              "roi": -0.13096495956873405
+              "evaluatedMatches": 1843,
+              "bettingMatches": 1839,
+              "noPredictionMatches": 4,
+              "wins": 958,
+              "multiSelectionMatches": 45,
+              "stakeUnits": 1884,
+              "returnUnits": 1653.0700000000002,
+              "profitUnits": -230.92999999999984,
+              "roi": -0.12257430997876849
             },
             "roiDelta": 0,
             "intervals": {
               "candidate": {
-                "lower": -0.1736270793812931,
-                "upper": -0.08876813839733075
+                "lower": -0.16542531788982823,
+                "upper": -0.07918709985686831
               },
               "baseline": {
-                "lower": -0.1736270793812931,
-                "upper": -0.08876813839733075
+                "lower": -0.16542531788982823,
+                "upper": -0.07918709985686831
               },
               "delta": {
                 "lower": 0,
@@ -803,11 +945,18 @@
       ],
       "gate": {
         "passed": false,
-        "tuningPassed": false,
+        "tuningPassed": true,
         "validationPassed": false,
-        "reason": "较早80%没有动态最低样本规则同时改善目标指标、Log Loss和Brier"
+        "reason": "较早80%选出的动态规则未通过最新20%验证"
       },
       "sources": [
+        {
+          "sourceFile": "history.xlsx",
+          "rows": 14,
+          "warmup": 14,
+          "tuningCases": 0,
+          "validationCases": 0
+        },
         {
           "sourceFile": "initspfpl.xlsx",
           "rows": 88,
@@ -817,15 +966,15 @@
         },
         {
           "sourceFile": "lsspfpl.xlsx",
-          "rows": 9513,
+          "rows": 9808,
           "warmup": 500,
-          "tuningCases": 6822,
-          "validationCases": 1815
+          "tuningCases": 7048,
+          "validationCases": 1860
         }
       ]
     },
     "hhad": {
-      "enabled": true,
+      "enabled": false,
       "objective": "accuracy",
       "thresholds": [
         0.03,
@@ -833,107 +982,107 @@
         0.07
       ],
       "baselineThreshold": 0.07,
-      "minSamples": 100,
+      "minSamples": null,
       "selected": {
         "minSamples": 100,
         "tuning": {
-          "targets": 7110,
-          "evaluated": 7056,
-          "accuracy": 0.483418367346939,
-          "topTwoCoverage": 0.7556689342403629,
-          "logLoss": 1.0599345301599408,
-          "brier": 0.6335678903683143,
-          "coverage": 0.9924050632911392,
-          "medianSamples": 33,
+          "targets": 7346,
+          "evaluated": 7197,
+          "accuracy": 0.48543374554212426,
+          "topTwoCoverage": 0.7578157565652355,
+          "logLoss": 1.0580232883530487,
+          "brier": 0.6324482462672697,
+          "coverage": 0.9797168527089573,
+          "medianSamples": 34,
           "thresholdCounts": {
-            "0.07": 7054,
-            "0.05": 2
+            "0.07": 7196,
+            "0.05": 1
           }
         },
         "validation": {
-          "targets": 1903,
-          "evaluated": 1891,
-          "accuracy": 0.49779658029261425,
-          "topTwoCoverage": 0.7789529349550502,
-          "logLoss": 1.036473606787322,
-          "brier": 0.6209014391924572,
-          "coverage": 0.9936941671045717,
-          "medianSamples": 79,
+          "targets": 1962,
+          "evaluated": 1940,
+          "accuracy": 0.4981958762886599,
+          "topTwoCoverage": 0.7793814432989691,
+          "logLoss": 1.0341764901078494,
+          "brier": 0.619348453792375,
+          "coverage": 0.9887869520897044,
+          "medianSamples": 80,
           "thresholdCounts": {
-            "0.07": 1856,
-            "0.05": 35
+            "0.07": 1892,
+            "0.05": 48
           }
         },
         "tuningComparison": {
-          "evaluated": 7056,
+          "evaluated": 7197,
           "adaptive": {
-            "targets": 7056,
-            "evaluated": 7056,
-            "accuracy": 0.483418367346939,
-            "topTwoCoverage": 0.7556689342403629,
-            "logLoss": 1.0599345301599408,
-            "brier": 0.6335678903683143,
+            "targets": 7197,
+            "evaluated": 7197,
+            "accuracy": 0.48543374554212426,
+            "topTwoCoverage": 0.7578157565652355,
+            "logLoss": 1.0580232883530487,
+            "brier": 0.6324482462672697,
             "coverage": 1,
-            "medianSamples": 33,
+            "medianSamples": 34,
             "thresholdCounts": {
-              "0.07": 7054,
-              "0.05": 2
+              "0.07": 7196,
+              "0.05": 1
             }
           },
           "baseline": {
-            "targets": 7056,
-            "evaluated": 7056,
-            "accuracy": 0.483418367346939,
-            "topTwoCoverage": 0.7556689342403629,
-            "logLoss": 1.0599458041976277,
-            "brier": 0.6335713515770749,
+            "targets": 7197,
+            "evaluated": 7197,
+            "accuracy": 0.48543374554212426,
+            "topTwoCoverage": 0.7578157565652355,
+            "logLoss": 1.0580385100655376,
+            "brier": 0.6324551174308671,
             "coverage": 1,
-            "medianSamples": 33,
+            "medianSamples": 34,
             "thresholdCounts": {
-              "0.07": 7056
+              "0.07": 7197
             }
           },
           "delta": {
             "accuracy": 0,
             "topTwoCoverage": 0,
-            "logLoss": -0.000011274037686970217,
-            "brier": -0.0000034612087606022968
+            "logLoss": -0.00001522171248891091,
+            "brier": -0.000006871163597432783
           }
         },
         "validationComparison": {
-          "evaluated": 1891,
+          "evaluated": 1940,
           "adaptive": {
-            "targets": 1891,
-            "evaluated": 1891,
-            "accuracy": 0.49779658029261425,
-            "topTwoCoverage": 0.7789529349550502,
-            "logLoss": 1.036473606787322,
-            "brier": 0.6209014391924572,
+            "targets": 1940,
+            "evaluated": 1940,
+            "accuracy": 0.4981958762886599,
+            "topTwoCoverage": 0.7793814432989691,
+            "logLoss": 1.0341764901078494,
+            "brier": 0.619348453792375,
             "coverage": 1,
-            "medianSamples": 79,
+            "medianSamples": 80,
             "thresholdCounts": {
-              "0.07": 1856,
-              "0.05": 35
+              "0.07": 1892,
+              "0.05": 48
             }
           },
           "baseline": {
-            "targets": 1891,
-            "evaluated": 1891,
-            "accuracy": 0.49700334919795536,
-            "topTwoCoverage": 0.777895293495505,
-            "logLoss": 1.0368197681377458,
-            "brier": 0.6211182543695034,
+            "targets": 1940,
+            "evaluated": 1940,
+            "accuracy": 0.4981958762886599,
+            "topTwoCoverage": 0.7793814432989691,
+            "logLoss": 1.0340334202866492,
+            "brier": 0.6192861299352135,
             "coverage": 1,
-            "medianSamples": 79,
+            "medianSamples": 80,
             "thresholdCounts": {
-              "0.07": 1891
+              "0.07": 1940
             }
           },
           "delta": {
-            "accuracy": 0.0007932310946588972,
-            "topTwoCoverage": 0.0010576414595452333,
-            "logLoss": -0.0003461613504238681,
-            "brier": -0.00021681517704619235
+            "accuracy": 0,
+            "topTwoCoverage": 0,
+            "logLoss": 0.0001430698212001591,
+            "brier": 0.00006232385716153921
           }
         },
         "strategy": {
@@ -941,155 +1090,155 @@
           "reason": "候选相对基线的ROI提升区间包含0",
           "passed": false,
           "positiveEdge": false,
-          "evaluated": 1891,
+          "evaluated": 1940,
           "iterations": 1000,
           "blockSize": 20,
           "confidence": 0.95,
           "candidate": {
-            "evaluatedMatches": 1891,
-            "bettingMatches": 1884,
-            "noPredictionMatches": 7,
-            "wins": 966,
-            "multiSelectionMatches": 69,
-            "stakeUnits": 1953,
-            "returnUnits": 1782.4700000000005,
-            "profitUnits": -170.52999999999952,
-            "roi": -0.08731694828468997
+            "evaluatedMatches": 1940,
+            "bettingMatches": 1931,
+            "noPredictionMatches": 9,
+            "wins": 995,
+            "multiSelectionMatches": 79,
+            "stakeUnits": 2010,
+            "returnUnits": 1843.3200000000022,
+            "profitUnits": -166.6799999999978,
+            "roi": -0.08292537313432725
           },
           "baseline": {
-            "evaluatedMatches": 1891,
-            "bettingMatches": 1884,
-            "noPredictionMatches": 7,
-            "wins": 965,
-            "multiSelectionMatches": 70,
-            "stakeUnits": 1954,
-            "returnUnits": 1780.9700000000005,
-            "profitUnits": -173.02999999999952,
-            "roi": -0.08855168884339791
+            "evaluatedMatches": 1940,
+            "bettingMatches": 1931,
+            "noPredictionMatches": 9,
+            "wins": 995,
+            "multiSelectionMatches": 79,
+            "stakeUnits": 2010,
+            "returnUnits": 1843.3200000000022,
+            "profitUnits": -166.6799999999978,
+            "roi": -0.08292537313432725
           },
-          "roiDelta": 0.001234740558707939,
+          "roiDelta": 0,
           "intervals": {
             "candidate": {
-              "lower": -0.12434596069582017,
-              "upper": -0.051112143020297804
+              "lower": -0.12241327953140411,
+              "upper": -0.04212118265191702
             },
             "baseline": {
-              "lower": -0.1256611655318381,
-              "upper": -0.052095678977620526
+              "lower": -0.12241327953140411,
+              "upper": -0.04212118265191702
             },
             "delta": {
               "lower": 0,
-              "upper": 0.0032407189944799156
+              "upper": 0
             }
           },
-          "improvementProbability": 0.867
+          "improvementProbability": 0
         }
       },
       "candidates": [
         {
           "minSamples": 30,
           "tuning": {
-            "targets": 7110,
-            "evaluated": 7056,
-            "accuracy": 0.48117441421012874,
-            "topTwoCoverage": 0.7545351473922902,
-            "logLoss": 1.0620762598437599,
-            "brier": 0.6346262069488008,
-            "coverage": 0.9924050632911392,
-            "medianSamples": 31,
+            "targets": 7346,
+            "evaluated": 7197,
+            "accuracy": 0.48274744106340634,
+            "topTwoCoverage": 0.7569820758649437,
+            "logLoss": 1.0603542140737292,
+            "brier": 0.6335806193618209,
+            "coverage": 0.9797168527089573,
+            "medianSamples": 32,
             "thresholdCounts": {
-              "0.07": 5414,
-              "0.05": 1602,
-              "0.03": 40
+              "0.07": 5490,
+              "0.05": 1701,
+              "0.03": 6
             }
           },
           "validation": {
-            "targets": 1903,
-            "evaluated": 1891,
-            "accuracy": 0.49356601445443343,
-            "topTwoCoverage": 0.7784241142252777,
-            "logLoss": 1.0415486302150299,
-            "brier": 0.6231669620936219,
-            "coverage": 0.9936941671045717,
+            "targets": 1962,
+            "evaluated": 1940,
+            "accuracy": 0.49484536082474234,
+            "topTwoCoverage": 0.7731958762886598,
+            "logLoss": 1.0406472304930492,
+            "brier": 0.6226114882024012,
+            "coverage": 0.9887869520897044,
             "medianSamples": 45,
             "thresholdCounts": {
-              "0.07": 873,
-              "0.05": 947,
-              "0.03": 71
+              "0.05": 961,
+              "0.07": 935,
+              "0.03": 44
             }
           },
           "tuningComparison": {
-            "evaluated": 7056,
+            "evaluated": 7197,
             "adaptive": {
-              "targets": 7056,
-              "evaluated": 7056,
-              "accuracy": 0.48117441421012874,
-              "topTwoCoverage": 0.7545351473922902,
-              "logLoss": 1.0620762598437599,
-              "brier": 0.6346262069488008,
+              "targets": 7197,
+              "evaluated": 7197,
+              "accuracy": 0.48274744106340634,
+              "topTwoCoverage": 0.7569820758649437,
+              "logLoss": 1.0603542140737292,
+              "brier": 0.6335806193618209,
               "coverage": 1,
-              "medianSamples": 31,
+              "medianSamples": 32,
               "thresholdCounts": {
-                "0.07": 5414,
-                "0.05": 1602,
-                "0.03": 40
+                "0.07": 5490,
+                "0.05": 1701,
+                "0.03": 6
               }
             },
             "baseline": {
-              "targets": 7056,
-              "evaluated": 7056,
-              "accuracy": 0.483418367346939,
-              "topTwoCoverage": 0.7556689342403629,
-              "logLoss": 1.0599458041976277,
-              "brier": 0.6335713515770749,
+              "targets": 7197,
+              "evaluated": 7197,
+              "accuracy": 0.48543374554212426,
+              "topTwoCoverage": 0.7578157565652355,
+              "logLoss": 1.0580385100655376,
+              "brier": 0.6324551174308671,
               "coverage": 1,
-              "medianSamples": 33,
+              "medianSamples": 34,
               "thresholdCounts": {
-                "0.07": 7056
+                "0.07": 7197
               }
             },
             "delta": {
-              "accuracy": -0.0022439531368102505,
-              "topTwoCoverage": -0.0011337868480726376,
-              "logLoss": 0.0021304556461321233,
-              "brier": 0.0010548553717258935
+              "accuracy": -0.002686304478717927,
+              "topTwoCoverage": -0.0008336807002917723,
+              "logLoss": 0.002315704008191588,
+              "brier": 0.0011255019309537317
             }
           },
           "validationComparison": {
-            "evaluated": 1891,
+            "evaluated": 1940,
             "adaptive": {
-              "targets": 1891,
-              "evaluated": 1891,
-              "accuracy": 0.49356601445443343,
-              "topTwoCoverage": 0.7784241142252777,
-              "logLoss": 1.0415486302150299,
-              "brier": 0.6231669620936219,
+              "targets": 1940,
+              "evaluated": 1940,
+              "accuracy": 0.49484536082474234,
+              "topTwoCoverage": 0.7731958762886598,
+              "logLoss": 1.0406472304930492,
+              "brier": 0.6226114882024012,
               "coverage": 1,
               "medianSamples": 45,
               "thresholdCounts": {
-                "0.07": 873,
-                "0.05": 947,
-                "0.03": 71
+                "0.05": 961,
+                "0.07": 935,
+                "0.03": 44
               }
             },
             "baseline": {
-              "targets": 1891,
-              "evaluated": 1891,
-              "accuracy": 0.49700334919795536,
-              "topTwoCoverage": 0.777895293495505,
-              "logLoss": 1.0368197681377458,
-              "brier": 0.6211182543695034,
+              "targets": 1940,
+              "evaluated": 1940,
+              "accuracy": 0.4981958762886599,
+              "topTwoCoverage": 0.7793814432989691,
+              "logLoss": 1.0340334202866492,
+              "brier": 0.6192861299352135,
               "coverage": 1,
-              "medianSamples": 79,
+              "medianSamples": 80,
               "thresholdCounts": {
-                "0.07": 1891
+                "0.07": 1940
               }
             },
             "delta": {
-              "accuracy": -0.003437334743521925,
-              "topTwoCoverage": 0.0005288207297726721,
-              "logLoss": 0.004728862077284068,
-              "brier": 0.0020487077241184704
+              "accuracy": -0.0033505154639175694,
+              "topTwoCoverage": -0.006185567010309256,
+              "logLoss": 0.00661381020639995,
+              "brier": 0.003325358267187717
             }
           },
           "strategy": {
@@ -1097,154 +1246,150 @@
             "reason": "候选相对基线的ROI提升区间包含0",
             "passed": false,
             "positiveEdge": false,
-            "evaluated": 1891,
+            "evaluated": 1940,
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
             "candidate": {
-              "evaluatedMatches": 1891,
-              "bettingMatches": 1884,
-              "noPredictionMatches": 7,
-              "wins": 961,
-              "multiSelectionMatches": 78,
-              "stakeUnits": 1962,
-              "returnUnits": 1781.8100000000013,
-              "profitUnits": -180.1899999999987,
-              "roi": -0.09183995922527965
+              "evaluatedMatches": 1940,
+              "bettingMatches": 1931,
+              "noPredictionMatches": 9,
+              "wins": 994,
+              "multiSelectionMatches": 94,
+              "stakeUnits": 2025,
+              "returnUnits": 1854.8300000000024,
+              "profitUnits": -170.16999999999757,
+              "roi": -0.08403456790123337
             },
             "baseline": {
-              "evaluatedMatches": 1891,
-              "bettingMatches": 1884,
-              "noPredictionMatches": 7,
-              "wins": 965,
-              "multiSelectionMatches": 70,
-              "stakeUnits": 1954,
-              "returnUnits": 1780.9700000000005,
-              "profitUnits": -173.02999999999952,
-              "roi": -0.08855168884339791
+              "evaluatedMatches": 1940,
+              "bettingMatches": 1931,
+              "noPredictionMatches": 9,
+              "wins": 995,
+              "multiSelectionMatches": 79,
+              "stakeUnits": 2010,
+              "returnUnits": 1843.3200000000022,
+              "profitUnits": -166.6799999999978,
+              "roi": -0.08292537313432725
             },
-            "roiDelta": -0.0032882703818817444,
+            "roiDelta": -0.0011091947669061158,
             "intervals": {
               "candidate": {
-                "lower": -0.13312402855939803,
-                "upper": -0.05418920791720933
+                "lower": -0.12599882269134707,
+                "upper": -0.04153729525441698
               },
               "baseline": {
-                "lower": -0.1256611655318381,
-                "upper": -0.052095678977620526
+                "lower": -0.12241327953140411,
+                "upper": -0.04212118265191702
               },
               "delta": {
-                "lower": -0.021384945718249393,
-                "upper": 0.014481141888183694
+                "lower": -0.015067243493213492,
+                "upper": 0.013524837386796284
               }
             },
-            "improvementProbability": 0.334
+            "improvementProbability": 0.416
           }
         },
         {
           "minSamples": 50,
           "tuning": {
-            "targets": 7110,
-            "evaluated": 7056,
-            "accuracy": 0.4834892290249435,
-            "topTwoCoverage": 0.753968253968254,
-            "logLoss": 1.0609045934470056,
-            "brier": 0.6340354865404884,
-            "coverage": 0.9924050632911392,
-            "medianSamples": 33,
+            "targets": 7346,
+            "evaluated": 7197,
+            "accuracy": 0.4852253253670513,
+            "topTwoCoverage": 0.7561483951646519,
+            "logLoss": 1.0589308341625716,
+            "brier": 0.6329012210427478,
+            "coverage": 0.9797168527089573,
+            "medianSamples": 34,
             "thresholdCounts": {
-              "0.07": 6540,
-              "0.05": 511,
-              "0.03": 5
+              "0.07": 6641,
+              "0.05": 556
             }
           },
           "validation": {
-            "targets": 1903,
-            "evaluated": 1891,
-            "accuracy": 0.49647452846818274,
-            "topTwoCoverage": 0.780539397144368,
-            "logLoss": 1.0408004079672561,
-            "brier": 0.623356113491382,
-            "coverage": 0.9936941671045717,
-            "medianSamples": 62,
+            "targets": 1962,
+            "evaluated": 1940,
+            "accuracy": 0.4992268041237114,
+            "topTwoCoverage": 0.7783505154639175,
+            "logLoss": 1.0376747899203365,
+            "brier": 0.621244655852236,
+            "coverage": 0.9887869520897044,
+            "medianSamples": 61,
             "thresholdCounts": {
-              "0.07": 1311,
-              "0.05": 566,
-              "0.03": 14
+              "0.07": 1328,
+              "0.05": 612
             }
           },
           "tuningComparison": {
-            "evaluated": 7056,
+            "evaluated": 7197,
             "adaptive": {
-              "targets": 7056,
-              "evaluated": 7056,
-              "accuracy": 0.4834892290249435,
-              "topTwoCoverage": 0.753968253968254,
-              "logLoss": 1.0609045934470056,
-              "brier": 0.6340354865404884,
+              "targets": 7197,
+              "evaluated": 7197,
+              "accuracy": 0.4852253253670513,
+              "topTwoCoverage": 0.7561483951646519,
+              "logLoss": 1.0589308341625716,
+              "brier": 0.6329012210427478,
               "coverage": 1,
-              "medianSamples": 33,
+              "medianSamples": 34,
               "thresholdCounts": {
-                "0.07": 6540,
-                "0.05": 511,
-                "0.03": 5
+                "0.07": 6641,
+                "0.05": 556
               }
             },
             "baseline": {
-              "targets": 7056,
-              "evaluated": 7056,
-              "accuracy": 0.483418367346939,
-              "topTwoCoverage": 0.7556689342403629,
-              "logLoss": 1.0599458041976277,
-              "brier": 0.6335713515770749,
+              "targets": 7197,
+              "evaluated": 7197,
+              "accuracy": 0.48543374554212426,
+              "topTwoCoverage": 0.7578157565652355,
+              "logLoss": 1.0580385100655376,
+              "brier": 0.6324551174308671,
               "coverage": 1,
-              "medianSamples": 33,
+              "medianSamples": 34,
               "thresholdCounts": {
-                "0.07": 7056
+                "0.07": 7197
               }
             },
             "delta": {
-              "accuracy": 0.00007086167800451904,
-              "topTwoCoverage": -0.001700680272108901,
-              "logLoss": 0.0009587892493778671,
-              "brier": 0.00046413496341346505
+              "accuracy": -0.00020842017507294308,
+              "topTwoCoverage": -0.0016673614005835447,
+              "logLoss": 0.0008923240970339918,
+              "brier": 0.00044610361188068826
             }
           },
           "validationComparison": {
-            "evaluated": 1891,
+            "evaluated": 1940,
             "adaptive": {
-              "targets": 1891,
-              "evaluated": 1891,
-              "accuracy": 0.49647452846818274,
-              "topTwoCoverage": 0.780539397144368,
-              "logLoss": 1.0408004079672561,
-              "brier": 0.623356113491382,
+              "targets": 1940,
+              "evaluated": 1940,
+              "accuracy": 0.4992268041237114,
+              "topTwoCoverage": 0.7783505154639175,
+              "logLoss": 1.0376747899203365,
+              "brier": 0.621244655852236,
               "coverage": 1,
-              "medianSamples": 62,
+              "medianSamples": 61,
               "thresholdCounts": {
-                "0.07": 1311,
-                "0.05": 566,
-                "0.03": 14
+                "0.07": 1328,
+                "0.05": 612
               }
             },
             "baseline": {
-              "targets": 1891,
-              "evaluated": 1891,
-              "accuracy": 0.49700334919795536,
-              "topTwoCoverage": 0.777895293495505,
-              "logLoss": 1.0368197681377458,
-              "brier": 0.6211182543695034,
+              "targets": 1940,
+              "evaluated": 1940,
+              "accuracy": 0.4981958762886599,
+              "topTwoCoverage": 0.7793814432989691,
+              "logLoss": 1.0340334202866492,
+              "brier": 0.6192861299352135,
               "coverage": 1,
-              "medianSamples": 79,
+              "medianSamples": 80,
               "thresholdCounts": {
-                "0.07": 1891
+                "0.07": 1940
               }
             },
             "delta": {
-              "accuracy": -0.0005288207297726166,
-              "topTwoCoverage": 0.0026441036488630276,
-              "logLoss": 0.003980639829510357,
-              "brier": 0.0022378591218785715
+              "accuracy": 0.0010309278350514872,
+              "topTwoCoverage": -0.0010309278350515427,
+              "logLoss": 0.0036413696336872192,
+              "brier": 0.0019585259170225022
             }
           },
           "strategy": {
@@ -1252,150 +1397,150 @@
             "reason": "候选相对基线的ROI提升区间包含0",
             "passed": false,
             "positiveEdge": false,
-            "evaluated": 1891,
+            "evaluated": 1940,
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
             "candidate": {
-              "evaluatedMatches": 1891,
-              "bettingMatches": 1884,
-              "noPredictionMatches": 7,
-              "wins": 964,
-              "multiSelectionMatches": 71,
-              "stakeUnits": 1955,
-              "returnUnits": 1781.3300000000013,
-              "profitUnits": -173.6699999999987,
-              "roi": -0.08883375959079218
+              "evaluatedMatches": 1940,
+              "bettingMatches": 1931,
+              "noPredictionMatches": 9,
+              "wins": 998,
+              "multiSelectionMatches": 82,
+              "stakeUnits": 2013,
+              "returnUnits": 1856.6300000000022,
+              "profitUnits": -156.36999999999784,
+              "roi": -0.0776800794833571
             },
             "baseline": {
-              "evaluatedMatches": 1891,
-              "bettingMatches": 1884,
-              "noPredictionMatches": 7,
-              "wins": 965,
-              "multiSelectionMatches": 70,
-              "stakeUnits": 1954,
-              "returnUnits": 1780.9700000000005,
-              "profitUnits": -173.02999999999952,
-              "roi": -0.08855168884339791
+              "evaluatedMatches": 1940,
+              "bettingMatches": 1931,
+              "noPredictionMatches": 9,
+              "wins": 995,
+              "multiSelectionMatches": 79,
+              "stakeUnits": 2010,
+              "returnUnits": 1843.3200000000022,
+              "profitUnits": -166.6799999999978,
+              "roi": -0.08292537313432725
             },
-            "roiDelta": -0.00028207074739426685,
+            "roiDelta": 0.005245293650970151,
             "intervals": {
               "candidate": {
-                "lower": -0.12577969586934715,
-                "upper": -0.05181766399289084
+                "lower": -0.11851515578707927,
+                "upper": -0.03613375250471427
               },
               "baseline": {
-                "lower": -0.1256611655318381,
-                "upper": -0.052095678977620526
+                "lower": -0.12241327953140411,
+                "upper": -0.04212118265191702
               },
               "delta": {
-                "lower": -0.01016545901930508,
-                "upper": 0.009508207833776197
+                "lower": -0.003394864702755392,
+                "upper": 0.014331262349564874
               }
             },
-            "improvementProbability": 0.485
+            "improvementProbability": 0.878
           }
         },
         {
           "minSamples": 100,
           "tuning": {
-            "targets": 7110,
-            "evaluated": 7056,
-            "accuracy": 0.483418367346939,
-            "topTwoCoverage": 0.7556689342403629,
-            "logLoss": 1.0599345301599408,
-            "brier": 0.6335678903683143,
-            "coverage": 0.9924050632911392,
-            "medianSamples": 33,
+            "targets": 7346,
+            "evaluated": 7197,
+            "accuracy": 0.48543374554212426,
+            "topTwoCoverage": 0.7578157565652355,
+            "logLoss": 1.0580232883530487,
+            "brier": 0.6324482462672697,
+            "coverage": 0.9797168527089573,
+            "medianSamples": 34,
             "thresholdCounts": {
-              "0.07": 7054,
-              "0.05": 2
+              "0.07": 7196,
+              "0.05": 1
             }
           },
           "validation": {
-            "targets": 1903,
-            "evaluated": 1891,
-            "accuracy": 0.49779658029261425,
-            "topTwoCoverage": 0.7789529349550502,
-            "logLoss": 1.036473606787322,
-            "brier": 0.6209014391924572,
-            "coverage": 0.9936941671045717,
-            "medianSamples": 79,
+            "targets": 1962,
+            "evaluated": 1940,
+            "accuracy": 0.4981958762886599,
+            "topTwoCoverage": 0.7793814432989691,
+            "logLoss": 1.0341764901078494,
+            "brier": 0.619348453792375,
+            "coverage": 0.9887869520897044,
+            "medianSamples": 80,
             "thresholdCounts": {
-              "0.07": 1856,
-              "0.05": 35
+              "0.07": 1892,
+              "0.05": 48
             }
           },
           "tuningComparison": {
-            "evaluated": 7056,
+            "evaluated": 7197,
             "adaptive": {
-              "targets": 7056,
-              "evaluated": 7056,
-              "accuracy": 0.483418367346939,
-              "topTwoCoverage": 0.7556689342403629,
-              "logLoss": 1.0599345301599408,
-              "brier": 0.6335678903683143,
+              "targets": 7197,
+              "evaluated": 7197,
+              "accuracy": 0.48543374554212426,
+              "topTwoCoverage": 0.7578157565652355,
+              "logLoss": 1.0580232883530487,
+              "brier": 0.6324482462672697,
               "coverage": 1,
-              "medianSamples": 33,
+              "medianSamples": 34,
               "thresholdCounts": {
-                "0.07": 7054,
-                "0.05": 2
+                "0.07": 7196,
+                "0.05": 1
               }
             },
             "baseline": {
-              "targets": 7056,
-              "evaluated": 7056,
-              "accuracy": 0.483418367346939,
-              "topTwoCoverage": 0.7556689342403629,
-              "logLoss": 1.0599458041976277,
-              "brier": 0.6335713515770749,
+              "targets": 7197,
+              "evaluated": 7197,
+              "accuracy": 0.48543374554212426,
+              "topTwoCoverage": 0.7578157565652355,
+              "logLoss": 1.0580385100655376,
+              "brier": 0.6324551174308671,
               "coverage": 1,
-              "medianSamples": 33,
+              "medianSamples": 34,
               "thresholdCounts": {
-                "0.07": 7056
+                "0.07": 7197
               }
             },
             "delta": {
               "accuracy": 0,
               "topTwoCoverage": 0,
-              "logLoss": -0.000011274037686970217,
-              "brier": -0.0000034612087606022968
+              "logLoss": -0.00001522171248891091,
+              "brier": -0.000006871163597432783
             }
           },
           "validationComparison": {
-            "evaluated": 1891,
+            "evaluated": 1940,
             "adaptive": {
-              "targets": 1891,
-              "evaluated": 1891,
-              "accuracy": 0.49779658029261425,
-              "topTwoCoverage": 0.7789529349550502,
-              "logLoss": 1.036473606787322,
-              "brier": 0.6209014391924572,
+              "targets": 1940,
+              "evaluated": 1940,
+              "accuracy": 0.4981958762886599,
+              "topTwoCoverage": 0.7793814432989691,
+              "logLoss": 1.0341764901078494,
+              "brier": 0.619348453792375,
               "coverage": 1,
-              "medianSamples": 79,
+              "medianSamples": 80,
               "thresholdCounts": {
-                "0.07": 1856,
-                "0.05": 35
+                "0.07": 1892,
+                "0.05": 48
               }
             },
             "baseline": {
-              "targets": 1891,
-              "evaluated": 1891,
-              "accuracy": 0.49700334919795536,
-              "topTwoCoverage": 0.777895293495505,
-              "logLoss": 1.0368197681377458,
-              "brier": 0.6211182543695034,
+              "targets": 1940,
+              "evaluated": 1940,
+              "accuracy": 0.4981958762886599,
+              "topTwoCoverage": 0.7793814432989691,
+              "logLoss": 1.0340334202866492,
+              "brier": 0.6192861299352135,
               "coverage": 1,
-              "medianSamples": 79,
+              "medianSamples": 80,
               "thresholdCounts": {
-                "0.07": 1891
+                "0.07": 1940
               }
             },
             "delta": {
-              "accuracy": 0.0007932310946588972,
-              "topTwoCoverage": 0.0010576414595452333,
-              "logLoss": -0.0003461613504238681,
-              "brier": -0.00021681517704619235
+              "accuracy": 0,
+              "topTwoCoverage": 0,
+              "logLoss": 0.0001430698212001591,
+              "brier": 0.00006232385716153921
             }
           },
           "strategy": {
@@ -1403,105 +1548,104 @@
             "reason": "候选相对基线的ROI提升区间包含0",
             "passed": false,
             "positiveEdge": false,
-            "evaluated": 1891,
+            "evaluated": 1940,
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
             "candidate": {
-              "evaluatedMatches": 1891,
-              "bettingMatches": 1884,
-              "noPredictionMatches": 7,
-              "wins": 966,
-              "multiSelectionMatches": 69,
-              "stakeUnits": 1953,
-              "returnUnits": 1782.4700000000005,
-              "profitUnits": -170.52999999999952,
-              "roi": -0.08731694828468997
+              "evaluatedMatches": 1940,
+              "bettingMatches": 1931,
+              "noPredictionMatches": 9,
+              "wins": 995,
+              "multiSelectionMatches": 79,
+              "stakeUnits": 2010,
+              "returnUnits": 1843.3200000000022,
+              "profitUnits": -166.6799999999978,
+              "roi": -0.08292537313432725
             },
             "baseline": {
-              "evaluatedMatches": 1891,
-              "bettingMatches": 1884,
-              "noPredictionMatches": 7,
-              "wins": 965,
-              "multiSelectionMatches": 70,
-              "stakeUnits": 1954,
-              "returnUnits": 1780.9700000000005,
-              "profitUnits": -173.02999999999952,
-              "roi": -0.08855168884339791
+              "evaluatedMatches": 1940,
+              "bettingMatches": 1931,
+              "noPredictionMatches": 9,
+              "wins": 995,
+              "multiSelectionMatches": 79,
+              "stakeUnits": 2010,
+              "returnUnits": 1843.3200000000022,
+              "profitUnits": -166.6799999999978,
+              "roi": -0.08292537313432725
             },
-            "roiDelta": 0.001234740558707939,
+            "roiDelta": 0,
             "intervals": {
               "candidate": {
-                "lower": -0.12434596069582017,
-                "upper": -0.051112143020297804
+                "lower": -0.12241327953140411,
+                "upper": -0.04212118265191702
               },
               "baseline": {
-                "lower": -0.1256611655318381,
-                "upper": -0.052095678977620526
+                "lower": -0.12241327953140411,
+                "upper": -0.04212118265191702
               },
               "delta": {
                 "lower": 0,
-                "upper": 0.0032407189944799156
+                "upper": 0
               }
             },
-            "improvementProbability": 0.867
+            "improvementProbability": 0
           }
         },
         {
           "minSamples": 150,
           "tuning": {
-            "targets": 7110,
-            "evaluated": 7056,
-            "accuracy": 0.483418367346939,
-            "topTwoCoverage": 0.7556689342403629,
-            "logLoss": 1.0599458041976277,
-            "brier": 0.6335713515770749,
-            "coverage": 0.9924050632911392,
-            "medianSamples": 33,
+            "targets": 7346,
+            "evaluated": 7197,
+            "accuracy": 0.48543374554212426,
+            "topTwoCoverage": 0.7578157565652355,
+            "logLoss": 1.0580385100655376,
+            "brier": 0.6324551174308671,
+            "coverage": 0.9797168527089573,
+            "medianSamples": 34,
             "thresholdCounts": {
-              "0.07": 7056
+              "0.07": 7197
             }
           },
           "validation": {
-            "targets": 1903,
-            "evaluated": 1891,
-            "accuracy": 0.497532169927728,
-            "topTwoCoverage": 0.7784241142252777,
-            "logLoss": 1.03614594362584,
-            "brier": 0.620707884397589,
-            "coverage": 0.9936941671045717,
-            "medianSamples": 79,
+            "targets": 1962,
+            "evaluated": 1940,
+            "accuracy": 0.4981958762886599,
+            "topTwoCoverage": 0.7793814432989691,
+            "logLoss": 1.0340334202866492,
+            "brier": 0.6192861299352135,
+            "coverage": 0.9887869520897044,
+            "medianSamples": 80,
             "thresholdCounts": {
-              "0.07": 1889,
-              "0.05": 2
+              "0.07": 1940
             }
           },
           "tuningComparison": {
-            "evaluated": 7056,
+            "evaluated": 7197,
             "adaptive": {
-              "targets": 7056,
-              "evaluated": 7056,
-              "accuracy": 0.483418367346939,
-              "topTwoCoverage": 0.7556689342403629,
-              "logLoss": 1.0599458041976277,
-              "brier": 0.6335713515770749,
+              "targets": 7197,
+              "evaluated": 7197,
+              "accuracy": 0.48543374554212426,
+              "topTwoCoverage": 0.7578157565652355,
+              "logLoss": 1.0580385100655376,
+              "brier": 0.6324551174308671,
               "coverage": 1,
-              "medianSamples": 33,
+              "medianSamples": 34,
               "thresholdCounts": {
-                "0.07": 7056
+                "0.07": 7197
               }
             },
             "baseline": {
-              "targets": 7056,
-              "evaluated": 7056,
-              "accuracy": 0.483418367346939,
-              "topTwoCoverage": 0.7556689342403629,
-              "logLoss": 1.0599458041976277,
-              "brier": 0.6335713515770749,
+              "targets": 7197,
+              "evaluated": 7197,
+              "accuracy": 0.48543374554212426,
+              "topTwoCoverage": 0.7578157565652355,
+              "logLoss": 1.0580385100655376,
+              "brier": 0.6324551174308671,
               "coverage": 1,
-              "medianSamples": 33,
+              "medianSamples": 34,
               "thresholdCounts": {
-                "0.07": 7056
+                "0.07": 7197
               }
             },
             "delta": {
@@ -1512,39 +1656,38 @@
             }
           },
           "validationComparison": {
-            "evaluated": 1891,
+            "evaluated": 1940,
             "adaptive": {
-              "targets": 1891,
-              "evaluated": 1891,
-              "accuracy": 0.497532169927728,
-              "topTwoCoverage": 0.7784241142252777,
-              "logLoss": 1.03614594362584,
-              "brier": 0.620707884397589,
+              "targets": 1940,
+              "evaluated": 1940,
+              "accuracy": 0.4981958762886599,
+              "topTwoCoverage": 0.7793814432989691,
+              "logLoss": 1.0340334202866492,
+              "brier": 0.6192861299352135,
               "coverage": 1,
-              "medianSamples": 79,
+              "medianSamples": 80,
               "thresholdCounts": {
-                "0.07": 1889,
-                "0.05": 2
+                "0.07": 1940
               }
             },
             "baseline": {
-              "targets": 1891,
-              "evaluated": 1891,
-              "accuracy": 0.49700334919795536,
-              "topTwoCoverage": 0.777895293495505,
-              "logLoss": 1.0368197681377458,
-              "brier": 0.6211182543695034,
+              "targets": 1940,
+              "evaluated": 1940,
+              "accuracy": 0.4981958762886599,
+              "topTwoCoverage": 0.7793814432989691,
+              "logLoss": 1.0340334202866492,
+              "brier": 0.6192861299352135,
               "coverage": 1,
-              "medianSamples": 79,
+              "medianSamples": 80,
               "thresholdCounts": {
-                "0.07": 1891
+                "0.07": 1940
               }
             },
             "delta": {
-              "accuracy": 0.0005288207297726166,
-              "topTwoCoverage": 0.0005288207297726721,
-              "logLoss": -0.0006738245119057851,
-              "brier": -0.00041036997191445934
+              "accuracy": 0,
+              "topTwoCoverage": 0,
+              "logLoss": 0,
+              "brier": 0
             }
           },
           "strategy": {
@@ -1552,104 +1695,104 @@
             "reason": "候选相对基线的ROI提升区间包含0",
             "passed": false,
             "positiveEdge": false,
-            "evaluated": 1891,
+            "evaluated": 1940,
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
             "candidate": {
-              "evaluatedMatches": 1891,
-              "bettingMatches": 1884,
-              "noPredictionMatches": 7,
-              "wins": 966,
-              "multiSelectionMatches": 70,
-              "stakeUnits": 1954,
-              "returnUnits": 1782.4700000000005,
-              "profitUnits": -171.52999999999952,
-              "roi": -0.08778403275332626
+              "evaluatedMatches": 1940,
+              "bettingMatches": 1931,
+              "noPredictionMatches": 9,
+              "wins": 995,
+              "multiSelectionMatches": 79,
+              "stakeUnits": 2010,
+              "returnUnits": 1843.3200000000022,
+              "profitUnits": -166.6799999999978,
+              "roi": -0.08292537313432725
             },
             "baseline": {
-              "evaluatedMatches": 1891,
-              "bettingMatches": 1884,
-              "noPredictionMatches": 7,
-              "wins": 965,
-              "multiSelectionMatches": 70,
-              "stakeUnits": 1954,
-              "returnUnits": 1780.9700000000005,
-              "profitUnits": -173.02999999999952,
-              "roi": -0.08855168884339791
+              "evaluatedMatches": 1940,
+              "bettingMatches": 1931,
+              "noPredictionMatches": 9,
+              "wins": 995,
+              "multiSelectionMatches": 79,
+              "stakeUnits": 2010,
+              "returnUnits": 1843.3200000000022,
+              "profitUnits": -166.6799999999978,
+              "roi": -0.08292537313432725
             },
-            "roiDelta": 0.00076765609007165,
+            "roiDelta": 0,
             "intervals": {
               "candidate": {
-                "lower": -0.12485484459661476,
-                "upper": -0.052031659933162576
+                "lower": -0.12241327953140411,
+                "upper": -0.04212118265191702
               },
               "baseline": {
-                "lower": -0.1256611655318381,
-                "upper": -0.052095678977620526
+                "lower": -0.12241327953140411,
+                "upper": -0.04212118265191702
               },
               "delta": {
                 "lower": 0,
-                "upper": 0.002313624678663145
+                "upper": 0
               }
             },
-            "improvementProbability": 0.636
+            "improvementProbability": 0
           }
         },
         {
           "minSamples": 200,
           "tuning": {
-            "targets": 7110,
-            "evaluated": 7056,
-            "accuracy": 0.483418367346939,
-            "topTwoCoverage": 0.7556689342403629,
-            "logLoss": 1.0599458041976277,
-            "brier": 0.6335713515770749,
-            "coverage": 0.9924050632911392,
-            "medianSamples": 33,
+            "targets": 7346,
+            "evaluated": 7197,
+            "accuracy": 0.48543374554212426,
+            "topTwoCoverage": 0.7578157565652355,
+            "logLoss": 1.0580385100655376,
+            "brier": 0.6324551174308671,
+            "coverage": 0.9797168527089573,
+            "medianSamples": 34,
             "thresholdCounts": {
-              "0.07": 7056
+              "0.07": 7197
             }
           },
           "validation": {
-            "targets": 1903,
-            "evaluated": 1891,
-            "accuracy": 0.49700334919795536,
-            "topTwoCoverage": 0.777895293495505,
-            "logLoss": 1.0368197681377458,
-            "brier": 0.6211182543695034,
-            "coverage": 0.9936941671045717,
-            "medianSamples": 79,
+            "targets": 1962,
+            "evaluated": 1940,
+            "accuracy": 0.4981958762886599,
+            "topTwoCoverage": 0.7793814432989691,
+            "logLoss": 1.0340334202866492,
+            "brier": 0.6192861299352135,
+            "coverage": 0.9887869520897044,
+            "medianSamples": 80,
             "thresholdCounts": {
-              "0.07": 1891
+              "0.07": 1940
             }
           },
           "tuningComparison": {
-            "evaluated": 7056,
+            "evaluated": 7197,
             "adaptive": {
-              "targets": 7056,
-              "evaluated": 7056,
-              "accuracy": 0.483418367346939,
-              "topTwoCoverage": 0.7556689342403629,
-              "logLoss": 1.0599458041976277,
-              "brier": 0.6335713515770749,
+              "targets": 7197,
+              "evaluated": 7197,
+              "accuracy": 0.48543374554212426,
+              "topTwoCoverage": 0.7578157565652355,
+              "logLoss": 1.0580385100655376,
+              "brier": 0.6324551174308671,
               "coverage": 1,
-              "medianSamples": 33,
+              "medianSamples": 34,
               "thresholdCounts": {
-                "0.07": 7056
+                "0.07": 7197
               }
             },
             "baseline": {
-              "targets": 7056,
-              "evaluated": 7056,
-              "accuracy": 0.483418367346939,
-              "topTwoCoverage": 0.7556689342403629,
-              "logLoss": 1.0599458041976277,
-              "brier": 0.6335713515770749,
+              "targets": 7197,
+              "evaluated": 7197,
+              "accuracy": 0.48543374554212426,
+              "topTwoCoverage": 0.7578157565652355,
+              "logLoss": 1.0580385100655376,
+              "brier": 0.6324551174308671,
               "coverage": 1,
-              "medianSamples": 33,
+              "medianSamples": 34,
               "thresholdCounts": {
-                "0.07": 7056
+                "0.07": 7197
               }
             },
             "delta": {
@@ -1660,31 +1803,31 @@
             }
           },
           "validationComparison": {
-            "evaluated": 1891,
+            "evaluated": 1940,
             "adaptive": {
-              "targets": 1891,
-              "evaluated": 1891,
-              "accuracy": 0.49700334919795536,
-              "topTwoCoverage": 0.777895293495505,
-              "logLoss": 1.0368197681377458,
-              "brier": 0.6211182543695034,
+              "targets": 1940,
+              "evaluated": 1940,
+              "accuracy": 0.4981958762886599,
+              "topTwoCoverage": 0.7793814432989691,
+              "logLoss": 1.0340334202866492,
+              "brier": 0.6192861299352135,
               "coverage": 1,
-              "medianSamples": 79,
+              "medianSamples": 80,
               "thresholdCounts": {
-                "0.07": 1891
+                "0.07": 1940
               }
             },
             "baseline": {
-              "targets": 1891,
-              "evaluated": 1891,
-              "accuracy": 0.49700334919795536,
-              "topTwoCoverage": 0.777895293495505,
-              "logLoss": 1.0368197681377458,
-              "brier": 0.6211182543695034,
+              "targets": 1940,
+              "evaluated": 1940,
+              "accuracy": 0.4981958762886599,
+              "topTwoCoverage": 0.7793814432989691,
+              "logLoss": 1.0340334202866492,
+              "brier": 0.6192861299352135,
               "coverage": 1,
-              "medianSamples": 79,
+              "medianSamples": 80,
               "thresholdCounts": {
-                "0.07": 1891
+                "0.07": 1940
               }
             },
             "delta": {
@@ -1699,41 +1842,41 @@
             "reason": "候选相对基线的ROI提升区间包含0",
             "passed": false,
             "positiveEdge": false,
-            "evaluated": 1891,
+            "evaluated": 1940,
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
             "candidate": {
-              "evaluatedMatches": 1891,
-              "bettingMatches": 1884,
-              "noPredictionMatches": 7,
-              "wins": 965,
-              "multiSelectionMatches": 70,
-              "stakeUnits": 1954,
-              "returnUnits": 1780.9700000000005,
-              "profitUnits": -173.02999999999952,
-              "roi": -0.08855168884339791
+              "evaluatedMatches": 1940,
+              "bettingMatches": 1931,
+              "noPredictionMatches": 9,
+              "wins": 995,
+              "multiSelectionMatches": 79,
+              "stakeUnits": 2010,
+              "returnUnits": 1843.3200000000022,
+              "profitUnits": -166.6799999999978,
+              "roi": -0.08292537313432725
             },
             "baseline": {
-              "evaluatedMatches": 1891,
-              "bettingMatches": 1884,
-              "noPredictionMatches": 7,
-              "wins": 965,
-              "multiSelectionMatches": 70,
-              "stakeUnits": 1954,
-              "returnUnits": 1780.9700000000005,
-              "profitUnits": -173.02999999999952,
-              "roi": -0.08855168884339791
+              "evaluatedMatches": 1940,
+              "bettingMatches": 1931,
+              "noPredictionMatches": 9,
+              "wins": 995,
+              "multiSelectionMatches": 79,
+              "stakeUnits": 2010,
+              "returnUnits": 1843.3200000000022,
+              "profitUnits": -166.6799999999978,
+              "roi": -0.08292537313432725
             },
             "roiDelta": 0,
             "intervals": {
               "candidate": {
-                "lower": -0.1256611655318381,
-                "upper": -0.052095678977620526
+                "lower": -0.12241327953140411,
+                "upper": -0.04212118265191702
               },
               "baseline": {
-                "lower": -0.1256611655318381,
-                "upper": -0.052095678977620526
+                "lower": -0.12241327953140411,
+                "upper": -0.04212118265191702
               },
               "delta": {
                 "lower": 0,
@@ -1745,12 +1888,19 @@
         }
       ],
       "gate": {
-        "passed": true,
+        "passed": false,
         "tuningPassed": true,
-        "validationPassed": true,
-        "reason": "动态最小范围在较早80%和最新20%均优于固定范围"
+        "validationPassed": false,
+        "reason": "较早80%选出的动态规则未通过最新20%验证"
       },
       "sources": [
+        {
+          "sourceFile": "history.xlsx",
+          "rows": 14,
+          "warmup": 14,
+          "tuningCases": 0,
+          "validationCases": 0
+        },
         {
           "sourceFile": "initspfpl.xlsx",
           "rows": 88,
@@ -1760,10 +1910,10 @@
         },
         {
           "sourceFile": "lsspfpl.xlsx",
-          "rows": 9513,
+          "rows": 9808,
           "warmup": 500,
-          "tuningCases": 7110,
-          "validationCases": 1903
+          "tuningCases": 7346,
+          "validationCases": 1962
         }
       ]
     },

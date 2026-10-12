@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-28T05:13:51.467Z",
+  "generatedAt": "2026-09-16T15:55:51.762Z",
   "data": {
     "database": "betwin.db",
-    "verifiedMatches": 9021,
-    "sourceUpdatedAt": "2026-08-28T05:00:08+00:00",
+    "verifiedMatches": 9303,
+    "sourceUpdatedAt": "2026-09-16T15:34:06+00:00",
     "matchingVersion": "spf-hhad-joint-v1"
   },
   "thresholds": {
@@ -25,10 +25,10 @@
           "passed": false,
           "reason": "候选未同时通过较早段、最新20%、概率质量和Bootstrap稳定性门槛",
           "delta": {
-            "tuningAccuracy": 0.012717045732452803,
-            "validationAccuracy": 0.002391464311993996,
-            "validationLogLoss": -0.06572929299781605,
-            "validationBrier": -0.006696747368988287
+            "tuningAccuracy": 0.012363290537327543,
+            "validationAccuracy": 0.0023385500989386854,
+            "validationLogLoss": -0.047754532664089355,
+            "validationBrier": -0.005408839842171109
           },
           "significance": {
             "passed": false,
@@ -37,59 +37,59 @@
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
-            "evaluated": 1812,
+            "evaluated": 1853,
             "accuracyMargin": 0,
             "accuracyPassed": false,
             "metrics": {
               "accuracy": {
-                "delta": 0.0023914643119941135,
-                "lower": -0.005061166298749078,
-                "upper": 0.010117733627667404,
-                "improvementProbability": 0.706
+                "delta": 0.0023385500989386585,
+                "lower": -0.005576542543622953,
+                "upper": 0.00971847454578161,
+                "improvementProbability": 0.725
               },
               "logLoss": {
-                "delta": -0.06572929299781367,
-                "lower": -0.12346554474978745,
-                "upper": -0.019198800702159357,
-                "improvementProbability": 1
+                "delta": -0.04775453266409026,
+                "lower": -0.10081364664734077,
+                "upper": -0.007030802299934815,
+                "improvementProbability": 0.999
               },
               "brier": {
-                "delta": -0.006696747368988503,
-                "lower": -0.010581379503766654,
-                "upper": -0.0029985892659313155,
-                "improvementProbability": 1
+                "delta": -0.005408839842171084,
+                "lower": -0.009174664826232972,
+                "upper": -0.0018564366178836632,
+                "improvementProbability": 0.998
               }
             }
           }
         },
         "validation": {
           "baseline": {
-            "targets": 1815,
-            "evaluated": 1812,
-            "coverage": 0.9983471074380166,
-            "accuracy": 0.5108535688005887,
-            "logLoss": 1.0588432361841786,
-            "brier": 0.5997739016355604
+            "targets": 1860,
+            "evaluated": 1853,
+            "coverage": 0.9962365591397849,
+            "accuracy": 0.5173592372728908,
+            "logLoss": 1.0352277899029783,
+            "brier": 0.5941943967045694
           },
           "candidate": {
-            "targets": 1815,
-            "evaluated": 1812,
-            "coverage": 0.9983471074380166,
-            "accuracy": 0.5132450331125827,
-            "logLoss": 0.9931139431863626,
-            "brier": 0.5930771542665721
+            "targets": 1860,
+            "evaluated": 1853,
+            "coverage": 0.9962365591397849,
+            "accuracy": 0.5196977873718295,
+            "logLoss": 0.9874732572388889,
+            "brier": 0.5887855568623983
           }
         }
       },
       "hhad": {
         "enabled": true,
         "selected": {
-          "id": "final70-initial15-movement15-decay0.5-market0.75",
+          "id": "final60-initial20-movement20-decay0.5-market0.75",
           "profile": {
-            "id": "final70-initial15-movement15",
-            "finalWeight": 0.7,
-            "initialWeight": 0.15,
-            "movementWeight": 0.15
+            "id": "final60-initial20-movement20",
+            "finalWeight": 0.6,
+            "initialWeight": 0.2,
+            "movementWeight": 0.2
           },
           "decay": 0.5,
           "marketWeight": 0.75
@@ -98,10 +98,10 @@
           "passed": true,
           "reason": "较早段与最新20%命中率均提高，概率质量未明显下降，且区块Bootstrap命中改善概率不低于75%",
           "delta": {
-            "tuningAccuracy": 0.014982332155476952,
-            "validationAccuracy": 0.007112750263435053,
-            "validationLogLoss": -0.15924253741259764,
-            "validationBrier": -0.010749651357287782
+            "tuningAccuracy": 0.01386791157490036,
+            "validationAccuracy": 0.009306693989071024,
+            "validationLogLoss": -0.12739810806302132,
+            "validationBrier": -0.009714234794256815
           },
           "significance": {
             "passed": false,
@@ -110,26 +110,26 @@
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
-            "evaluated": 1898,
+            "evaluated": 1952,
             "accuracyMargin": 0,
             "accuracyPassed": false,
             "metrics": {
               "accuracy": {
-                "delta": 0.007112750263435195,
-                "lower": -0.0027265542676501546,
-                "upper": 0.016952054794520544,
-                "improvementProbability": 0.936
+                "delta": 0.009306693989071038,
+                "lower": -0.000774846311475404,
+                "upper": 0.019211065573770492,
+                "improvementProbability": 0.967
               },
               "logLoss": {
-                "delta": -0.1592425374126017,
-                "lower": -0.25866483070535023,
-                "upper": -0.07654600935465608,
+                "delta": -0.1273981080630226,
+                "lower": -0.22477878092811865,
+                "upper": -0.04579783442314535,
                 "improvementProbability": 1
               },
               "brier": {
-                "delta": -0.01074965135728717,
-                "lower": -0.015679409843294842,
-                "upper": -0.006112400108357729,
+                "delta": -0.009714234794256375,
+                "lower": -0.01453063412459988,
+                "upper": -0.005255723247057756,
                 "improvementProbability": 1
               }
             }
@@ -137,20 +137,20 @@
         },
         "validation": {
           "baseline": {
-            "targets": 1903,
-            "evaluated": 1898,
-            "coverage": 0.9973725696269049,
-            "accuracy": 0.5044783983140149,
-            "logLoss": 1.1693991596479814,
-            "brier": 0.6154316672323403
+            "targets": 1962,
+            "evaluated": 1952,
+            "coverage": 0.9949031600407747,
+            "accuracy": 0.505037568306011,
+            "logLoss": 1.1352345133013453,
+            "brier": 0.6130751993452117
           },
           "candidate": {
-            "targets": 1903,
-            "evaluated": 1898,
-            "coverage": 0.9973725696269049,
-            "accuracy": 0.5115911485774499,
-            "logLoss": 1.0101566222353837,
-            "brier": 0.6046820158750525
+            "targets": 1962,
+            "evaluated": 1952,
+            "coverage": 0.9949031600407747,
+            "accuracy": 0.514344262295082,
+            "logLoss": 1.007836405238324,
+            "brier": 0.6033609645509549
           }
         }
       }
@@ -173,10 +173,10 @@
           "passed": true,
           "reason": "较早段与最新20%命中率均提高，概率质量未明显下降，且区块Bootstrap命中改善概率不低于75%",
           "delta": {
-            "tuningAccuracy": 0.06736535181823189,
-            "validationAccuracy": 0.055522798742138335,
-            "validationLogLoss": -3.886016354260966,
-            "validationBrier": -0.14623026368255154
+            "tuningAccuracy": 0.06572930955647005,
+            "validationAccuracy": 0.053921568627450955,
+            "validationLogLoss": -3.3960576116956225,
+            "validationBrier": -0.12822099982728452
           },
           "significance": {
             "passed": true,
@@ -185,26 +185,26 @@
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
-            "evaluated": 1696,
+            "evaluated": 1666,
             "accuracyMargin": 0,
             "accuracyPassed": true,
             "metrics": {
               "accuracy": {
-                "delta": 0.05552279874213837,
-                "lower": 0.038028203616352174,
-                "upper": 0.07164160770440256,
+                "delta": 0.053921568627450976,
+                "lower": 0.036014405762304906,
+                "upper": 0.07273159263705482,
                 "improvementProbability": 1
               },
               "logLoss": {
-                "delta": -3.8860163542609394,
-                "lower": -4.488434152588392,
-                "upper": -3.2759046662466393,
+                "delta": -3.396057611695603,
+                "lower": -3.9622412787276233,
+                "upper": -2.827915710653621,
                 "improvementProbability": 1
               },
               "brier": {
-                "delta": -0.1462302636825523,
-                "lower": -0.17021876752779538,
-                "upper": -0.12425340531528252,
+                "delta": -0.12822099982728527,
+                "lower": -0.15266487600158726,
+                "upper": -0.10595714992033005,
                 "improvementProbability": 1
               }
             }
@@ -212,20 +212,20 @@
         },
         "validation": {
           "baseline": {
-            "targets": 1815,
-            "evaluated": 1696,
-            "coverage": 0.934435261707989,
-            "accuracy": 0.4397602201257862,
-            "logLoss": 4.904078500851392,
-            "brier": 0.7567585145491896
+            "targets": 1860,
+            "evaluated": 1666,
+            "coverage": 0.8956989247311828,
+            "accuracy": 0.4514805922368948,
+            "logLoss": 4.405234849778412,
+            "brier": 0.7322419704727452
           },
           "candidate": {
-            "targets": 1815,
-            "evaluated": 1696,
-            "coverage": 0.934435261707989,
-            "accuracy": 0.49528301886792453,
-            "logLoss": 1.0180621465904254,
-            "brier": 0.6105282508666381
+            "targets": 1860,
+            "evaluated": 1666,
+            "coverage": 0.8956989247311828,
+            "accuracy": 0.5054021608643458,
+            "logLoss": 1.0091772380827897,
+            "brier": 0.6040209706454607
           }
         }
       },
@@ -246,10 +246,10 @@
           "passed": true,
           "reason": "较早段与最新20%命中率均提高，概率质量未明显下降，且区块Bootstrap命中改善概率不低于75%",
           "delta": {
-            "tuningAccuracy": 0.05687241489023198,
-            "validationAccuracy": 0.0541334850208568,
-            "validationLogLoss": -4.585331012883131,
-            "validationBrier": -0.16296350271758875
+            "tuningAccuracy": 0.05621056127532359,
+            "validationAccuracy": 0.04677017442974879,
+            "validationLogLoss": -3.799084642436836,
+            "validationBrier": -0.1370714176791219
           },
           "significance": {
             "passed": true,
@@ -258,26 +258,26 @@
             "iterations": 1000,
             "blockSize": 20,
             "confidence": 0.95,
-            "evaluated": 1758,
+            "evaluated": 1739,
             "accuracyMargin": 0,
             "accuracyPassed": true,
             "metrics": {
               "accuracy": {
-                "delta": 0.05413348502085707,
-                "lower": 0.03886518771331059,
-                "upper": 0.06865756541524463,
+                "delta": 0.04677017442974892,
+                "lower": 0.03028081272762123,
+                "upper": 0.06411730879815988,
                 "improvementProbability": 1
               },
               "logLoss": {
-                "delta": -4.585331012883087,
-                "lower": -5.301672137066089,
-                "upper": -3.931777612565257,
+                "delta": -3.799084642436823,
+                "lower": -4.464967161543222,
+                "upper": -3.1933927971223666,
                 "improvementProbability": 1
               },
               "brier": {
-                "delta": -0.1629635027175888,
-                "lower": -0.19017518654635995,
-                "upper": -0.13902510737578463,
+                "delta": -0.13707141767912262,
+                "lower": -0.16188305954196527,
+                "upper": -0.11273826769363475,
                 "improvementProbability": 1
               }
             }
@@ -285,20 +285,20 @@
         },
         "validation": {
           "baseline": {
-            "targets": 1903,
-            "evaluated": 1758,
-            "coverage": 0.9238045191802418,
-            "accuracy": 0.4407470610542285,
-            "logLoss": 5.615849800130894,
-            "brier": 0.7817705496307772
+            "targets": 1962,
+            "evaluated": 1739,
+            "coverage": 0.8863404689092762,
+            "accuracy": 0.45466743339083776,
+            "logLoss": 4.821168052359815,
+            "brier": 0.750162904898429
           },
           "candidate": {
-            "targets": 1903,
-            "evaluated": 1758,
-            "coverage": 0.9238045191802418,
-            "accuracy": 0.4948805460750853,
-            "logLoss": 1.0305187872477628,
-            "brier": 0.6188070469131884
+            "targets": 1962,
+            "evaluated": 1739,
+            "coverage": 0.8863404689092762,
+            "accuracy": 0.5014376078205866,
+            "logLoss": 1.0220834099229792,
+            "brier": 0.6130914872193071
           }
         }
       }

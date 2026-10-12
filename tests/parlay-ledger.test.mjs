@@ -77,6 +77,9 @@ test("串关快照不可重复，并保留完整的自选规则", () => {
     assert.equal(first.row.settings.sort, "probability");
     assert.equal(first.row.legs.length, 2);
     assert.equal(ledger.summary().totals.total, 1);
+    assert.equal(ledger.findRecorded(snapshot()).id, first.row.id);
+    assert.equal(ledger.findRecorded({ ...snapshot(), policyVersion: "another-model" }), null);
+    assert.equal(ledger.summary().totals.total, 1, "record lookup must not write");
   } finally {
     ledger.close();
     rmSync(directory, { recursive: true, force: true });
@@ -130,6 +133,45 @@ test("历史文件更新后允许结算水位行被替换的新赛果", () => {
   assert.equal(settlementRowEligible(100, 100, false), false);
   assert.equal(settlementRowEligible(100, 100, true), true);
   assert.equal(settlementRowEligible(99, 100, true), false);
+});
+
+test("串关总览日期筛选会联动汇总与资金轨迹", () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "betwin-parlay-overview-range-"));
+  const ledger = createParlayLedger(path.join(directory, "ledger.db"));
+  try {
+    ["2026-08-01", "2026-08-15", "2026-08-31"].forEach((date, index) => {
+      const row = snapshot();
+      row.combinationId = `combination-${index}`;
+      row.capturedAt = `${date}T10:00:00.000Z`;
+      row.legs = row.legs.map((leg) => ({
+        ...leg,
+        matchId: `${leg.matchId}-${index}`,
+      }));
+      const recorded = ledger.record(row);
+      ledger.settle(recorded.row.id, {
+        correct: index !== 1,
+        simulatedReturn: index !== 1 ? 3 : 0,
+        totalStake: 1,
+        actualResults: [],
+        settledAt: "2026-09-01T10:00:00.000Z",
+      });
+    });
+
+    const overview = ledger.summary({
+      from: "2026-08-10",
+      to: "2026-08-20",
+      applyFiltersToSummary: true,
+    });
+    assert.equal(overview.totals.total, 1);
+    assert.equal(overview.totals.settled, 1);
+    assert.equal(overview.totals.correct, 0);
+    assert.equal(overview.totals.simulatedProfit, -1);
+    assert.equal(overview.performanceEvents.length, 1);
+    assert.equal(overview.performanceEvents[0].correct, false);
+  } finally {
+    ledger.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("待结算串关会保存已经到达的单腿赛果", () => {
@@ -251,29 +293,57 @@ test("串关账本支持玩法、球队筛选和分页", () => {
   }
 });
 
-test("串关账本可按当前预测模型版本统计", () => {
+test("串关账本按稳定算法版本统计并忽略配置生成时间", () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "betwin-parlay-version-"));
   const ledger = createParlayLedger(path.join(directory, "ledger.db"));
   try {
     ledger.record(snapshot());
     const currentSnapshot = snapshot();
     currentSnapshot.combinationId = "current-combo";
+    currentSnapshot.settings.algorithmVersion = "parlay-current-v3";
     currentSnapshot.policyVersion =
-      "historical-similarity-v2:selection-v3@test:all-leagues";
+      "historical-similarity-v2:selection-v3@2026-09-03T11:07:00.245Z:all-leagues";
     ledger.record(currentSnapshot);
     const oldSameFamily = snapshot();
     oldSameFamily.combinationId = "old-same-family-combo";
+    oldSameFamily.settings.algorithmVersion = "parlay-current-v3";
     oldSameFamily.policyVersion =
-      "historical-similarity-v2:selection-v3@old:all-leagues";
+      "historical-similarity-v2:selection-v3@2026-09-02T03:30:07.895Z:all-leagues";
     ledger.record(oldSameFamily);
+    const pendingValidation = snapshot();
+    pendingValidation.combinationId = "pending-validation-combo";
+    pendingValidation.settings.algorithmVersion = "parlay-current-v3";
+    pendingValidation.policyVersion =
+      "historical-similarity-v2:selection-v3@2026-09-01T05:01:45.343Z:pending-validation:all-leagues";
+    ledger.record(pendingValidation);
+    const oldAlgorithm = snapshot();
+    oldAlgorithm.combinationId = "old-algorithm-combo";
+    oldAlgorithm.settings.algorithmVersion = "parlay-old-v2";
+    oldAlgorithm.policyVersion =
+      "historical-similarity-v2:selection-v2@old:all-leagues";
+    ledger.record(oldAlgorithm);
 
     const current = ledger.summary({
       policyVersion: "current",
       currentPolicyPrefix: "historical-similarity-v2:",
-      currentPolicyVersions: [currentSnapshot.policyVersion],
+      currentPolicyVersions: ["parlay-current-v3"],
     });
-    assert.equal(current.totals.total, 1);
-    assert.equal(current.rows[0].policyVersion, currentSnapshot.policyVersion);
+    assert.equal(current.totals.total, 3);
+    assert.deepEqual(
+      new Set(current.rows.map((row) => row.policyVersion)),
+      new Set([
+        currentSnapshot.policyVersion,
+        oldSameFamily.policyVersion,
+        pendingValidation.policyVersion,
+      ]),
+    );
+
+    const legacy = ledger.summary({
+      policyVersion: "legacy",
+      currentPolicyPrefix: "historical-similarity-v2:",
+      currentPolicyVersions: ["parlay-current-v3"],
+    });
+    assert.equal(legacy.totals.total, 2);
   } finally {
     ledger.close();
     rmSync(directory, { recursive: true, force: true });

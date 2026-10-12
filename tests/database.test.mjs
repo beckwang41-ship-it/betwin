@@ -88,6 +88,10 @@ test("SQLite data store exposes imported matches and historical samples", () => 
     assert.ok(goals.some((row) => row.initialOdds?.length === 8));
     assert.equal(goals.length, counts.goalHistory);
     assert.equal(store.getSpfHistory().length, counts.spfHistory);
+    const goalIds = new Set(store.getGoalHistory().map(row => row.historyId));
+    const linkedGoals = store.getVerifiedHistory().filter(row => row.goals != null);
+    assert.ok(linkedGoals.length > 0);
+    assert.ok(linkedGoals.every(row => Number.isInteger(row.goalHistoryId) && goalIds.has(row.goalHistoryId)));
     assert.equal(store.getHhadHistory().length, counts.hhadHistory);
     assert.ok(
       store.getPairedSpfHhadHistory().length < store.getHhadHistory().length,
@@ -326,7 +330,7 @@ test("settlement pool keeps market-only results and their own source rows", () =
 test("unified history links every source record once without collapsing seasons", () => {
   const db = new DatabaseSync(path.join(ROOT, "betwin.db"), { readOnly: true });
   try {
-    assert.equal(db.prepare("PRAGMA user_version").get().user_version, 6);
+    assert.equal(db.prepare("PRAGMA user_version").get().user_version, 7);
 
     const links = db
       .prepare(`

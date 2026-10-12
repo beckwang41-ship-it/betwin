@@ -47,6 +47,7 @@ function loadRows() {
 }
 
 const rows = loadRows();
+console.warn("旧研究协议：仅分析数据库中样本最多的单一来源，不是全库校准结论；正式批次验证请用 model:tune-smoothing。");
 console.log(`数据库: ${DB_PATH}`);
 console.log(`主时间序列 ${rows.length} 场，warmup ${WARMUP}，阈值 ±${(100 * TOL).toFixed(0)}%`);
 console.log(`口径：严格只用 source_row 更早的记录；平滑公式 (n*p + k*prior)/(n+k)\n`);

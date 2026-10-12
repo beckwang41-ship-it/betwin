@@ -1,4 +1,5 @@
 const DEFAULT_GOAL_LABELS = ["0", "1", "2", "3", "4", "5", "6", "7+"];
+export const GOAL_MULTIPLE_VERSION = "goal-multiple-v2-database-all";
 const MULTIPLE_PREDICTION_LABELS = ["2", "3", "4", "5", "6", "7+"];
 const EQUALITY_PREDICTION_LABELS = DEFAULT_GOAL_LABELS;
 
@@ -208,20 +209,26 @@ function recordGoalOdds(record) {
   return Array.isArray(odds) ? odds.map(Number) : [];
 }
 
-function recordSourceFile(record) {
-  return record?.sourceFile || record?.goalSourceFile || "";
+// 来源文件仅用于追溯；倍率分析覆盖数据库全部进球记录，不依赖其他玩法是否齐全。
+export function buildGoalMultipleRecords(records, { minimumZeroOdds = 11 } = {}) {
+  return (Array.isArray(records) ? records : []).flatMap(record => {
+    const odds = recordGoalOdds(record);
+    if (odds.length !== 8 || odds.some(v => !Number.isFinite(v) || v <= 1) ||
+        odds[0] < minimumZeroOdds || !DEFAULT_GOAL_LABELS.includes(String(record.goals))) return [];
+    const relations = exactGoalMultipleRelations(odds);
+    return relations.length ? [{ ...record, odds, relations }] : [];
+  }).sort((a, b) => Number(b.historyBatchId || 0) - Number(a.historyBatchId || 0) ||
+    Number(b.historyId || 0) - Number(a.historyId || 0));
 }
 
 export function buildGoalMultipleDistribution(
   records,
   {
-    sourceFile = null,
     minimumZeroOdds = 11,
   } = {},
 ) {
   const grouped = new Map();
   for (const record of Array.isArray(records) ? records : []) {
-    if (sourceFile && recordSourceFile(record) !== sourceFile) continue;
     const odds = recordGoalOdds(record);
     const zeroOdds = Number(odds[0]);
     const goals = String(record?.goals ?? "");

@@ -5,9 +5,17 @@ import {
   calculateDoubleChance,
   crossValidateScoreAndGoals,
   formatOddsWithMovement,
+  formatStakeProfit,
+  ledgerPerformanceMetrics,
   settledLedgerCounts,
   timelineHasOddsMovement,
 } from "../public/ledger-metrics.js";
+
+test("注单位盈亏按每注2元换算并同时展示两种单位", () => {
+  assert.equal(formatStakeProfit(8.78), "+17.56 元 (+8.78 注)");
+  assert.equal(formatStakeProfit(-4), "-8.00 元 (-4.00 注)");
+  assert.equal(formatStakeProfit(0), "0.00 元 (0.00 注)");
+});
 
 test("实战汇总只统计已结算比赛和预测", () => {
   assert.deepEqual(
@@ -86,6 +94,33 @@ test("资金看板没有已结算注数时不伪造收益率", () => {
       roi: null,
     },
   );
+});
+
+test("资金轨迹按留档顺序计算滚动ROI、回撤和连续未中", () => {
+  const result = ledgerPerformanceMetrics([
+    { id: "4", capturedAt: "2026-08-04T10:00:00Z", correct: true, stakeUnits: 1, simulatedProfit: 4 },
+    { id: "2", capturedAt: "2026-08-02T10:00:00Z", correct: false, stakeUnits: 1, simulatedProfit: -1 },
+    { id: "ignored", capturedAt: "2026-08-02T11:00:00Z", correct: false, stakeUnits: 0, simulatedProfit: 0 },
+    { id: "1", capturedAt: "2026-08-01T10:00:00Z", correct: true, stakeUnits: 1, simulatedProfit: 1 },
+    { id: "3", capturedAt: "2026-08-03T10:00:00Z", correct: false, stakeUnits: 2, simulatedProfit: -2 },
+  ], 3);
+
+  assert.equal(result.entries, 4);
+  assert.equal(result.cumulativeProfit, 2);
+  assert.equal(result.maximumDrawdown, 3);
+  assert.equal(result.currentDrawdown, 0);
+  assert.equal(result.longestMissStreak, 2);
+  assert.equal(result.currentMissStreak, 0);
+  assert.equal(result.points[1].rollingRoi, null);
+  assert.equal(result.points[2].rollingRoi, -0.5);
+  assert.equal(result.points[3].rollingRoi, 0.25);
+  assert.equal(result.rollingRoi, 0.25);
+  assert.deepEqual(result.daily.map((row) => row.date), [
+    "2026-08-01",
+    "2026-08-02",
+    "2026-08-03",
+    "2026-08-04",
+  ]);
 });
 
 test("概率前两项选取最高两项并计算分配后等效返还", () => {

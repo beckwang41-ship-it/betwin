@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildThreeWaySmoothingRows,
   createThreeWaySmoothingResolvers,
+  selectThreeWayHistoricalPrior,
 } from "../lib/three-way-smoothing.mjs";
 
 function historyRow(sourceRow, spfOdds, hhadOdds) {
@@ -18,7 +19,7 @@ function historyRow(sourceRow, spfOdds, hhadOdds) {
   };
 }
 
-test("平滑训练复用生产联合比分口径且不做独立回退", () => {
+test("平滑训练复用双盘口联合样本口径且不做独立回退", () => {
   const rows = buildThreeWaySmoothingRows(
     [
       historyRow(1, [2, 3.2, 3.8], [2.5, 3.2, 2.2]),
@@ -40,4 +41,25 @@ test("平滑训练复用生产联合比分口径且不做独立回退", () => {
   };
   const fallback = resolver.sampleResolver(noJointTarget, rows.slice(0, 2));
   assert.equal(fallback.length, 0);
+});
+
+test("未配对让球记录进入先验池，回测与正式先验一致，但不冒充联合样本", () => {
+  const row = buildThreeWaySmoothingRows([historyRow(1, [2, 3.2, 3.8], [2.5, 3.2, 2.2])], "hhad")[0];
+  const single = { ...row.hhad, sourceFile: "hhad-only.xlsx", sourceRow: 2, result: "胜" };
+  const rows = buildThreeWaySmoothingRows({
+    spfHistory: [row.spf], hhadHistory: [row.hhad, single], pairedHistory: [row],
+  }, "hhad");
+  assert.equal(rows.length, 2);
+  const resolver = createThreeWaySmoothingResolvers("hhad");
+  assert.equal(resolver.sampleResolver(row, rows).length, 1);
+  const options = { threshold: 0.07, relaxedMultiplier: 2, minLocalizedSamples: 1 };
+  const prior = resolver.priorResolver(rows, row, options);
+  assert.equal(prior.sampleSize, 2);
+  assert.deepEqual(prior.probabilities, [0.5, 0, 0.5]);
+  assert.deepEqual(prior, selectThreeWayHistoricalPrior([row.hhad, single], row.hhad, "hhad", options));
+  const oneMarketTarget = rows.find(r => !r.spf);
+  assert.equal(resolver.sampleResolver(oneMarketTarget, rows).length, 2);
+  // historySteps 的历史数组原地增长，缓存也必须增长。
+  rows.push({ hhad: { ...single, result: "平", sourceRow: 3 } });
+  assert.equal(resolver.priorResolver(rows, row, options).sampleSize, 3);
 });

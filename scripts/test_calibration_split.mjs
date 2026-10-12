@@ -69,6 +69,7 @@ function evaluate(sub, k) {
 }
 
 const rows = loadMain();
+console.warn("旧研究协议：仅分析数据库中样本最多的单一来源，不是全库校准结论；正式批次验证请用 model:tune-smoothing。");
 const cases = [];
 for (let i = WARMUP; i < rows.length; i += 1) {
   const t = rows[i];

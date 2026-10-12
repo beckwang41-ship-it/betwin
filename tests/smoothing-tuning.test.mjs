@@ -109,6 +109,16 @@ test("高概率候选样本不足时不能把更差的校准偏差当作未退�
   assert.equal(result.delta, null);
 });
 
+test("高概率声明变少且观测偏差更小时仍不能绕过样本量门槛", () => {
+  const result = assessHighConfidenceCalibration(
+    { count: 12, observedAbsoluteGap: 0.024, absoluteGap: null },
+    { count: 32, observedAbsoluteGap: 0.1071, absoluteGap: 0.1071 },
+  );
+  assert.equal(result.passed, false);
+  assert.equal(result.status, "candidate-insufficient");
+  assert.equal(result.delta, null);
+});
+
 test("候选不再产生高概率声明时通过高概率档保护", () => {
   const result = assessHighConfidenceCalibration(
     {
@@ -142,4 +152,34 @@ test("加权经验分布使用生产权重计数执行防零", () => {
     result.map((value) => Number(value.toFixed(6))),
     [0.636364, 0.363636],
   );
+});
+
+test("每日批次使用旧库预热、忽略重复行号且训练验证不拆批次", () => {
+  const legacy = Array.from({ length: 8 }, (_, i) => ({
+    sourceFile: "old.xlsx", sourceRow: i + 1, historyBatchId: 0,
+    odds: [2, 3, 4], result: ["胜", "平", "负"][i % 3],
+  }));
+  const daily = [1, 1, 2, 2].map((batch, i) => ({
+    sourceFile: "history.xlsx", sourceRow: 2, historyBatchId: batch,
+    historyId: 100 + i, odds: [2, 3, 4], result: "胜",
+  }));
+  const seen = [];
+  const result = tuneHistoricalSmoothing([...daily].reverse().concat(legacy), {
+    labels: ["胜", "平", "负"], outcomeField: "result", distance: () => 0,
+    threshold: 0.07, strengths: [2], warmup: 2,
+    sampleResolver(target, history) {
+      if (target.historyBatchId) {
+        assert.ok(history.every(row => row.historyBatchId < target.historyBatchId));
+        seen.push([target.historyId, history.length]);
+      }
+      return history;
+    },
+  });
+  assert.deepEqual(seen, [[100, 8], [101, 8], [102, 10], [103, 10]]);
+  assert.equal(result.validationStart, 8);
+  assert.equal(result.baseline.tuning.evaluated, 6);
+  assert.equal(result.baseline.validation.evaluated, 4);
+  assert.deepEqual(result.sources.at(-1), {
+    sourceFile: "database-import-batches", rows: 4, warmup: 0, tuningCases: 0, validationCases: 4,
+  });
 });

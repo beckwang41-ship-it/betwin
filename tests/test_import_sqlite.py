@@ -69,6 +69,7 @@ class JsonOnlyImportTests(unittest.TestCase):
                         "initialOdds": [2.0, 3.0, 4.0],
                         "odds": [2.1, 3.1, 4.1],
                     }],
+                    "2026-01-01T00:00:00+00:00",
                 )
                 connection.execute(
                     """
@@ -259,7 +260,7 @@ class LiveTeamNameImportTests(unittest.TestCase):
 
 
 class HistoricalSourceRowUpdateTests(unittest.TestCase):
-    def test_reused_source_row_replaces_the_complete_historical_record(self) -> None:
+    def test_reused_source_row_appends_new_records(self) -> None:
         connection = sqlite3.connect(":memory:")
         try:
             connection.executescript(SCHEMA)
@@ -284,6 +285,7 @@ class HistoricalSourceRowUpdateTests(unittest.TestCase):
                     "initialOdds": [2.0, 3.0, 4.0],
                     "odds": [2.1, 3.1, 4.1],
                 }],
+                "2026-09-20T00:00:00+00:00",
             )
             import_historical_spf(
                 connection,
@@ -299,6 +301,7 @@ class HistoricalSourceRowUpdateTests(unittest.TestCase):
                     "initialOdds": [2.65, 3.15, 2.3],
                     "odds": [2.88, 3.15, 2.15],
                 }],
+                "2026-09-21T00:00:00+00:00",
             )
             import_historical_hhad(
                 connection,
@@ -313,6 +316,7 @@ class HistoricalSourceRowUpdateTests(unittest.TestCase):
                     "initialOdds": [2.0, 3.0, 4.0],
                     "odds": [2.1, 3.1, 4.1],
                 }],
+                "2026-09-20T00:00:00+00:00",
             )
             import_historical_hhad(
                 connection,
@@ -327,6 +331,7 @@ class HistoricalSourceRowUpdateTests(unittest.TestCase):
                     "initialOdds": [1.47, 3.95, 5.1],
                     "odds": [1.52, 3.8, 4.8],
                 }],
+                "2026-09-21T00:00:00+00:00",
             )
             import_historical_goals(
                 connection,
@@ -339,6 +344,7 @@ class HistoricalSourceRowUpdateTests(unittest.TestCase):
                     "initialOdds": [2.0] * 8,
                     "odds": [2.1] * 8,
                 }],
+                "2026-09-20T00:00:00+00:00",
             )
             import_historical_goals(
                 connection,
@@ -351,26 +357,29 @@ class HistoricalSourceRowUpdateTests(unittest.TestCase):
                     "initialOdds": [13, 5.2, 3.6, 3.6, 5.4, 9.7, 19, 28],
                     "odds": [12, 5, 3.1, 3.4, 6.2, 12, 27, 44],
                 }],
+                "2026-09-21T00:00:00+00:00",
             )
 
+            for table in ("historical_spf", "historical_hhad", "historical_goals"):
+                self.assertEqual(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0], 2)
             self.assertEqual(
                 connection.execute(
                     "SELECT league, home_team, away_team, score, result, "
-                    "total_goals, final_home_odds FROM historical_spf"
+                    "total_goals, final_home_odds FROM historical_spf ORDER BY id DESC"
                 ).fetchone(),
                 ("欧罗巴", "比亚韦斯托克", "格拉斯哥流浪者", "2:1", "胜", 3, 2.88),
             )
             self.assertEqual(
                 connection.execute(
                     "SELECT league, home_team, away_team, score, handicap, "
-                    "result, final_home_odds FROM historical_hhad"
+                    "result, final_home_odds FROM historical_hhad ORDER BY id DESC"
                 ).fetchone(),
                 ("欧罗巴", "比亚韦斯托克", "格拉斯哥流浪者", "2:1", 1, "胜", 1.52),
             )
             self.assertEqual(
                 connection.execute(
                     "SELECT league, home_team, away_team, actual_goals, "
-                    "final_g0 FROM historical_goals"
+                    "final_g0 FROM historical_goals ORDER BY id DESC"
                 ).fetchone(),
                 ("欧罗巴", "比亚韦", "流浪者", "3", 12.0),
             )

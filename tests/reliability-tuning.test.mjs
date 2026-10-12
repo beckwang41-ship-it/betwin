@@ -4,6 +4,7 @@ import {
   buildGoalReliabilityObservation,
   buildThreeWayReliabilityObservations,
   reliabilityRuleMatches,
+  selectedMarketProbability,
   tuneReliabilityPolicy,
 } from "../lib/reliability-tuning.mjs";
 
@@ -54,6 +55,7 @@ test("reliability tuning enables a rule that repeats across later segments", () 
       consensus: strong ? 1 : 0.5,
       stable: strong,
       correct: strong ? 1 : index % 4 === 0 ? 1 : 0,
+      marketProbability: strong ? 0.6 : 0.3,
     };
   });
   const result = tuneReliabilityPolicy(observations, { threshold: 0.1 });
@@ -61,6 +63,82 @@ test("reliability tuning enables a rule that repeats across later segments", () 
   assert.equal(result.gate.passed, true);
   assert.ok(result.test.selected >= 100);
   assert.ok(result.test.accuracyLift >= 0.02);
+});
+
+test("筛选规则只挑中市场热门、命中不超过去水市场概率时不得点亮重点参考", () => {
+  // 强信号场实际命中 70%，但市场本身已给出 72%：命中率提升是真的，市场增量却为负。
+  const observations = Array.from({ length: 2000 }, (_, index) => {
+    const strong = index % 5 < 2;
+    return {
+      available: true,
+      samples: strong ? 120 : 35,
+      topProbability: strong ? 0.72 : 0.43,
+      margin: strong ? 0.35 : 0.08,
+      consensus: strong ? 1 : 0.5,
+      stable: strong,
+      correct: strong ? (Math.floor(index / 5) % 10 < 7 ? 1 : 0) : index % 4 === 0 ? 1 : 0,
+      marketProbability: strong ? 0.72 : 0.3,
+    };
+  });
+  const result = tuneReliabilityPolicy(observations, { threshold: 0.1 });
+  assert.equal(result.gate.testPassed, true, "命中率门禁本身应通过");
+  assert.equal(result.gate.marketEdgePassed, false);
+  assert.equal(result.enabled, false);
+  assert.match(result.gate.reason, /市场热门/);
+  assert.ok(result.test.marketEdge < 0);
+
+  const legacy = tuneReliabilityPolicy(observations, {
+    threshold: 0.1,
+    requireMarketEdge: false,
+  });
+  assert.equal(legacy.enabled, true, "关闭市场门禁可复现 v1 旧结果");
+});
+
+test("筛出场次稳定比市场更准时市场门禁通过", () => {
+  const observations = Array.from({ length: 2000 }, (_, index) => {
+    const strong = index % 5 < 2;
+    return {
+      available: true,
+      samples: strong ? 120 : 35,
+      topProbability: strong ? 0.72 : 0.43,
+      margin: strong ? 0.35 : 0.08,
+      consensus: strong ? 1 : 0.5,
+      stable: strong,
+      correct: strong ? 1 : index % 4 === 0 ? 1 : 0,
+      marketProbability: strong ? 0.6 : 0.3,
+    };
+  });
+  const result = tuneReliabilityPolicy(observations, { threshold: 0.1 });
+  assert.equal(result.gate.marketEdgePassed, true);
+  assert.equal(result.enabled, true);
+  assert.ok(result.testMarketSignificance.marketEdge.lower >= 0);
+});
+
+test("缺少市场赔率的观察不能证明市场增量", () => {
+  const observations = Array.from({ length: 2000 }, (_, index) => {
+    const strong = index % 5 < 2;
+    return {
+      available: true,
+      samples: strong ? 120 : 35,
+      topProbability: strong ? 0.72 : 0.43,
+      margin: strong ? 0.35 : 0.08,
+      consensus: strong ? 1 : 0.5,
+      stable: strong,
+      correct: strong ? 1 : index % 4 === 0 ? 1 : 0,
+    };
+  });
+  const result = tuneReliabilityPolicy(observations, { threshold: 0.1 });
+  assert.equal(result.test.marketEdge, null);
+  assert.equal(result.enabled, false);
+});
+
+test("去水市场概率按所选方向计算，并列取均值，非法赔率返回 null", () => {
+  const value = selectedMarketProbability([2, 4, 4], [0]);
+  assert.ok(Math.abs(value - 0.5) < 1e-12);
+  const tie = selectedMarketProbability([2, 4, 4], [1, 2]);
+  assert.ok(Math.abs(tie - 0.25) < 1e-12);
+  assert.equal(selectedMarketProbability([2, 0.5, 4], [0]), null);
+  assert.equal(selectedMarketProbability([2, 4, 4], []), null);
 });
 
 test("reliability rule checks samples, probability, margin and stability", () => {

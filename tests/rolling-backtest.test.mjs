@@ -78,3 +78,16 @@ test("goal-pair summary counts top-two coverage and charges two stakes", () => {
   assert.equal(summary.flatBetRoi, -0.125);
   assert.equal(summary.stakePerMatch, 2);
 });
+
+test("并列最高按覆盖成本结算，三项全覆盖不下注", () => {
+  const result = summarizeCases([
+    { probabilities: [.45, .45, .1], odds: [2, 3, 4], actualIndex: 1, prediction: 0 },
+    { probabilities: [1/3, 1/3, 1/3], odds: [2, 3, 4], actualIndex: 0, prediction: 0 },
+  ], "probabilities", "prediction");
+  assert.equal(result.flatBetProfit, 1);
+  assert.equal(result.stakeUnits, 2);
+  assert.equal(result.flatBetRoi, .5);
+  assert.equal(result.noPrediction, 1);
+  assert.equal(result.accuracy, null);
+  assert.equal(result.multiSelectionCoverage, 1);
+});

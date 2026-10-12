@@ -1,0 +1,920 @@
+{
+  "reportOnly": true,
+  "affectsProduction": false,
+  "generatedAt": "2026-09-05T02:18:25.963Z",
+  "matchingVersion": "spf-hhad-paired-direct-results-v3",
+  "discipline": "首行最旧、末行最新；每场仅使用同来源更小行号；文件之间不拼接时间线",
+  "limitation": "末段此前已经查看，属于历史研究，不能宣称独立未来验证或全局最优",
+  "data": {
+    "source": "lsspfpl.xlsx",
+    "rows": 9621,
+    "sourceRows": [
+      2,
+      9632
+    ],
+    "fingerprint": "9136fb685c41afc17e863dc23baa4beb80806df5363cb1c7dec73085cac06f5a"
+  },
+  "codeFingerprint": "0c8010a3658c0b193d43c775125314e82002b2c81feaea895ae14859ab414962",
+  "settings": {
+    "warmup": 1000,
+    "spfTolerance": 0.07,
+    "hhadTolerance": 0.07,
+    "tuningEnd": 0.6,
+    "validationEnd": 0.8
+  },
+  "ranking": [
+    {
+      "id": "global",
+      "k": null,
+      "metrics": {
+        "evaluated": 9208,
+        "accuracy": 0.5014018691588785,
+        "strictSingles": 8560,
+        "multiSelections": 585,
+        "multiSelectionCoverage": 0.7094017094017094,
+        "noPrediction": 63,
+        "stakeUnits": 9730,
+        "flatBetProfit": -1064.0900000000008,
+        "logLoss": 1.0466357331497695,
+        "brier": 0.6242367259130494,
+        "flatBetRoi": -0.10936176772867429,
+        "targets": 9362,
+        "coverage": 0.9835505233924375,
+        "fixtures": 4686
+      }
+    },
+    {
+      "id": "hierarchy-k1600",
+      "k": 1600,
+      "metrics": {
+        "evaluated": 9208,
+        "accuracy": 0.4983000906618314,
+        "strictSingles": 8824,
+        "multiSelections": 350,
+        "multiSelectionCoverage": 0.6714285714285714,
+        "noPrediction": 34,
+        "stakeUnits": 9524,
+        "flatBetProfit": -1031.5300000000007,
+        "logLoss": 1.0466640736694746,
+        "brier": 0.6242523893348431,
+        "flatBetRoi": -0.10830848383032346,
+        "targets": 9362,
+        "coverage": 0.9835505233924375,
+        "fixtures": 4686
+      }
+    },
+    {
+      "id": "hierarchy-k800",
+      "k": 800,
+      "metrics": {
+        "evaluated": 9208,
+        "accuracy": 0.4983000906618314,
+        "strictSingles": 8824,
+        "multiSelections": 350,
+        "multiSelectionCoverage": 0.6714285714285714,
+        "noPrediction": 34,
+        "stakeUnits": 9524,
+        "flatBetProfit": -1031.5300000000007,
+        "logLoss": 1.046693835773053,
+        "brier": 0.6242688928891394,
+        "flatBetRoi": -0.10830848383032346,
+        "targets": 9362,
+        "coverage": 0.9835505233924375,
+        "fixtures": 4686
+      }
+    },
+    {
+      "id": "hierarchy-k400",
+      "k": 400,
+      "metrics": {
+        "evaluated": 9208,
+        "accuracy": 0.4983000906618314,
+        "strictSingles": 8824,
+        "multiSelections": 350,
+        "multiSelectionCoverage": 0.6714285714285714,
+        "noPrediction": 34,
+        "stakeUnits": 9524,
+        "flatBetProfit": -1031.5300000000007,
+        "logLoss": 1.0467575020564124,
+        "brier": 0.6243043495745267,
+        "flatBetRoi": -0.10830848383032346,
+        "targets": 9362,
+        "coverage": 0.9835505233924375,
+        "fixtures": 4686
+      }
+    },
+    {
+      "id": "hierarchy-k200",
+      "k": 200,
+      "metrics": {
+        "evaluated": 9208,
+        "accuracy": 0.4983000906618314,
+        "strictSingles": 8824,
+        "multiSelections": 350,
+        "multiSelectionCoverage": 0.6714285714285714,
+        "noPrediction": 34,
+        "stakeUnits": 9524,
+        "flatBetProfit": -1029.4400000000005,
+        "logLoss": 1.0469005958180213,
+        "brier": 0.6243845928240461,
+        "flatBetRoi": -0.10808903821923567,
+        "targets": 9362,
+        "coverage": 0.9835505233924375,
+        "fixtures": 4686
+      }
+    },
+    {
+      "id": "hierarchy-k120",
+      "k": 120,
+      "metrics": {
+        "evaluated": 9208,
+        "accuracy": 0.49807343608340887,
+        "strictSingles": 8824,
+        "multiSelections": 350,
+        "multiSelectionCoverage": 0.6714285714285714,
+        "noPrediction": 34,
+        "stakeUnits": 9524,
+        "flatBetProfit": -1033.41,
+        "logLoss": 1.0471216057569857,
+        "brier": 0.6245094897451076,
+        "flatBetRoi": -0.10850587988240236,
+        "targets": 9362,
+        "coverage": 0.9835505233924375,
+        "fixtures": 4686
+      }
+    },
+    {
+      "id": "hierarchy-k80",
+      "k": 80,
+      "metrics": {
+        "evaluated": 9208,
+        "accuracy": 0.49716681776971894,
+        "strictSingles": 8824,
+        "multiSelections": 350,
+        "multiSelectionCoverage": 0.6714285714285714,
+        "noPrediction": 34,
+        "stakeUnits": 9524,
+        "flatBetProfit": -1049.4700000000005,
+        "logLoss": 1.0474415030644333,
+        "brier": 0.6246914797943671,
+        "flatBetRoi": -0.11019214615707691,
+        "targets": 9362,
+        "coverage": 0.9835505233924375,
+        "fixtures": 4686
+      }
+    },
+    {
+      "id": "hierarchy-k40",
+      "k": 40,
+      "metrics": {
+        "evaluated": 9208,
+        "accuracy": 0.49750679963735267,
+        "strictSingles": 8824,
+        "multiSelections": 350,
+        "multiSelectionCoverage": 0.6742857142857143,
+        "noPrediction": 34,
+        "stakeUnits": 9524,
+        "flatBetProfit": -1017.2700000000007,
+        "logLoss": 1.048640049752652,
+        "brier": 0.6253788031687315,
+        "flatBetRoi": -0.10681121377572456,
+        "targets": 9362,
+        "coverage": 0.9835505233924375,
+        "fixtures": 4686
+      }
+    },
+    {
+      "id": "hierarchy-k20",
+      "k": 20,
+      "metrics": {
+        "evaluated": 9208,
+        "accuracy": 0.4942229270502945,
+        "strictSingles": 8828,
+        "multiSelections": 346,
+        "multiSelectionCoverage": 0.6734104046242775,
+        "noPrediction": 34,
+        "stakeUnits": 9520,
+        "flatBetProfit": -1042.4800000000016,
+        "logLoss": 1.0517843773849176,
+        "brier": 0.6271908631935026,
+        "flatBetRoi": -0.10950420168067244,
+        "targets": 9362,
+        "coverage": 0.9835505233924375,
+        "fixtures": 4686
+      }
+    },
+    {
+      "id": "hierarchy-k10",
+      "k": 10,
+      "metrics": {
+        "evaluated": 9208,
+        "accuracy": 0.48533906939884525,
+        "strictSingles": 8833,
+        "multiSelections": 341,
+        "multiSelectionCoverage": 0.6803519061583577,
+        "noPrediction": 34,
+        "stakeUnits": 9515,
+        "flatBetProfit": -1132.990000000003,
+        "logLoss": 1.0596206121103966,
+        "brier": 0.6316819530374757,
+        "flatBetRoi": -0.1190740935365216,
+        "targets": 9362,
+        "coverage": 0.9835505233924375,
+        "fixtures": 4686
+      }
+    },
+    {
+      "id": "hierarchy-k5",
+      "k": 5,
+      "metrics": {
+        "evaluated": 9208,
+        "accuracy": 0.4760502774317744,
+        "strictSingles": 8831,
+        "multiSelections": 343,
+        "multiSelectionCoverage": 0.685131195335277,
+        "noPrediction": 34,
+        "stakeUnits": 9517,
+        "flatBetProfit": -1097.9600000000012,
+        "logLoss": 1.0772016531465236,
+        "brier": 0.6415279015266564,
+        "flatBetRoi": -0.11536828832615333,
+        "targets": 9362,
+        "coverage": 0.9835505233924375,
+        "fixtures": 4686
+      }
+    },
+    {
+      "id": "hierarchy-k2",
+      "k": 2,
+      "metrics": {
+        "evaluated": 9208,
+        "accuracy": 0.45511151364202423,
+        "strictSingles": 8833,
+        "multiSelections": 341,
+        "multiSelectionCoverage": 0.6862170087976539,
+        "noPrediction": 34,
+        "stakeUnits": 9515,
+        "flatBetProfit": -1123.640000000001,
+        "logLoss": 1.1274907175356026,
+        "brier": 0.6678515520425738,
+        "flatBetRoi": -0.11809143457698382,
+        "targets": 9362,
+        "coverage": 0.9835505233924375,
+        "fixtures": 4686
+      }
+    }
+  ],
+  "selectedOnTuningOnly": {
+    "id": "global",
+    "k": null
+  },
+  "stages": {
+    "tuning": {
+      "sourceRows": [
+        1002,
+        5773
+      ],
+      "byPolicy": {
+        "global": {
+          "evaluated": 9208,
+          "accuracy": 0.5014018691588785,
+          "strictSingles": 8560,
+          "multiSelections": 585,
+          "multiSelectionCoverage": 0.7094017094017094,
+          "noPrediction": 63,
+          "stakeUnits": 9730,
+          "flatBetProfit": -1064.0900000000008,
+          "logLoss": 1.0466357331497695,
+          "brier": 0.6242367259130494,
+          "flatBetRoi": -0.10936176772867429,
+          "targets": 9362,
+          "coverage": 0.9835505233924375,
+          "fixtures": 4686
+        },
+        "same": {
+          "evaluated": 6342,
+          "accuracy": 0.4335271706436736,
+          "strictSingles": 4987,
+          "multiSelections": 1144,
+          "multiSelectionCoverage": 0.7036713286713286,
+          "noPrediction": 211,
+          "stakeUnits": 7275,
+          "flatBetProfit": -787.2999999999997,
+          "logLoss": 1.163393256876331,
+          "brier": 0.6995809372831221,
+          "flatBetRoi": -0.10821993127147762,
+          "targets": 9362,
+          "coverage": 0.6774193548387096,
+          "fixtures": 3217
+        },
+        "market": {
+          "evaluated": 9208,
+          "accuracy": 0.5190232203205059,
+          "strictSingles": 9173,
+          "multiSelections": 35,
+          "multiSelectionCoverage": 0.7714285714285715,
+          "noPrediction": 0,
+          "stakeUnits": 9243,
+          "flatBetProfit": -947.5000000000017,
+          "logLoss": 1.0002074886871206,
+          "brier": 0.5975366518174371,
+          "flatBetRoi": -0.1025100075732989,
+          "targets": 9362,
+          "coverage": 0.9835505233924375,
+          "fixtures": 4686
+        }
+      },
+      "commonAllAndSame": {
+        "global": {
+          "evaluated": 6342,
+          "accuracy": 0.5052561321541799,
+          "strictSingles": 5993,
+          "multiSelections": 318,
+          "multiSelectionCoverage": 0.7264150943396226,
+          "noPrediction": 31,
+          "stakeUnits": 6629,
+          "flatBetProfit": -625.8499999999989,
+          "logLoss": 1.040944984301818,
+          "brier": 0.6209905124918446,
+          "flatBetRoi": -0.09441092170764805,
+          "targets": 6342,
+          "coverage": 1,
+          "fixtures": 3217
+        },
+        "same": {
+          "evaluated": 6342,
+          "accuracy": 0.4335271706436736,
+          "strictSingles": 4987,
+          "multiSelections": 1144,
+          "multiSelectionCoverage": 0.7036713286713286,
+          "noPrediction": 211,
+          "stakeUnits": 7275,
+          "flatBetProfit": -787.2999999999997,
+          "logLoss": 1.163393256876331,
+          "brier": 0.6995809372831221,
+          "flatBetRoi": -0.10821993127147762,
+          "targets": 6342,
+          "coverage": 1,
+          "fixtures": 3217
+        },
+        "market": {
+          "evaluated": 6342,
+          "accuracy": 0.512666244458518,
+          "strictSingles": 6316,
+          "multiSelections": 26,
+          "multiSelectionCoverage": 0.7692307692307693,
+          "noPrediction": 0,
+          "stakeUnits": 6368,
+          "flatBetProfit": -673.4400000000009,
+          "logLoss": 1.0054874038073895,
+          "brier": 0.6011763308968877,
+          "flatBetRoi": -0.10575376884422123,
+          "targets": 6342,
+          "coverage": 1,
+          "fixtures": 3217
+        }
+      },
+      "byMarket": {
+        "spf": {
+          "global": {
+            "evaluated": 4522,
+            "accuracy": 0.5060440862763688,
+            "strictSingles": 4219,
+            "multiSelections": 280,
+            "multiSelectionCoverage": 0.7178571428571429,
+            "noPrediction": 23,
+            "stakeUnits": 4779,
+            "flatBetProfit": -567.0999999999992,
+            "logLoss": 1.0359599241285835,
+            "brier": 0.6164636809276636,
+            "flatBetRoi": -0.11866499267629195,
+            "targets": 4590,
+            "coverage": 0.9851851851851852,
+            "fixtures": 4522
+          },
+          "same": {
+            "evaluated": 3125,
+            "accuracy": 0.42525458248472503,
+            "strictSingles": 2455,
+            "multiSelections": 565,
+            "multiSelectionCoverage": 0.7168141592920354,
+            "noPrediction": 105,
+            "stakeUnits": 3585,
+            "flatBetProfit": -431.0999999999996,
+            "logLoss": 1.1667580319492852,
+            "brier": 0.7018876420116353,
+            "flatBetRoi": -0.1202510460251045,
+            "targets": 4590,
+            "coverage": 0.6808278867102396,
+            "fixtures": 3125
+          },
+          "market": {
+            "evaluated": 4522,
+            "accuracy": 0.5228787205686362,
+            "strictSingles": 4502,
+            "multiSelections": 20,
+            "multiSelectionCoverage": 0.9,
+            "noPrediction": 0,
+            "stakeUnits": 4542,
+            "flatBetProfit": -518.5300000000002,
+            "logLoss": 0.990975150084858,
+            "brier": 0.591122632813783,
+            "flatBetRoi": -0.11416336415675918,
+            "targets": 4590,
+            "coverage": 0.9851851851851852,
+            "fixtures": 4522
+          }
+        },
+        "hhad": {
+          "global": {
+            "evaluated": 4686,
+            "accuracy": 0.4968901174844506,
+            "strictSingles": 4341,
+            "multiSelections": 305,
+            "multiSelectionCoverage": 0.7016393442622951,
+            "noPrediction": 40,
+            "stakeUnits": 4951,
+            "flatBetProfit": -496.9900000000004,
+            "logLoss": 1.0569379116375575,
+            "brier": 0.631737730911748,
+            "flatBetRoi": -0.10038174106241171,
+            "targets": 4772,
+            "coverage": 0.9819782062028499,
+            "fixtures": 4686
+          },
+          "same": {
+            "evaluated": 3217,
+            "accuracy": 0.4415481832543444,
+            "strictSingles": 2532,
+            "multiSelections": 579,
+            "multiSelectionCoverage": 0.690846286701209,
+            "noPrediction": 106,
+            "stakeUnits": 3690,
+            "flatBetProfit": -356.1999999999992,
+            "logLoss": 1.160124707885618,
+            "brier": 0.6973401998642494,
+            "flatBetRoi": -0.0965311653116529,
+            "targets": 4772,
+            "coverage": 0.674140821458508,
+            "fixtures": 3217
+          },
+          "market": {
+            "evaluated": 4686,
+            "accuracy": 0.5153072147291801,
+            "strictSingles": 4671,
+            "multiSelections": 15,
+            "multiSelectionCoverage": 0.6,
+            "noPrediction": 0,
+            "stakeUnits": 4701,
+            "flatBetProfit": -428.97,
+            "logLoss": 1.009116715140268,
+            "brier": 0.6037261938435873,
+            "flatBetRoi": -0.09125079770261647,
+            "targets": 4772,
+            "coverage": 0.9819782062028499,
+            "fixtures": 4686
+          }
+        }
+      }
+    },
+    "validation": {
+      "sourceRows": [
+        5774,
+        7703
+      ],
+      "byPolicy": {
+        "global": {
+          "evaluated": 3716,
+          "accuracy": 0.5036333147009503,
+          "strictSingles": 3578,
+          "multiSelections": 131,
+          "multiSelectionCoverage": 0.6946564885496184,
+          "noPrediction": 7,
+          "stakeUnits": 3840,
+          "flatBetProfit": -430.4299999999996,
+          "logLoss": 1.0342790610076884,
+          "brier": 0.6172695549385698,
+          "flatBetRoi": -0.11209114583333323,
+          "targets": 3755,
+          "coverage": 0.9896138482023968,
+          "fixtures": 1901
+        },
+        "same": {
+          "evaluated": 2920,
+          "accuracy": 0.4404560810810811,
+          "strictSingles": 2368,
+          "multiSelections": 477,
+          "multiSelectionCoverage": 0.7484276729559748,
+          "noPrediction": 75,
+          "stakeUnits": 3322,
+          "flatBetProfit": -295.99999999999983,
+          "logLoss": 1.1371336394215643,
+          "brier": 0.680125266193752,
+          "flatBetRoi": -0.0891029500301023,
+          "targets": 3755,
+          "coverage": 0.7776298268974701,
+          "fixtures": 1490
+        },
+        "market": {
+          "evaluated": 3716,
+          "accuracy": 0.5167386609071274,
+          "strictSingles": 3704,
+          "multiSelections": 12,
+          "multiSelectionCoverage": 0.5833333333333334,
+          "noPrediction": 0,
+          "stakeUnits": 3728,
+          "flatBetProfit": -377.0599999999995,
+          "logLoss": 1.0092314404728218,
+          "brier": 0.6037680844536147,
+          "flatBetRoi": -0.1011427038626608,
+          "targets": 3755,
+          "coverage": 0.9896138482023968,
+          "fixtures": 1901
+        }
+      },
+      "commonAllAndSame": {
+        "global": {
+          "evaluated": 2920,
+          "accuracy": 0.5054481546572935,
+          "strictSingles": 2845,
+          "multiSelections": 71,
+          "multiSelectionCoverage": 0.676056338028169,
+          "noPrediction": 4,
+          "stakeUnits": 2987,
+          "flatBetProfit": -314.9299999999998,
+          "logLoss": 1.0292954669629484,
+          "brier": 0.6154030787224691,
+          "flatBetRoi": -0.10543354536324064,
+          "targets": 2920,
+          "coverage": 1,
+          "fixtures": 1490
+        },
+        "same": {
+          "evaluated": 2920,
+          "accuracy": 0.4404560810810811,
+          "strictSingles": 2368,
+          "multiSelections": 477,
+          "multiSelectionCoverage": 0.7484276729559748,
+          "noPrediction": 75,
+          "stakeUnits": 3322,
+          "flatBetProfit": -295.99999999999983,
+          "logLoss": 1.1371336394215643,
+          "brier": 0.680125266193752,
+          "flatBetRoi": -0.0891029500301023,
+          "targets": 2920,
+          "coverage": 1,
+          "fixtures": 1490
+        },
+        "market": {
+          "evaluated": 2920,
+          "accuracy": 0.511340206185567,
+          "strictSingles": 2910,
+          "multiSelections": 10,
+          "multiSelectionCoverage": 0.6,
+          "noPrediction": 0,
+          "stakeUnits": 2930,
+          "flatBetProfit": -296.52999999999986,
+          "logLoss": 1.0147602047136663,
+          "brier": 0.6078775969182622,
+          "flatBetRoi": -0.10120477815699654,
+          "targets": 2920,
+          "coverage": 1,
+          "fixtures": 1490
+        }
+      },
+      "byMarket": {
+        "spf": {
+          "global": {
+            "evaluated": 1815,
+            "accuracy": 0.5090702947845805,
+            "strictSingles": 1764,
+            "multiSelections": 49,
+            "multiSelectionCoverage": 0.7755102040816326,
+            "noPrediction": 2,
+            "stakeUnits": 1862,
+            "flatBetProfit": -234.60999999999996,
+            "logLoss": 1.0204830249490844,
+            "brier": 0.6077316726377407,
+            "flatBetRoi": -0.12599892588614392,
+            "targets": 1831,
+            "coverage": 0.9912616056799564,
+            "fixtures": 1815
+          },
+          "same": {
+            "evaluated": 1430,
+            "accuracy": 0.4369602763385147,
+            "strictSingles": 1158,
+            "multiSelections": 238,
+            "multiSelectionCoverage": 0.7941176470588235,
+            "noPrediction": 34,
+            "stakeUnits": 1634,
+            "flatBetProfit": -112.71000000000002,
+            "logLoss": 1.1168284120032783,
+            "brier": 0.670073758274942,
+            "flatBetRoi": -0.06897796817625461,
+            "targets": 1831,
+            "coverage": 0.780993992353905,
+            "fixtures": 1430
+          },
+          "market": {
+            "evaluated": 1815,
+            "accuracy": 0.5235196458218041,
+            "strictSingles": 1807,
+            "multiSelections": 8,
+            "multiSelectionCoverage": 0.625,
+            "noPrediction": 0,
+            "stakeUnits": 1823,
+            "flatBetProfit": -199.3099999999999,
+            "logLoss": 0.994410099206593,
+            "brier": 0.5934646986056213,
+            "flatBetRoi": -0.1093307734503565,
+            "targets": 1831,
+            "coverage": 0.9912616056799564,
+            "fixtures": 1815
+          }
+        },
+        "hhad": {
+          "global": {
+            "evaluated": 1901,
+            "accuracy": 0.49834619625137816,
+            "strictSingles": 1814,
+            "multiSelections": 82,
+            "multiSelectionCoverage": 0.6463414634146342,
+            "noPrediction": 5,
+            "stakeUnits": 1978,
+            "flatBetProfit": -195.8199999999999,
+            "logLoss": 1.0474509733940036,
+            "brier": 0.6263759496655603,
+            "flatBetRoi": -0.09899898887765415,
+            "targets": 1924,
+            "coverage": 0.988045738045738,
+            "fixtures": 1901
+          },
+          "same": {
+            "evaluated": 1490,
+            "accuracy": 0.44380165289256196,
+            "strictSingles": 1210,
+            "multiSelections": 239,
+            "multiSelectionCoverage": 0.702928870292887,
+            "noPrediction": 41,
+            "stakeUnits": 1688,
+            "flatBetProfit": -183.29,
+            "logLoss": 1.1566212066753692,
+            "brier": 0.68977201540442,
+            "flatBetRoi": -0.10858412322274881,
+            "targets": 1924,
+            "coverage": 0.7744282744282744,
+            "fixtures": 1490
+          },
+          "market": {
+            "evaluated": 1901,
+            "accuracy": 0.5102793885081708,
+            "strictSingles": 1897,
+            "multiSelections": 4,
+            "multiSelectionCoverage": 0.5,
+            "noPrediction": 0,
+            "stakeUnits": 1905,
+            "flatBetProfit": -177.74999999999994,
+            "logLoss": 1.023382273927959,
+            "brier": 0.6136053518466204,
+            "flatBetRoi": -0.0933070866141732,
+            "targets": 1924,
+            "coverage": 0.988045738045738,
+            "fixtures": 1901
+          }
+        }
+      }
+    },
+    "observedTail": {
+      "sourceRows": [
+        7704,
+        9632
+      ],
+      "byPolicy": {
+        "global": {
+          "evaluated": 3730,
+          "accuracy": 0.5052719200887902,
+          "strictSingles": 3604,
+          "multiSelections": 117,
+          "multiSelectionCoverage": 0.8290598290598291,
+          "noPrediction": 9,
+          "stakeUnits": 3838,
+          "flatBetProfit": -410.55999999999995,
+          "logLoss": 1.0219804703761035,
+          "brier": 0.6119312455546139,
+          "flatBetRoi": -0.10697238144867117,
+          "targets": 3763,
+          "coverage": 0.991230401275578,
+          "fixtures": 1906
+        },
+        "same": {
+          "evaluated": 2936,
+          "accuracy": 0.44430485762144056,
+          "strictSingles": 2388,
+          "multiSelections": 463,
+          "multiSelectionCoverage": 0.7105831533477321,
+          "noPrediction": 85,
+          "stakeUnits": 3314,
+          "flatBetProfit": -413.7299999999998,
+          "logLoss": 1.1371951827159277,
+          "brier": 0.6806718996134572,
+          "flatBetRoi": -0.1248430899215449,
+          "targets": 3763,
+          "coverage": 0.7802285410576667,
+          "fixtures": 1493
+        },
+        "market": {
+          "evaluated": 3730,
+          "accuracy": 0.5193548387096775,
+          "strictSingles": 3720,
+          "multiSelections": 10,
+          "multiSelectionCoverage": 0.9,
+          "noPrediction": 0,
+          "stakeUnits": 3740,
+          "flatBetProfit": -369.71999999999974,
+          "logLoss": 0.9981552724769854,
+          "brier": 0.5964529310375274,
+          "flatBetRoi": -0.09885561497326197,
+          "targets": 3763,
+          "coverage": 0.991230401275578,
+          "fixtures": 1906
+        }
+      },
+      "commonAllAndSame": {
+        "global": {
+          "evaluated": 2936,
+          "accuracy": 0.5038327526132405,
+          "strictSingles": 2870,
+          "multiSelections": 65,
+          "multiSelectionCoverage": 0.8153846153846154,
+          "noPrediction": 1,
+          "stakeUnits": 3000,
+          "flatBetProfit": -336.7199999999999,
+          "logLoss": 1.019444472783766,
+          "brier": 0.6113818764474338,
+          "flatBetRoi": -0.11223999999999996,
+          "targets": 2936,
+          "coverage": 1,
+          "fixtures": 1493
+        },
+        "same": {
+          "evaluated": 2936,
+          "accuracy": 0.44430485762144056,
+          "strictSingles": 2388,
+          "multiSelections": 463,
+          "multiSelectionCoverage": 0.7105831533477321,
+          "noPrediction": 85,
+          "stakeUnits": 3314,
+          "flatBetProfit": -413.7299999999998,
+          "logLoss": 1.1371951827159277,
+          "brier": 0.6806718996134572,
+          "flatBetRoi": -0.1248430899215449,
+          "targets": 2936,
+          "coverage": 1,
+          "fixtures": 1493
+        },
+        "market": {
+          "evaluated": 2936,
+          "accuracy": 0.5156996587030717,
+          "strictSingles": 2930,
+          "multiSelections": 6,
+          "multiSelectionCoverage": 1,
+          "noPrediction": 0,
+          "stakeUnits": 2942,
+          "flatBetProfit": -288.5699999999996,
+          "logLoss": 1.0038750918212351,
+          "brier": 0.6005428116554511,
+          "flatBetRoi": -0.0980863358259686,
+          "targets": 2936,
+          "coverage": 1,
+          "fixtures": 1493
+        }
+      },
+      "byMarket": {
+        "spf": {
+          "global": {
+            "evaluated": 1824,
+            "accuracy": 0.508169014084507,
+            "strictSingles": 1775,
+            "multiSelections": 47,
+            "multiSelectionCoverage": 0.851063829787234,
+            "noPrediction": 2,
+            "stakeUnits": 1869,
+            "flatBetProfit": -240.2100000000001,
+            "logLoss": 1.008406054173652,
+            "brier": 0.6031881718393015,
+            "flatBetRoi": -0.1285232744783307,
+            "targets": 1838,
+            "coverage": 0.9923830250272034,
+            "fixtures": 1824
+          },
+          "same": {
+            "evaluated": 1443,
+            "accuracy": 0.44207836456558774,
+            "strictSingles": 1174,
+            "multiSelections": 235,
+            "multiSelectionCoverage": 0.7319148936170212,
+            "noPrediction": 34,
+            "stakeUnits": 1644,
+            "flatBetProfit": -213.66999999999993,
+            "logLoss": 1.1309020638006424,
+            "brier": 0.6778926303024054,
+            "flatBetRoi": -0.12996958637469583,
+            "targets": 1838,
+            "coverage": 0.7850924918389554,
+            "fixtures": 1443
+          },
+          "market": {
+            "evaluated": 1824,
+            "accuracy": 0.5200880572372042,
+            "strictSingles": 1817,
+            "multiSelections": 7,
+            "multiSelectionCoverage": 1,
+            "noPrediction": 0,
+            "stakeUnits": 1831,
+            "flatBetProfit": -219.90999999999997,
+            "logLoss": 0.9883954175237808,
+            "brier": 0.5898059584333009,
+            "flatBetRoi": -0.1201037684325505,
+            "targets": 1838,
+            "coverage": 0.9923830250272034,
+            "fixtures": 1824
+          }
+        },
+        "hhad": {
+          "global": {
+            "evaluated": 1906,
+            "accuracy": 0.5024603608529251,
+            "strictSingles": 1829,
+            "multiSelections": 70,
+            "multiSelectionCoverage": 0.8142857142857143,
+            "noPrediction": 7,
+            "stakeUnits": 1969,
+            "flatBetProfit": -170.35000000000008,
+            "logLoss": 1.0349708875603971,
+            "brier": 0.6202981744406211,
+            "flatBetRoi": -0.08651599796851198,
+            "targets": 1925,
+            "coverage": 0.9901298701298701,
+            "fixtures": 1906
+          },
+          "same": {
+            "evaluated": 1493,
+            "accuracy": 0.4464579901153213,
+            "strictSingles": 1214,
+            "multiSelections": 228,
+            "multiSelectionCoverage": 0.6885964912280702,
+            "noPrediction": 51,
+            "stakeUnits": 1670,
+            "flatBetProfit": -200.05999999999992,
+            "logLoss": 1.1432775474813612,
+            "brier": 0.6833580922563519,
+            "flatBetRoi": -0.11979640718562869,
+            "targets": 1925,
+            "coverage": 0.7755844155844156,
+            "fixtures": 1493
+          },
+          "market": {
+            "evaluated": 1906,
+            "accuracy": 0.5186547556489753,
+            "strictSingles": 1903,
+            "multiSelections": 3,
+            "multiSelectionCoverage": 0.6666666666666666,
+            "noPrediction": 0,
+            "stakeUnits": 1909,
+            "flatBetProfit": -149.81000000000003,
+            "logLoss": 1.0074952386021936,
+            "brier": 0.6028139373492335,
+            "flatBetRoi": -0.0784756416972237,
+            "targets": 1925,
+            "coverage": 0.9901298701298701,
+            "fixtures": 1906
+          }
+        }
+      }
+    }
+  },
+  "tailLossImprovementVsMarket": {
+    "evaluated": 3730,
+    "fixtures": 1906,
+    "iterations": 5000,
+    "blockSize": 50,
+    "confidence": 0.95,
+    "mean": -0.023825197899116232,
+    "lower": -0.03317141612884978,
+    "upper": -0.014445944559464267,
+    "status": "worse",
+    "improvementProbability": 0
+  },
+  "futureValidation": {
+    "source": "lsspfpl.xlsx",
+    "requiresSourceRowGreaterThan": 9632,
+    "requiresFrozenPrematchPredictions": true,
+    "enabled": false
+  },
+  "cases": {
+    "file": "league-hierarchy-report.cases.jsonl",
+    "rows": 16880,
+    "sha256": "31500aa60ef0ae4700fed76720f8112da8573522d02b4c554e7a35af2161a121"
+  }
+}

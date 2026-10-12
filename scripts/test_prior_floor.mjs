@@ -1,10 +1,12 @@
 // 一次性只读诊断：对比「防零」方案在验证段的效果。
 // 背景：test_zero_cells.mjs 显示模型报 0% 的格子实际发生率 14.6%~17.6%，
 // 这会让 LogLoss 被 clamp 极端惩罚，也让用户按虚高概率下注。
-// 对比三种方案：
+// 对比五种方案：
 //   A 基线            —— 原始历史占比，不做任何处理
 //   B Jeffreys α=0.5  —— 对称 Laplace 平滑，(c+α)/(n+3α)
 //   C 生产平滑 k=20    —— 已通过门禁的市场先验收缩
+//   D 固定先验质量      —— 总质量 1.5，均匀分配到三个结果
+//   E 历史先验质量      —— 总质量 1.5，按历史先验概率分配
 // 关键约束：防零不能改变 argmax（该押哪一边），否则就不只是校准问题。
 import { createDataStore } from "../lib/database.mjs";
 import { OUTCOME_LABELS } from "../lib/predictor.mjs";
@@ -34,6 +36,13 @@ function priorMassFloor(counts, total) {
   const alpha = PRIOR_MASS / OUTCOME_LABELS.length;
   const denominator = total + PRIOR_MASS;
   return counts.map((count) => (count + alpha) / denominator);
+}
+
+function historicalPriorMassFloor(counts, total, priorProbabilities) {
+  const denominator = total + PRIOR_MASS;
+  return counts.map(
+    (count, i) => (count + PRIOR_MASS * priorProbabilities[i]) / denominator,
+  );
 }
 
 function logLoss(probabilities, actualIndex) {
@@ -102,6 +111,7 @@ for (const market of ["spf", "hhad"]) {
     B: accumulator(),
     C: accumulator(),
     D: accumulator(),
+    E: accumulator(),
   };
   // 高概率档专项：模型报 >=0.75 的场次，实际命中多少
   const highProb = {
@@ -109,6 +119,7 @@ for (const market of ["spf", "hhad"]) {
     B: { n: 0, hit: 0, predicted: 0 },
     C: { n: 0, hit: 0, predicted: 0 },
     D: { n: 0, hit: 0, predicted: 0 },
+    E: { n: 0, hit: 0, predicted: 0 },
   };
 
   for (const group of groups.values()) {
@@ -148,6 +159,7 @@ for (const market of ["spf", "hhad"]) {
         B: jeffreys(counts, total),
         C: production,
         D: priorMassFloor(counts, total),
+        E: historicalPriorMassFloor(counts, total, prior.probabilities),
       };
       for (const [key, probabilities] of Object.entries(variants)) {
         record(
@@ -170,14 +182,16 @@ for (const market of ["spf", "hhad"]) {
   console.log(summarize("A 基线（原始占比）", accs.A));
   console.log(summarize("B Jeffreys a=" + ALPHA, accs.B));
   console.log(summarize("C 生产平滑 k=" + STRENGTH, accs.C));
-  console.log(summarize("D 总质量=" + PRIOR_MASS, accs.D));
+  console.log(summarize("D 均匀总质量=" + PRIOR_MASS, accs.D));
+  console.log(summarize("E 历史先验质量=" + PRIOR_MASS, accs.E));
 
   console.log("\n  高概率档（模型报 >=75%）实际表现：");
   for (const [key, label] of [
     ["A", "A 基线"],
     ["B", "B Jeffreys"],
     ["C", "C 生产平滑"],
-    ["D", "D 总质量=1.5"],
+    ["D", "D 均匀总质量=1.5"],
+    ["E", "E 历史先验=1.5"],
   ]) {
     const h = highProb[key];
     if (!h.n) {

@@ -1,0 +1,1016 @@
+{
+  "reportOnly": true,
+  "affectsProduction": false,
+  "generatedAt": "2026-09-05T02:23:19.106Z",
+  "source": "SQLite backup of betwin.db; no production ledger rewritten",
+  "definition": "Strict current algorithm versions; unknown is a subset of legacy/all, not an additional disjoint group",
+  "currentVersions": [
+    "historical-similarity-v3-zero-floor-m1.5:spf:spf-hhad-paired-direct-results-v3:tolerance-7.00pct:all-leagues",
+    "historical-similarity-v3-zero-floor-m1.5:hhad:spf-hhad-paired-direct-results-v3:tolerance-7.00pct:all-leagues",
+    "historical-similarity-v3-zero-floor-m1.5:goals:goal-zero-composite-v1:zero-2.00:all-leagues",
+    "historical-similarity-v3-zero-floor-m1.5:spf:spf-hhad-paired-direct-results-v3:tolerance-7.00pct:same-league",
+    "historical-similarity-v3-zero-floor-m1.5:hhad:spf-hhad-paired-direct-results-v3:tolerance-7.00pct:same-league",
+    "historical-similarity-v3-zero-floor-m1.5:goals:goal-zero-composite-v1:zero-2.50:same-league",
+    "historical-similarity-v3-zero-floor-m1.5:goal-multiple-v1:all-leagues"
+  ],
+  "layers": {
+    "current": {
+      "totals": {
+        "fixtures": 122,
+        "pendingFixtures": 17,
+        "settledFixtures": 105,
+        "coreFixtures": 122,
+        "corePendingFixtures": 17,
+        "coreSettledFixtures": 105,
+        "corePending": 80,
+        "coreSettled": 364,
+        "fixtureSampleLevel": "reference",
+        "snapshots": 465,
+        "pending": 82,
+        "settled": 383,
+        "recommendedCoverage": 0.033942558746736295
+      },
+      "overall": {
+        "total": 465,
+        "pending": 82,
+        "recordedSettled": 383,
+        "settled": 352,
+        "correct": 120,
+        "accuracy": 0.3409090909090909,
+        "multiSelection": {
+          "settled": 12,
+          "correct": 8,
+          "coverageAccuracy": 0.6666666666666666
+        },
+        "noPrediction": 0,
+        "simulatedProfit": -51.679999999999986,
+        "roi": -0.13744680851063826,
+        "stakeUnits": 376,
+        "accuracyLow": 0.2933,
+        "accuracyHigh": 0.3919,
+        "sampleLevel": "reference"
+      },
+      "benchmark": {
+        "compared": 352,
+        "fixtures": 105,
+        "modelCorrect": 120,
+        "oddsCorrect": 128,
+        "modelAccuracy": 0.3409,
+        "oddsAccuracy": 0.3636,
+        "directionsAgree": 251,
+        "directionsDiffer": 101,
+        "disagreementModelCorrect": 20,
+        "disagreementOddsCorrect": 28,
+        "netWins": -8,
+        "disagreementNetWins": -8,
+        "lift": -0.0227,
+        "liftLow": -0.0478,
+        "liftHigh": 0.0028,
+        "liftMethod": "fixture-chronological-block-bootstrap",
+        "liftIterations": 1000,
+        "liftBlockSize": 20,
+        "liftImprovementProbability": 0.034,
+        "liftStatus": "uncertain"
+      },
+      "byMarketScope": {
+        "spf": {
+          "all": {
+            "total": 52,
+            "pending": 13,
+            "recordedSettled": 39,
+            "settled": 38,
+            "correct": 20,
+            "accuracy": 0.5263157894736842,
+            "multiSelection": {
+              "settled": 1,
+              "correct": 1,
+              "coverageAccuracy": 1
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -5.720000000000002,
+            "roi": -0.14300000000000007,
+            "stakeUnits": 40,
+            "accuracyLow": 0.3726,
+            "accuracyHigh": 0.6752,
+            "sampleLevel": "preliminary"
+          },
+          "sameLeague": {
+            "total": 45,
+            "pending": 9,
+            "recordedSettled": 36,
+            "settled": 30,
+            "correct": 18,
+            "accuracy": 0.6,
+            "multiSelection": {
+              "settled": 6,
+              "correct": 4,
+              "coverageAccuracy": 0.6666666666666666
+            },
+            "noPrediction": 0,
+            "simulatedProfit": 0.3900000000000001,
+            "roi": 0.00928571428571429,
+            "stakeUnits": 42,
+            "accuracyLow": 0.4232,
+            "accuracyHigh": 0.7541,
+            "sampleLevel": "preliminary"
+          }
+        },
+        "hhad": {
+          "all": {
+            "total": 55,
+            "pending": 14,
+            "recordedSettled": 41,
+            "settled": 41,
+            "correct": 24,
+            "accuracy": 0.5853658536585366,
+            "multiSelection": {
+              "settled": 0,
+              "correct": 0,
+              "coverageAccuracy": null
+            },
+            "noPrediction": 0,
+            "simulatedProfit": 4.06,
+            "roi": 0.09902439024390243,
+            "stakeUnits": 41,
+            "accuracyLow": 0.4337,
+            "accuracyHigh": 0.7224,
+            "sampleLevel": "preliminary"
+          },
+          "sameLeague": {
+            "total": 48,
+            "pending": 10,
+            "recordedSettled": 38,
+            "settled": 33,
+            "correct": 16,
+            "accuracy": 0.48484848484848486,
+            "multiSelection": {
+              "settled": 5,
+              "correct": 3,
+              "coverageAccuracy": 0.6
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -1.21,
+            "roi": -0.02813953488372093,
+            "stakeUnits": 43,
+            "accuracyLow": 0.325,
+            "accuracyHigh": 0.6478,
+            "sampleLevel": "preliminary"
+          }
+        },
+        "goals": {
+          "all": {
+            "total": 122,
+            "pending": 17,
+            "recordedSettled": 105,
+            "settled": 105,
+            "correct": 23,
+            "accuracy": 0.21904761904761905,
+            "multiSelection": {
+              "settled": 0,
+              "correct": 0,
+              "coverageAccuracy": null
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -25.500000000000004,
+            "roi": -0.24285714285714288,
+            "stakeUnits": 105,
+            "accuracyLow": 0.1506,
+            "accuracyHigh": 0.3073,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 122,
+            "pending": 17,
+            "recordedSettled": 105,
+            "settled": 105,
+            "correct": 19,
+            "accuracy": 0.18095238095238095,
+            "multiSelection": {
+              "settled": 0,
+              "correct": 0,
+              "coverageAccuracy": null
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -23.700000000000003,
+            "roi": -0.22571428571428573,
+            "stakeUnits": 105,
+            "accuracyLow": 0.119,
+            "accuracyHigh": 0.2654,
+            "sampleLevel": "reference"
+          }
+        },
+        "goalsPair": {
+          "all": {
+            "total": 122,
+            "pending": 17,
+            "settled": 105,
+            "correct": 44,
+            "accuracy": 0.41904761904761906,
+            "simulatedProfit": -47.39999999999999,
+            "roi": -0.22571428571428567,
+            "stakeUnits": 210,
+            "costPerRecord": 2,
+            "accuracyLow": 0.3292,
+            "accuracyHigh": 0.5146,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 122,
+            "pending": 17,
+            "settled": 105,
+            "correct": 33,
+            "accuracy": 0.3142857142857143,
+            "simulatedProfit": -71.6,
+            "roi": -0.34095238095238095,
+            "stakeUnits": 210,
+            "costPerRecord": 2,
+            "accuracyLow": 0.2334,
+            "accuracyHigh": 0.4083,
+            "sampleLevel": "reference"
+          }
+        },
+        "goalMultiple": {
+          "all": {
+            "total": 21,
+            "pending": 2,
+            "recordedSettled": 19,
+            "settled": 19,
+            "correct": 10,
+            "accuracy": 0.5263157894736842,
+            "simulatedProfit": 0,
+            "roi": null,
+            "stakeUnits": 0,
+            "accuracyLow": 0.3171,
+            "accuracyHigh": 0.7267,
+            "sampleLevel": "insufficient"
+          },
+          "sameLeague": {
+            "total": 0,
+            "pending": 0,
+            "recordedSettled": 0,
+            "settled": 0,
+            "correct": 0,
+            "accuracy": null,
+            "simulatedProfit": 0,
+            "roi": null,
+            "stakeUnits": 0,
+            "accuracyLow": null,
+            "accuracyHigh": null,
+            "sampleLevel": "empty"
+          }
+        }
+      }
+    },
+    "legacy": {
+      "totals": {
+        "fixtures": 330,
+        "pendingFixtures": 4,
+        "settledFixtures": 326,
+        "coreFixtures": 330,
+        "corePendingFixtures": 4,
+        "coreSettledFixtures": 326,
+        "corePending": 18,
+        "coreSettled": 1708,
+        "fixtureSampleLevel": "reference",
+        "snapshots": 1774,
+        "pending": 18,
+        "settled": 1756,
+        "recommendedCoverage": 0.03929384965831435
+      },
+      "overall": {
+        "total": 1774,
+        "pending": 18,
+        "recordedSettled": 1756,
+        "settled": 1586,
+        "correct": 656,
+        "accuracy": 0.4136191677175284,
+        "multiSelection": {
+          "settled": 110,
+          "correct": 82,
+          "coverageAccuracy": 0.7454545454545455
+        },
+        "noPrediction": 12,
+        "simulatedProfit": -235.06000000000017,
+        "roi": -0.12993919292426764,
+        "stakeUnits": 1809,
+        "accuracyLow": 0.3896,
+        "accuracyHigh": 0.438,
+        "sampleLevel": "reference"
+      },
+      "benchmark": {
+        "compared": 1586,
+        "fixtures": 326,
+        "modelCorrect": 656,
+        "oddsCorrect": 705,
+        "modelAccuracy": 0.4136,
+        "oddsAccuracy": 0.4445,
+        "directionsAgree": 1246,
+        "directionsDiffer": 340,
+        "disagreementModelCorrect": 88,
+        "disagreementOddsCorrect": 137,
+        "netWins": -49,
+        "disagreementNetWins": -49,
+        "lift": -0.0309,
+        "liftLow": -0.0508,
+        "liftHigh": -0.0099,
+        "liftMethod": "fixture-chronological-block-bootstrap",
+        "liftIterations": 1000,
+        "liftBlockSize": 20,
+        "liftImprovementProbability": 0.001,
+        "liftStatus": "worse"
+      },
+      "byMarketScope": {
+        "spf": {
+          "all": {
+            "total": 319,
+            "pending": 4,
+            "recordedSettled": 315,
+            "settled": 310,
+            "correct": 174,
+            "accuracy": 0.5612903225806452,
+            "multiSelection": {
+              "settled": 5,
+              "correct": 5,
+              "coverageAccuracy": 1
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -14.550000000000002,
+            "roi": -0.04546875000000001,
+            "stakeUnits": 320,
+            "accuracyLow": 0.5056,
+            "accuracyHigh": 0.6154,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 288,
+            "pending": 4,
+            "recordedSettled": 284,
+            "settled": 236,
+            "correct": 111,
+            "accuracy": 0.4703389830508475,
+            "multiSelection": {
+              "settled": 43,
+              "correct": 32,
+              "coverageAccuracy": 0.7441860465116279
+            },
+            "noPrediction": 5,
+            "simulatedProfit": -41.970000000000006,
+            "roi": -0.13034161490683233,
+            "stakeUnits": 322,
+            "accuracyLow": 0.4076,
+            "accuracyHigh": 0.534,
+            "sampleLevel": "reference"
+          }
+        },
+        "hhad": {
+          "all": {
+            "total": 328,
+            "pending": 4,
+            "recordedSettled": 324,
+            "settled": 314,
+            "correct": 157,
+            "accuracy": 0.5,
+            "multiSelection": {
+              "settled": 9,
+              "correct": 7,
+              "coverageAccuracy": 0.7777777777777778
+            },
+            "noPrediction": 1,
+            "simulatedProfit": -31.279999999999998,
+            "roi": -0.0942168674698795,
+            "stakeUnits": 332,
+            "accuracyLow": 0.445,
+            "accuracyHigh": 0.555,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 288,
+            "pending": 4,
+            "recordedSettled": 284,
+            "settled": 231,
+            "correct": 106,
+            "accuracy": 0.4588744588744589,
+            "multiSelection": {
+              "settled": 47,
+              "correct": 32,
+              "coverageAccuracy": 0.6808510638297872
+            },
+            "noPrediction": 6,
+            "simulatedProfit": -36.91000000000002,
+            "roi": -0.11356923076923083,
+            "stakeUnits": 325,
+            "accuracyLow": 0.3958,
+            "accuracyHigh": 0.5233,
+            "sampleLevel": "reference"
+          }
+        },
+        "goals": {
+          "all": {
+            "total": 264,
+            "pending": 1,
+            "recordedSettled": 263,
+            "settled": 261,
+            "correct": 64,
+            "accuracy": 0.24521072796934865,
+            "multiSelection": {
+              "settled": 2,
+              "correct": 2,
+              "coverageAccuracy": 1
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -41.19999999999999,
+            "roi": -0.15488721804511274,
+            "stakeUnits": 266,
+            "accuracyLow": 0.197,
+            "accuracyHigh": 0.3009,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 239,
+            "pending": 1,
+            "recordedSettled": 238,
+            "settled": 234,
+            "correct": 44,
+            "accuracy": 0.18803418803418803,
+            "multiSelection": {
+              "settled": 4,
+              "correct": 4,
+              "coverageAccuracy": 1
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -69.15000000000002,
+            "roi": -0.2834016393442624,
+            "stakeUnits": 244,
+            "accuracyLow": 0.1432,
+            "accuracyHigh": 0.243,
+            "sampleLevel": "reference"
+          }
+        },
+        "goalsPair": {
+          "all": {
+            "total": 264,
+            "pending": 1,
+            "settled": 263,
+            "correct": 124,
+            "accuracy": 0.4714828897338403,
+            "simulatedProfit": -74.35,
+            "roi": -0.14134980988593154,
+            "stakeUnits": 526,
+            "costPerRecord": 2,
+            "accuracyLow": 0.412,
+            "accuracyHigh": 0.5318,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 239,
+            "pending": 1,
+            "settled": 238,
+            "correct": 97,
+            "accuracy": 0.40756302521008403,
+            "simulatedProfit": -94.84999999999998,
+            "roi": -0.1992647058823529,
+            "stakeUnits": 476,
+            "costPerRecord": 2,
+            "accuracyLow": 0.3471,
+            "accuracyHigh": 0.471,
+            "sampleLevel": "reference"
+          }
+        },
+        "goalMultiple": {
+          "all": {
+            "total": 48,
+            "pending": 0,
+            "recordedSettled": 48,
+            "settled": 48,
+            "correct": 18,
+            "accuracy": 0.375,
+            "simulatedProfit": 0,
+            "roi": null,
+            "stakeUnits": 0,
+            "accuracyLow": 0.2522,
+            "accuracyHigh": 0.5164,
+            "sampleLevel": "preliminary"
+          },
+          "sameLeague": {
+            "total": 0,
+            "pending": 0,
+            "recordedSettled": 0,
+            "settled": 0,
+            "correct": 0,
+            "accuracy": null,
+            "simulatedProfit": 0,
+            "roi": null,
+            "stakeUnits": 0,
+            "accuracyLow": null,
+            "accuracyHigh": null,
+            "sampleLevel": "empty"
+          }
+        }
+      }
+    },
+    "unknown": {
+      "totals": {
+        "fixtures": 211,
+        "pendingFixtures": 1,
+        "settledFixtures": 210,
+        "coreFixtures": 210,
+        "corePendingFixtures": 1,
+        "coreSettledFixtures": 209,
+        "corePending": 6,
+        "coreSettled": 1144,
+        "fixtureSampleLevel": "reference",
+        "snapshots": 1188,
+        "pending": 6,
+        "settled": 1182,
+        "recommendedCoverage": 0.02030456852791878
+      },
+      "overall": {
+        "total": 1188,
+        "pending": 6,
+        "recordedSettled": 1182,
+        "settled": 1072,
+        "correct": 427,
+        "accuracy": 0.3983208955223881,
+        "multiSelection": {
+          "settled": 63,
+          "correct": 50,
+          "coverageAccuracy": 0.7936507936507936
+        },
+        "noPrediction": 9,
+        "simulatedProfit": -128.0900000000001,
+        "roi": -0.1066527893422149,
+        "stakeUnits": 1201,
+        "accuracyLow": 0.3694,
+        "accuracyHigh": 0.4279,
+        "sampleLevel": "reference"
+      },
+      "benchmark": {
+        "compared": 1072,
+        "fixtures": 209,
+        "modelCorrect": 427,
+        "oddsCorrect": 444,
+        "modelAccuracy": 0.3983,
+        "oddsAccuracy": 0.4142,
+        "directionsAgree": 838,
+        "directionsDiffer": 234,
+        "disagreementModelCorrect": 69,
+        "disagreementOddsCorrect": 86,
+        "netWins": -17,
+        "disagreementNetWins": -17,
+        "lift": -0.0159,
+        "liftLow": -0.035,
+        "liftHigh": 0.0072,
+        "liftMethod": "fixture-chronological-block-bootstrap",
+        "liftIterations": 1000,
+        "liftBlockSize": 20,
+        "liftImprovementProbability": 0.073,
+        "liftStatus": "uncertain"
+      },
+      "byMarketScope": {
+        "spf": {
+          "all": {
+            "total": 199,
+            "pending": 1,
+            "recordedSettled": 198,
+            "settled": 194,
+            "correct": 103,
+            "accuracy": 0.5309278350515464,
+            "multiSelection": {
+              "settled": 4,
+              "correct": 4,
+              "coverageAccuracy": 1
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -12.760000000000003,
+            "roi": -0.06316831683168318,
+            "stakeUnits": 202,
+            "accuracyLow": 0.4608,
+            "accuracyHigh": 0.5999,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 174,
+            "pending": 1,
+            "recordedSettled": 173,
+            "settled": 146,
+            "correct": 66,
+            "accuracy": 0.4520547945205479,
+            "multiSelection": {
+              "settled": 23,
+              "correct": 17,
+              "coverageAccuracy": 0.7391304347826086
+            },
+            "noPrediction": 4,
+            "simulatedProfit": -22.460000000000008,
+            "roi": -0.1169791666666667,
+            "stakeUnits": 192,
+            "accuracyLow": 0.3736,
+            "accuracyHigh": 0.533,
+            "sampleLevel": "reference"
+          }
+        },
+        "hhad": {
+          "all": {
+            "total": 207,
+            "pending": 1,
+            "recordedSettled": 206,
+            "settled": 202,
+            "correct": 104,
+            "accuracy": 0.5148514851485149,
+            "multiSelection": {
+              "settled": 3,
+              "correct": 2,
+              "coverageAccuracy": 0.6666666666666666
+            },
+            "noPrediction": 1,
+            "simulatedProfit": -10.760000000000002,
+            "roi": -0.05173076923076924,
+            "stakeUnits": 208,
+            "accuracyLow": 0.4463,
+            "accuracyHigh": 0.5829,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 177,
+            "pending": 1,
+            "recordedSettled": 176,
+            "settled": 145,
+            "correct": 70,
+            "accuracy": 0.4827586206896552,
+            "multiSelection": {
+              "settled": 27,
+              "correct": 21,
+              "coverageAccuracy": 0.7777777777777778
+            },
+            "noPrediction": 4,
+            "simulatedProfit": -2.1599999999999997,
+            "roi": -0.010854271356783919,
+            "stakeUnits": 199,
+            "accuracyLow": 0.4029,
+            "accuracyHigh": 0.5635,
+            "sampleLevel": "reference"
+          }
+        },
+        "goals": {
+          "all": {
+            "total": 209,
+            "pending": 1,
+            "recordedSettled": 208,
+            "settled": 206,
+            "correct": 52,
+            "accuracy": 0.2524271844660194,
+            "multiSelection": {
+              "settled": 2,
+              "correct": 2,
+              "coverageAccuracy": 1
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -25.5,
+            "roi": -0.12085308056872038,
+            "stakeUnits": 211,
+            "accuracyLow": 0.198,
+            "accuracyHigh": 0.3159,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 184,
+            "pending": 1,
+            "recordedSettled": 183,
+            "settled": 179,
+            "correct": 32,
+            "accuracy": 0.1787709497206704,
+            "multiSelection": {
+              "settled": 4,
+              "correct": 4,
+              "coverageAccuracy": 1
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -54.44999999999999,
+            "roi": -0.288095238095238,
+            "stakeUnits": 189,
+            "accuracyLow": 0.1296,
+            "accuracyHigh": 0.2415,
+            "sampleLevel": "reference"
+          }
+        },
+        "goalsPair": {
+          "all": {
+            "total": 209,
+            "pending": 1,
+            "settled": 208,
+            "correct": 99,
+            "accuracy": 0.47596153846153844,
+            "simulatedProfit": -53.250000000000014,
+            "roi": -0.12800480769230774,
+            "stakeUnits": 416,
+            "costPerRecord": 2,
+            "accuracyLow": 0.4091,
+            "accuracyHigh": 0.5437,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 184,
+            "pending": 1,
+            "settled": 183,
+            "correct": 71,
+            "accuracy": 0.3879781420765027,
+            "simulatedProfit": -91.59999999999997,
+            "roi": -0.25027322404371577,
+            "stakeUnits": 366,
+            "costPerRecord": 2,
+            "accuracyLow": 0.3204,
+            "accuracyHigh": 0.4602,
+            "sampleLevel": "reference"
+          }
+        },
+        "goalMultiple": {
+          "all": {
+            "total": 38,
+            "pending": 0,
+            "recordedSettled": 38,
+            "settled": 38,
+            "correct": 15,
+            "accuracy": 0.39473684210526316,
+            "simulatedProfit": 0,
+            "roi": null,
+            "stakeUnits": 0,
+            "accuracyLow": 0.256,
+            "accuracyHigh": 0.5528,
+            "sampleLevel": "preliminary"
+          },
+          "sameLeague": {
+            "total": 0,
+            "pending": 0,
+            "recordedSettled": 0,
+            "settled": 0,
+            "correct": 0,
+            "accuracy": null,
+            "simulatedProfit": 0,
+            "roi": null,
+            "stakeUnits": 0,
+            "accuracyLow": null,
+            "accuracyHigh": null,
+            "sampleLevel": "empty"
+          }
+        }
+      }
+    },
+    "all": {
+      "totals": {
+        "fixtures": 386,
+        "pendingFixtures": 18,
+        "settledFixtures": 368,
+        "coreFixtures": 386,
+        "corePendingFixtures": 18,
+        "coreSettledFixtures": 368,
+        "corePending": 98,
+        "coreSettled": 2072,
+        "fixtureSampleLevel": "reference",
+        "snapshots": 2239,
+        "pending": 100,
+        "settled": 2139,
+        "recommendedCoverage": 0.0383356708742403
+      },
+      "overall": {
+        "total": 2239,
+        "pending": 100,
+        "recordedSettled": 2139,
+        "settled": 1938,
+        "correct": 776,
+        "accuracy": 0.4004127966976264,
+        "multiSelection": {
+          "settled": 122,
+          "correct": 90,
+          "coverageAccuracy": 0.7377049180327869
+        },
+        "noPrediction": 12,
+        "simulatedProfit": -286.73999999999967,
+        "roi": -0.13123112128146439,
+        "stakeUnits": 2185,
+        "accuracyLow": 0.3788,
+        "accuracyHigh": 0.4224,
+        "sampleLevel": "reference"
+      },
+      "benchmark": {
+        "compared": 1938,
+        "fixtures": 368,
+        "modelCorrect": 776,
+        "oddsCorrect": 833,
+        "modelAccuracy": 0.4004,
+        "oddsAccuracy": 0.4298,
+        "directionsAgree": 1497,
+        "directionsDiffer": 441,
+        "disagreementModelCorrect": 108,
+        "disagreementOddsCorrect": 165,
+        "netWins": -57,
+        "disagreementNetWins": -57,
+        "lift": -0.0294,
+        "liftLow": -0.0482,
+        "liftHigh": -0.0118,
+        "liftMethod": "fixture-chronological-block-bootstrap",
+        "liftIterations": 1000,
+        "liftBlockSize": 20,
+        "liftImprovementProbability": 0,
+        "liftStatus": "worse"
+      },
+      "byMarketScope": {
+        "spf": {
+          "all": {
+            "total": 371,
+            "pending": 17,
+            "recordedSettled": 354,
+            "settled": 348,
+            "correct": 194,
+            "accuracy": 0.5574712643678161,
+            "multiSelection": {
+              "settled": 6,
+              "correct": 6,
+              "coverageAccuracy": 1
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -20.270000000000003,
+            "roi": -0.05630555555555557,
+            "stakeUnits": 360,
+            "accuracyLow": 0.5049,
+            "accuracyHigh": 0.6087,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 333,
+            "pending": 13,
+            "recordedSettled": 320,
+            "settled": 266,
+            "correct": 129,
+            "accuracy": 0.4849624060150376,
+            "multiSelection": {
+              "settled": 49,
+              "correct": 36,
+              "coverageAccuracy": 0.7346938775510204
+            },
+            "noPrediction": 5,
+            "simulatedProfit": -41.58000000000001,
+            "roi": -0.11423076923076926,
+            "stakeUnits": 364,
+            "accuracyLow": 0.4255,
+            "accuracyHigh": 0.5448,
+            "sampleLevel": "reference"
+          }
+        },
+        "hhad": {
+          "all": {
+            "total": 383,
+            "pending": 18,
+            "recordedSettled": 365,
+            "settled": 355,
+            "correct": 181,
+            "accuracy": 0.5098591549295775,
+            "multiSelection": {
+              "settled": 9,
+              "correct": 7,
+              "coverageAccuracy": 0.7777777777777778
+            },
+            "noPrediction": 1,
+            "simulatedProfit": -27.22000000000001,
+            "roi": -0.07297587131367295,
+            "stakeUnits": 373,
+            "accuracyLow": 0.458,
+            "accuracyHigh": 0.5615,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 336,
+            "pending": 14,
+            "recordedSettled": 322,
+            "settled": 264,
+            "correct": 122,
+            "accuracy": 0.4621212121212121,
+            "multiSelection": {
+              "settled": 52,
+              "correct": 35,
+              "coverageAccuracy": 0.6730769230769231
+            },
+            "noPrediction": 6,
+            "simulatedProfit": -38.12000000000001,
+            "roi": -0.10358695652173916,
+            "stakeUnits": 368,
+            "accuracyLow": 0.403,
+            "accuracyHigh": 0.5224,
+            "sampleLevel": "reference"
+          }
+        },
+        "goals": {
+          "all": {
+            "total": 386,
+            "pending": 18,
+            "recordedSettled": 368,
+            "settled": 366,
+            "correct": 87,
+            "accuracy": 0.23770491803278687,
+            "multiSelection": {
+              "settled": 2,
+              "correct": 2,
+              "coverageAccuracy": 1
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -66.70000000000002,
+            "roi": -0.17978436657681945,
+            "stakeUnits": 371,
+            "accuracyLow": 0.197,
+            "accuracyHigh": 0.2839,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 361,
+            "pending": 18,
+            "recordedSettled": 343,
+            "settled": 339,
+            "correct": 63,
+            "accuracy": 0.18584070796460178,
+            "multiSelection": {
+              "settled": 4,
+              "correct": 4,
+              "coverageAccuracy": 1
+            },
+            "noPrediction": 0,
+            "simulatedProfit": -92.85000000000004,
+            "roi": -0.2660458452722064,
+            "stakeUnits": 349,
+            "accuracyLow": 0.148,
+            "accuracyHigh": 0.2307,
+            "sampleLevel": "reference"
+          }
+        },
+        "goalsPair": {
+          "all": {
+            "total": 386,
+            "pending": 18,
+            "settled": 368,
+            "correct": 168,
+            "accuracy": 0.45652173913043476,
+            "simulatedProfit": -121.74999999999994,
+            "roi": -0.16542119565217384,
+            "stakeUnits": 736,
+            "costPerRecord": 2,
+            "accuracyLow": 0.4063,
+            "accuracyHigh": 0.5076,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 361,
+            "pending": 18,
+            "settled": 343,
+            "correct": 130,
+            "accuracy": 0.37900874635568516,
+            "simulatedProfit": -166.45,
+            "roi": -0.24263848396501456,
+            "stakeUnits": 686,
+            "costPerRecord": 2,
+            "accuracyLow": 0.3293,
+            "accuracyHigh": 0.4314,
+            "sampleLevel": "reference"
+          }
+        },
+        "goalMultiple": {
+          "all": {
+            "total": 69,
+            "pending": 2,
+            "recordedSettled": 67,
+            "settled": 67,
+            "correct": 28,
+            "accuracy": 0.417910447761194,
+            "simulatedProfit": 0,
+            "roi": null,
+            "stakeUnits": 0,
+            "accuracyLow": 0.3074,
+            "accuracyHigh": 0.5373,
+            "sampleLevel": "reference"
+          },
+          "sameLeague": {
+            "total": 0,
+            "pending": 0,
+            "recordedSettled": 0,
+            "settled": 0,
+            "correct": 0,
+            "accuracy": null,
+            "simulatedProfit": 0,
+            "roi": null,
+            "stakeUnits": 0,
+            "accuracyLow": null,
+            "accuracyHigh": null,
+            "sampleLevel": "empty"
+          }
+        }
+      }
+    }
+  },
+  "unknownParlays": {
+    "total": 49,
+    "pending": 2,
+    "settled": 47,
+    "correct": 8,
+    "accuracy": 0.1702127659574468,
+    "simulatedProfit": -46.492999999999995,
+    "stakeUnits": 110,
+    "roi": -0.4226636363636363
+  }
+}

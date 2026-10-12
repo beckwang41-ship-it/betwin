@@ -3,6 +3,19 @@
   "runtimeEnabled": false,
   "approvedAt": null,
   "approvedArtifact": null,
+  "suspensionReason": "2026-10-01：修复批次回测、完整先验池和严格校准门禁；旧批准暂停，新结果仅作研究，不自动上线",
+  "previousApproval": {
+    "approvedAt": "2026-09-30T02:11:01.366Z",
+    "market": "hhad",
+    "strength": 20,
+    "artifact": {
+    "generatedAt": "2026-09-30T01:52:32.011Z",
+    "verifiedMatches": 9429,
+    "sourceUpdatedAt": "2026-09-29T12:13:15.883570+00:00",
+    "matchingVersion": "spf-hhad-paired-direct-results-v3",
+    "goalMatchingVersion": "goal-zero-composite-v1"
+    }
+  },
   "markets": {
     "spf": {
       "enabled": false,

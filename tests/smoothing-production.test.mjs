@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolveSmoothingProduction } from "../lib/smoothing-production.mjs";
+import { resolveSmoothingProduction, SMOOTHING_VALIDATION_VERSION, smoothingPolicyToken, smoothingValidationSignature } from "../lib/smoothing-production.mjs";
+import { HISTORY_TIMELINE_VERSION } from "../lib/history-timeline.mjs";
 
 function candidate() {
   return {
     generatedAt: "2026-08-27T00:00:00.000Z",
     candidateOnly: true,
     data: {
+      timelineVersion: HISTORY_TIMELINE_VERSION,
+      validationVersion: SMOOTHING_VALIDATION_VERSION,
       verifiedMatches: 8171,
       sourceUpdatedAt: "2026-08-26T15:05:03+00:00",
       matchingVersion: "spf-hhad-joint-v1",
@@ -84,4 +87,27 @@ test("过期候选或批准强度不一致时保持关闭", () => {
   assert.equal(mismatch.runtimeEnabled, false);
   assert.equal(mismatch.status, "approval-mismatch");
   assert.equal(mismatch.markets.hhad.enabled, false);
+});
+
+test("旧回测协议不能凭已有人工批准重新启用", () => {
+  const old = candidate();
+  delete old.data.timelineVersion;
+  assert.equal(resolveSmoothingProduction(old, matchingApproval()).runtimeEnabled, false);
+  const approval = matchingApproval();
+  delete approval.approvedArtifact.validationVersion;
+  assert.equal(resolveSmoothingProduction(candidate(), approval).runtimeEnabled, false);
+});
+
+test("实际平滑规则进入版本，关闭或未验证范围不改变原模型版本", () => {
+  const policy = { enabled: true, strength: 20 };
+  const token = smoothingPolicyToken(policy);
+  assert.match(token, /^:smoothing-/);
+  assert.notEqual(token, smoothingPolicyToken({ ...policy, strength: 12 }));
+  assert.notEqual(token, smoothingPolicyToken({ ...policy, minLocalizedSamples: 40 }));
+  assert.equal(token, smoothingPolicyToken({ ...policy, referenceStrength: 3, reason: "说明变化" }));
+  assert.equal(smoothingPolicyToken({ ...policy, enabled: false }), "");
+  assert.equal(smoothingPolicyToken(policy, { sameLeague: true }), "");
+  assert.equal(smoothingPolicyToken(policy, { usesRecommendedThreshold: false }), "");
+  assert.equal(smoothingValidationSignature({}), "off");
+  assert.notEqual(smoothingValidationSignature({ hhad: policy }), "off");
 });

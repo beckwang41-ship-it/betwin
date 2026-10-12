@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   blockBootstrapMean,
+  blockBootstrapFixtureMean,
   blockBootstrapComparison,
   classificationDelta,
 } from "../lib/significance.mjs";
@@ -22,6 +23,19 @@ test("scalar block bootstrap preserves chronological clusters", () => {
   assert.ok(result.lower > 0);
   assert.equal(result.evaluated, 120);
   assert.equal(result.improvementProbability, 1);
+});
+
+test("同一比赛跨玩法反向误差在每次重采样中仍共同出现", () => {
+  const cases = Array.from({ length: 60 }, (_, i) => [
+    { fixtureId: String(i), market: "spf", sourceFile: "spf.xlsx", order: i, value: 1 },
+    { fixtureId: String(i), market: "goals", sourceFile: "goals.xlsx", order: 100 - i, value: -1 },
+  ]).flat();
+  const result = blockBootstrapFixtureMean(cases, { blockSize: 5 });
+  assert.equal(result.fixtures, 60);
+  assert.equal(result.evaluated, 120);
+  assert.equal(result.mean, 0);
+  assert.equal(result.lower, 0);
+  assert.equal(result.upper, 0);
 });
 
 test("scalar block bootstrap reports an unstable lift as uncertain", () => {

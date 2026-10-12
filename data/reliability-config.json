@@ -1,11 +1,13 @@
 {
-  "version": 1,
-  "generatedAt": "2026-08-30T12:56:25.814Z",
+  "version": 2,
+  "generatedAt": "2026-10-11T03:22:20.970Z",
   "data": {
+    "gateVersion": "market-edge-v2",
+    "timelineVersion": "database-import-batches-v1",
     "database": "betwin.db",
-    "verifiedMatches": 9060,
-    "sourceUpdatedAt": "2026-08-30T12:54:36+00:00",
-    "matchingVersion": "spf-hhad-joint-v1",
+    "verifiedMatches": 9483,
+    "sourceUpdatedAt": "2026-10-11T03:21:46.507030+00:00",
+    "matchingVersion": "spf-hhad-paired-direct-results-v3",
     "goalMatchingVersion": "goal-zero-composite-v1",
     "probabilityPolicy": "historical-similarity-v3-zero-floor-m1.5",
     "thresholds": {
@@ -16,227 +18,305 @@
     "thresholdSource": "locked-formal-production-rules"
   },
   "methodology": {
-    "ordering": "选择记录最多的历史来源，按 source_row 递增；每场只读取此前记录",
+    "ordering": "每日增量按数据库批次，整批预测后进入训练；旧累加来源分别按原顺序回测，并作为新批次的初始历史池",
     "warmup": 500,
     "split": "前60%选择规则、中间20%验证、最新20%最终测试",
     "matching": "SPF/HHAD复用生产联合优先与联合零样本回退；只训练全部联赛口径",
     "probability": "与生产一致使用 historical-similarity-v3-zero-floor-m1.5；三项盘和总进球均先应用总先验质量1.5的保序防零",
-    "gate": "训练提升至少3%；中间20%提升至少3%；最新20%提升至少2%，且两段连续20场区块Bootstrap的95%提升下界不低于0",
+    "gate": "训练提升至少3%；中间20%提升至少3%；最新20%提升至少2%，且两段连续20场区块Bootstrap的95%提升下界不低于0；另外筛出场次在中间与最新两段的实际命中率须高于所选方向的去水市场概率（区块Bootstrap下界不低于0）",
     "goals": "复用生产0球赔率±2.00窗口；全部合格样本按终赔60%、初赔15%、走势15%、隐含进球10%的综合距离指数加权；四档样本池方向用于稳定性筛选"
   },
   "sources": {
     "spf": {
-      "file": "lsspfpl.xlsx",
-      "rows": 9552
+      "file": "database-timeline",
+      "rows": 10105
     },
     "hhad": {
-      "file": "lsspfpl.xlsx",
-      "rows": 9552
+      "file": "database-timeline",
+      "rows": 10105
     },
     "goals": {
-      "file": "历史进球数.xlsx",
-      "rows": 8804
+      "file": "database-timeline",
+      "rows": 9321
     }
   },
   "markets": {
     "spf": {
-      "enabled": true,
+      "enabled": false,
       "rule": {
         "threshold": 0.07,
-        "minSamples": 1,
+        "minSamples": 15,
         "minTopProbability": 0.6,
-        "minMargin": 0.3614457831,
+        "minMargin": 0.0076628352,
         "requireStable": false,
-        "minConsensus": 1
+        "minConsensus": 0
       },
       "train": {
-        "targets": 5205,
-        "available": 5181,
-        "modelCoverage": 0.9953890489913545,
-        "selected": 873,
-        "coverage": 0.1685002895193978,
-        "baselineAccuracy": 0.49623624782860454,
-        "selectedAccuracy": 0.6437571592210768,
-        "accuracyLift": 0.14752091139247225
+        "targets": 5461,
+        "available": 5353,
+        "modelCoverage": 0.9802234023072697,
+        "selected": 679,
+        "coverage": 0.12684475994769287,
+        "baselineAccuracy": 0.49402204371380537,
+        "selectedAccuracy": 0.6421207658321061,
+        "accuracyLift": 0.14809872211830072,
+        "selectedMarketProbability": 0.6294362455042362,
+        "marketEdge": 0.012684520327870158
       },
       "calibration": {
-        "targets": 1735,
-        "available": 1730,
-        "modelCoverage": 0.9971181556195965,
-        "selected": 306,
-        "coverage": 0.176878612716763,
-        "baselineAccuracy": 0.49836223506743743,
-        "selectedAccuracy": 0.6862745098039216,
-        "accuracyLift": 0.18791227473648414
+        "targets": 1820,
+        "available": 1808,
+        "modelCoverage": 0.9934065934065934,
+        "selected": 290,
+        "coverage": 0.16039823008849557,
+        "baselineAccuracy": 0.4973266961651917,
+        "selectedAccuracy": 0.6344827586206897,
+        "accuracyLift": 0.137156062455498,
+        "selectedMarketProbability": 0.6506886336430114,
+        "marketEdge": -0.01620587502232185
       },
       "calibrationSignificance": {
         "iterations": 1000,
         "blockSize": 20,
         "confidence": 0.95,
         "accuracyLift": {
-          "lower": 0.14522922793711518,
-          "upper": 0.23234468929739516
+          "lower": 0.08969339454827309,
+          "upper": 0.18852281383054798
+        }
+      },
+      "calibrationMarketSignificance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "marketEdge": {
+          "lower": -0.07143589158252202,
+          "upper": 0.036496301012604516
         }
       },
       "test": {
-        "targets": 1736,
-        "available": 1732,
-        "modelCoverage": 0.9976958525345622,
-        "selected": 336,
-        "coverage": 0.19399538106235567,
-        "baselineAccuracy": 0.5073133179368745,
-        "selectedAccuracy": 0.6785714285714286,
-        "accuracyLift": 0.1712581106345541
+        "targets": 1821,
+        "available": 1801,
+        "modelCoverage": 0.9890170236133993,
+        "selected": 331,
+        "coverage": 0.18378678511937813,
+        "baselineAccuracy": 0.5179529890801406,
+        "selectedAccuracy": 0.676737160120846,
+        "accuracyLift": 0.1587841710407053,
+        "selectedMarketProbability": 0.6547834872406597,
+        "marketEdge": 0.021953672880186615
       },
       "testSignificance": {
         "iterations": 1000,
         "blockSize": 20,
         "confidence": 0.95,
         "accuracyLift": {
-          "lower": 0.1278527413962016,
-          "upper": 0.21209399721160024
+          "lower": 0.117755486086658,
+          "upper": 0.2007112721340468
+        }
+      },
+      "testMarketSignificance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "marketEdge": {
+          "lower": -0.024686606818243792,
+          "upper": 0.0719696788886013
         }
       },
       "gate": {
-        "passed": true,
+        "passed": false,
         "calibrationPassed": true,
         "testPassed": true,
+        "marketEdgePassed": false,
+        "requireMarketEdge": true,
         "minimumTrainLift": 0.03,
         "minimumCalibrationLift": 0.03,
         "minimumTestLift": 0.02,
-        "reason": "训练段选出的规则在中间20%和最新20%均提高命中率，且连续区块Bootstrap的95%下界不低于0"
+        "reason": "规则挑出的比赛命中率更高，但没有比赔率隐含概率更准（只是挑中了市场热门），本玩法不标记“重点参考”"
       }
     },
     "hhad": {
-      "enabled": true,
+      "enabled": false,
       "rule": {
         "threshold": 0.07,
-        "minSamples": 35,
-        "minTopProbability": 0.547826087,
+        "minSamples": 37,
+        "minTopProbability": 0.5471698113,
         "minMargin": 0.2857142857,
         "requireStable": false,
         "minConsensus": 0
       },
       "train": {
-        "targets": 5431,
-        "available": 5379,
-        "modelCoverage": 0.9904253360338796,
-        "selected": 806,
-        "coverage": 0.14984197806283697,
-        "baselineAccuracy": 0.4802937348949621,
-        "selectedAccuracy": 0.609181141439206,
-        "accuracyLift": 0.1288874065442439
+        "targets": 5709,
+        "available": 5575,
+        "modelCoverage": 0.976528288667017,
+        "selected": 849,
+        "coverage": 0.15228699551569508,
+        "baselineAccuracy": 0.48173393124065794,
+        "selectedAccuracy": 0.607773851590106,
+        "accuracyLift": 0.12603992034944805,
+        "selectedMarketProbability": 0.5716290717062047,
+        "marketEdge": 0.0361447798839019
       },
       "calibration": {
-        "targets": 1810,
-        "available": 1805,
-        "modelCoverage": 0.9972375690607734,
-        "selected": 511,
-        "coverage": 0.28310249307479224,
-        "baselineAccuracy": 0.4986149584487535,
-        "selectedAccuracy": 0.5831702544031311,
-        "accuracyLift": 0.08455529595437761
+        "targets": 1903,
+        "available": 1887,
+        "modelCoverage": 0.9915922228060956,
+        "selected": 532,
+        "coverage": 0.28192898781134074,
+        "baselineAccuracy": 0.49620208443737857,
+        "selectedAccuracy": 0.5695488721804511,
+        "accuracyLift": 0.07334678774307257,
+        "selectedMarketProbability": 0.5730964942596782,
+        "marketEdge": -0.0035476220792274547
       },
       "calibrationSignificance": {
         "iterations": 1000,
         "blockSize": 20,
         "confidence": 0.95,
         "accuracyLift": {
-          "lower": 0.04542486674497046,
-          "upper": 0.12206235608410539
+          "lower": 0.03183655446279734,
+          "upper": 0.11331702989122178
+        }
+      },
+      "calibrationMarketSignificance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "marketEdge": {
+          "lower": -0.046365203163660905,
+          "upper": 0.04413298891008339
         }
       },
       "test": {
-        "targets": 1811,
-        "available": 1802,
-        "modelCoverage": 0.9950303699613473,
-        "selected": 471,
-        "coverage": 0.26137624861265263,
-        "baselineAccuracy": 0.49435812060673334,
-        "selectedAccuracy": 0.564755838641189,
-        "accuracyLift": 0.0703977180344556
+        "targets": 1904,
+        "available": 1879,
+        "modelCoverage": 0.9868697478991597,
+        "selected": 476,
+        "coverage": 0.253326237360298,
+        "baselineAccuracy": 0.5013304949441192,
+        "selectedAccuracy": 0.5609243697478992,
+        "accuracyLift": 0.05959387480377998,
+        "selectedMarketProbability": 0.5739438875471727,
+        "marketEdge": -0.013019517799273381
       },
       "testSignificance": {
         "iterations": 1000,
         "blockSize": 20,
         "confidence": 0.95,
         "accuracyLift": {
-          "lower": 0.030000389656243978,
-          "upper": 0.109140971073334
+          "lower": 0.016469960086163405,
+          "upper": 0.09812797846705429
+        }
+      },
+      "testMarketSignificance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "marketEdge": {
+          "lower": -0.05789443656993995,
+          "upper": 0.029919572140086042
         }
       },
       "gate": {
-        "passed": true,
+        "passed": false,
         "calibrationPassed": true,
         "testPassed": true,
+        "marketEdgePassed": false,
+        "requireMarketEdge": true,
         "minimumTrainLift": 0.03,
         "minimumCalibrationLift": 0.03,
         "minimumTestLift": 0.02,
-        "reason": "训练段选出的规则在中间20%和最新20%均提高命中率，且连续区块Bootstrap的95%下界不低于0"
+        "reason": "规则挑出的比赛命中率更高，但没有比赔率隐含概率更准（只是挑中了市场热门），本玩法不标记“重点参考”"
       }
     },
     "goals": {
       "enabled": false,
       "rule": {
         "threshold": 0.015,
-        "minSamples": 336,
-        "minTopProbability": 0.2566255981,
-        "minMargin": 0.0206728443,
+        "minSamples": 351,
+        "minTopProbability": 0.2559224637,
+        "minMargin": 0.0204160352,
         "requireStable": false,
         "minConsensus": 1
       },
       "train": {
-        "targets": 4982,
-        "available": 4973,
-        "modelCoverage": 0.9981934965877157,
-        "selected": 615,
-        "coverage": 0.12366780615322742,
-        "baselineAccuracy": 0.22561833903076614,
-        "selectedAccuracy": 0.28780487804878047,
-        "accuracyLift": 0.062186539018014325
+        "targets": 5261,
+        "available": 5252,
+        "modelCoverage": 0.9982892986124311,
+        "selected": 647,
+        "coverage": 0.12319116527037319,
+        "baselineAccuracy": 0.22658035034272658,
+        "selectedAccuracy": 0.28593508500772796,
+        "accuracyLift": 0.05935473466500138,
+        "selectedMarketProbability": 0.26044339664501487,
+        "marketEdge": 0.025491688362712903
       },
       "calibration": {
-        "targets": 1661,
-        "available": 1660,
-        "modelCoverage": 0.9993979530403372,
-        "selected": 225,
-        "coverage": 0.1355421686746988,
-        "baselineAccuracy": 0.23795180722891565,
-        "selectedAccuracy": 0.27111111111111114,
-        "accuracyLift": 0.033159303882195484
+        "targets": 1754,
+        "available": 1753,
+        "modelCoverage": 0.999429874572406,
+        "selected": 246,
+        "coverage": 0.14033086138049058,
+        "baselineAccuracy": 0.2430119794637764,
+        "selectedAccuracy": 0.23983739837398374,
+        "accuracyLift": -0.003174581089792655,
+        "selectedMarketProbability": 0.25804045852650126,
+        "marketEdge": -0.018203060152517443
       },
       "calibrationSignificance": {
         "iterations": 1000,
         "blockSize": 20,
         "confidence": 0.95,
         "accuracyLift": {
-          "lower": -0.019478115845692052,
-          "upper": 0.09145867962863048
+          "lower": -0.051147394581785466,
+          "upper": 0.04759958803893407
+        }
+      },
+      "calibrationMarketSignificance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "marketEdge": {
+          "lower": -0.07063956300570651,
+          "upper": 0.03866185157990754
         }
       },
       "test": {
-        "targets": 1661,
-        "available": 1661,
-        "modelCoverage": 1,
-        "selected": 225,
-        "coverage": 0.13546056592414207,
-        "baselineAccuracy": 0.25225767609873573,
-        "selectedAccuracy": 0.24,
-        "accuracyLift": -0.012257676098735737
+        "targets": 1754,
+        "available": 1752,
+        "modelCoverage": 0.9988597491448119,
+        "selected": 242,
+        "coverage": 0.13812785388127855,
+        "baselineAccuracy": 0.2391552511415525,
+        "selectedAccuracy": 0.25206611570247933,
+        "accuracyLift": 0.012910864560926827,
+        "selectedMarketProbability": 0.2647389019115199,
+        "marketEdge": -0.012672786209040545
       },
       "testSignificance": {
         "iterations": 1000,
         "blockSize": 20,
         "confidence": 0.95,
         "accuracyLift": {
-          "lower": -0.05994357089250782,
-          "upper": 0.037459733391846155
+          "lower": -0.032272146043608084,
+          "upper": 0.05769916963974017
+        }
+      },
+      "testMarketSignificance": {
+        "iterations": 1000,
+        "blockSize": 20,
+        "confidence": 0.95,
+        "marketEdge": {
+          "lower": -0.06632604434194884,
+          "upper": 0.035401217850819226
         }
       },
       "gate": {
         "passed": false,
         "calibrationPassed": false,
         "testPassed": false,
+        "marketEdgePassed": false,
+        "requireMarketEdge": true,
         "minimumTrainLift": 0.03,
         "minimumCalibrationLift": 0.03,
         "minimumTestLift": 0.02,

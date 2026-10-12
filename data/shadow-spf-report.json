@@ -1,0 +1,111 @@
+{
+  "generatedAt": "2026-09-04T01:40:17.558Z",
+  "reportOnly": true,
+  "affectsProduction": false,
+  "modelVersion": "spf-shadow-distance-v1:spf-hhad-paired-direct-results-v3:baseline-relative-max-0.07:candidate-hellinger-0.04:zero-floor-m1.5:all-leagues",
+  "totals": {
+    "snapshots": 7,
+    "pending": 7,
+    "settled": 0,
+    "commonEvaluated": 0,
+    "firstCapturedAt": "2026-09-04T00:32:11.120Z",
+    "lastCapturedAt": "2026-09-04T00:32:18.324Z"
+  },
+  "baseline": {
+    "targets": 0,
+    "evaluated": 0,
+    "coverage": 0,
+    "accuracy": null,
+    "logLoss": null,
+    "brier": null,
+    "meanSamples": null,
+    "strategy": {
+      "evaluatedMatches": 0,
+      "bettingMatches": 0,
+      "noPredictionMatches": 0,
+      "wins": 0,
+      "multiSelectionMatches": 0,
+      "stakeUnits": 0,
+      "returnUnits": 0,
+      "profitUnits": 0,
+      "roi": null
+    }
+  },
+  "candidate": {
+    "targets": 0,
+    "evaluated": 0,
+    "coverage": 0,
+    "accuracy": null,
+    "logLoss": null,
+    "brier": null,
+    "meanSamples": null,
+    "strategy": {
+      "evaluatedMatches": 0,
+      "bettingMatches": 0,
+      "noPredictionMatches": 0,
+      "wins": 0,
+      "multiSelectionMatches": 0,
+      "stakeUnits": 0,
+      "returnUnits": 0,
+      "profitUnits": 0,
+      "roi": null
+    }
+  },
+  "probabilityComparison": {
+    "passed": false,
+    "status": "insufficient",
+    "reason": "没有可用于显著性检验的共同验证样本",
+    "iterations": 0,
+    "blockSize": 0,
+    "confidence": 0.95,
+    "evaluated": 0,
+    "metrics": null
+  },
+  "roiComparison": {
+    "status": "insufficient",
+    "reason": "没有足够的共同投注样本",
+    "passed": false,
+    "positiveEdge": false,
+    "evaluated": 0,
+    "iterations": 0,
+    "blockSize": 0,
+    "confidence": 0.95,
+    "candidate": {
+      "evaluatedMatches": 0,
+      "bettingMatches": 0,
+      "noPredictionMatches": 0,
+      "wins": 0,
+      "multiSelectionMatches": 0,
+      "stakeUnits": 0,
+      "returnUnits": 0,
+      "profitUnits": 0,
+      "roi": null
+    },
+    "baseline": {
+      "evaluatedMatches": 0,
+      "bettingMatches": 0,
+      "noPredictionMatches": 0,
+      "wins": 0,
+      "multiSelectionMatches": 0,
+      "stakeUnits": 0,
+      "returnUnits": 0,
+      "profitUnits": 0,
+      "roi": null
+    },
+    "roiDelta": null,
+    "intervals": null
+  },
+  "reviewGate": {
+    "minimumSettled": 200,
+    "enoughFreshSamples": false,
+    "probabilityPassed": false,
+    "roiPassed": false,
+    "eligibleForManualReview": false,
+    "productionChanged": false
+  },
+  "activation": {
+    "activatedAt": "2026-09-02T12:57:13.165Z",
+    "initialMatchesExcluded": 13,
+    "backfillExistingMatches": false
+  }
+}

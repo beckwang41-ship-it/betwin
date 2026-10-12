@@ -40,6 +40,8 @@ function readReliabilityConfig() {
 }
 
 run(process.env.PYTHON || "python3", ["scripts/import_sqlite.py"]);
+// 只核对已冻结选择；直接读取新赛果，不等待网页结算，也不调用预测或 AI 服务。
+run(process.execPath, ["--disable-warning=ExperimentalWarning", "scripts/report_prediction_audit.mjs"]);
 
 const store = createDataStore(DATABASE_PATH);
 let current = false;

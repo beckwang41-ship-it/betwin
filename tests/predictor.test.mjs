@@ -52,7 +52,8 @@ test("market comparison distinguishes market alignment from historical divergenc
   assert.equal(divergent.agreesWithMarket, false);
   assert.deepEqual(divergent.historicalTopLabels, ["负"]);
   assert.deepEqual(divergent.marketTopLabels, ["胜"]);
-  assert.match(divergent.reason, /仅作待验证观察/);
+  // 回测结论：偏离市场时实际命中接近市场概率，文案须如实说明历史概率偏高。
+  assert.match(divergent.reason, /实际命中接近市场概率/);
 });
 
 test("market comparison supports top-two goal selections", () => {

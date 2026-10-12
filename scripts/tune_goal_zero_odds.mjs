@@ -36,6 +36,7 @@ try {
   const [trainingSource, trainingRows] = [...sourceCounts.entries()]
     .sort((left, right) => right[1] - left[1])[0];
   const rows = history.filter((row) => row.sourceFile === trainingSource);
+  console.warn(`旧研究协议：仅分析数据库来源 ${trainingSource} 的 ${trainingRows} 场，排除 ${history.length - trainingRows} 场；不是全库统计，不参与生产预测。`);
   const result = tuneGoalBandModel(rows, {
     legacyTolerance: LEGACY_TOLERANCE,
   });

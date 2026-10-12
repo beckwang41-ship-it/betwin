@@ -12,6 +12,32 @@ const candidates = [
   { id: "d", odds: 2.4, probability: 0.42 },
 ];
 
+test("常规与双选按原排名筛选，遵守每场使用上限且不足时不放宽", () => {
+  const goals = candidates.map(c => ({ ...c, selections: [
+    { label: "2", odds: 3, probability: c.probability / 2 },
+    { label: "3", odds: 4, probability: c.probability / 2 },
+  ] }));
+  for (const [generate, pool] of [[generateParlayCombinations, candidates], [generateGoalPairParlays, goals]]) {
+    const base = generate(pool, { limit: 20, targetOdds: 1 });
+    const once = generate(pool, { limit: 5, maxMatchUses: 1, targetOdds: 1 });
+    assert.equal(once.rows.length, 2);
+    assert.equal(once.rows[0].id, base.rows[0].id);
+    assert.equal(new Set(once.rows.flatMap(r => r.legs.map(l => l.id))).size, 4);
+    const twice = generate(pool, { limit: 5, maxMatchUses: 2, targetOdds: 1 });
+    const uses = new Map();
+    twice.rows.flatMap(r => r.legs).forEach(l => uses.set(l.id, (uses.get(l.id) || 0) + 1));
+    assert.ok([...uses.values()].every(n => n <= 2));
+    assert.equal(twice.settings.maxMatchUses, 2);
+    assert.deepEqual(generate(pool, { limit: 2, maxMatchUses: 0, targetOdds: 1 }).rows, base.rows.slice(0, 2));
+    assert.equal(generate(pool.slice(0, 1), { maxMatchUses: 1 }).rows.length, 0);
+    for (const legs of [3, 4, 5]) {
+      const result = generate(pool, { legs, limit: 5, maxMatchUses: 1, targetOdds: 1 });
+      assert.equal(result.rows.length, legs > pool.length ? 0 : 1);
+    }
+    assert.throws(() => generate(pool, { maxMatchUses: 3 }), /使用次数/);
+  }
+});
+
 test("parlay generator creates the expected number of unique combinations", () => {
   const result = generateParlayCombinations(candidates, {
     legs: 2,

@@ -34,7 +34,11 @@ test("challenger builds finite multi-market features for current matches", () =>
     new URL("../betwin.db", import.meta.url).pathname,
   );
   try {
-    const match = store.getMatches()[0];
+    // 首场待赛可能未开售胜平负（had 为空），挑一场三项赔率齐全的来测特征构建
+    const match = store
+      .getMatches()
+      .find((item) => item.had && item.had.h && item.hhad && item.hhad.h);
+    assert.ok(match, "当前待赛中应至少有一场胜平负/让球赔率齐全的比赛");
     const history = store.getVerifiedHistory();
     const features = challengerFeatures(
       match,

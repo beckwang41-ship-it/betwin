@@ -57,12 +57,17 @@ def total_goals_from_score(score: object) -> int | None:
 
 
 def build_spf_history() -> list[dict]:
+    """
+    从 history.xlsx 的「胜平负让球」工作表读取胜平负和让球数据。
+    每条记录包含初始赔率和最终赔率。
+    """
     records: list[dict] = []
-    initial_by_key: dict[tuple, dict] = {}
-    matched_initial_keys: set[tuple] = set()
-
-    rich = pd.read_excel(ROOT / "initspfpl.xlsx")
-    for source_row, (_, row) in enumerate(rich.iterrows(), start=2):
+    
+    # 读取新的统一文件
+    df = pd.read_excel(ROOT / "history.xlsx", sheet_name="胜平负让球")
+    
+    for source_row, (_, row) in enumerate(df.iterrows(), start=2):
+        # 读取最终赔率（必需）
         final_odds = [
             clean_number(row.get("胜平负-最终-胜")),
             clean_number(row.get("胜平负-最终-平")),
@@ -70,57 +75,18 @@ def build_spf_history() -> list[dict]:
         ]
         if not valid_odds(final_odds):
             continue
+            
+        # 读取初始赔率（可选）
         initial_odds = [
             clean_number(row.get("胜平负-初始-胜")),
             clean_number(row.get("胜平负-初始-平")),
             clean_number(row.get("胜平负-初始-负")),
         ]
+        
         result = result_from_score(row.get("比分"), row.get("胜平负结果"))
         if not result:
             continue
-        key = (
-            clean_text(row.get("联赛类型")),
-            clean_text(row.get("主队")),
-            clean_text(row.get("客队")),
-            clean_text(row.get("比分")),
-            int(row.get("让球", 0)),
-            *final_odds,
-        )
-        rich_record = {
-            "league": key[0],
-            "home": key[1],
-            "away": key[2],
-            "score": key[3],
-            "result": result,
-            "handicap": key[4],
-            "odds": final_odds,
-            "initialOdds": initial_odds if valid_odds(initial_odds) else None,
-            "totalGoals": total_goals_from_score(row.get("比分")),
-            "source": "初始/最终赔率库",
-            "sourceFile": "initspfpl.xlsx",
-            "sourceRow": source_row,
-            "initialSourceFile": "initspfpl.xlsx",
-            "initialSourceRow": source_row,
-        }
-        initial_by_key[key] = {
-            "odds": initial_odds if valid_odds(initial_odds) else None,
-            "sourceFile": "initspfpl.xlsx",
-            "sourceRow": source_row,
-            "record": rich_record,
-        }
-
-    legacy = pd.read_excel(ROOT / "lsspfpl.xlsx")
-    for source_row, (_, row) in enumerate(legacy.iterrows(), start=2):
-        odds = [
-            clean_number(row.get("胜平负-胜")),
-            clean_number(row.get("胜平负-平")),
-            clean_number(row.get("胜平负-负")),
-        ]
-        if not valid_odds(odds):
-            continue
-        result = result_from_score(row.get("比分"), row.get("胜平负结果"))
-        if not result:
-            continue
+            
         record = {
             "league": clean_text(row.get("联赛类型")),
             "home": clean_text(row.get("主队")),
@@ -128,47 +94,32 @@ def build_spf_history() -> list[dict]:
             "score": clean_text(row.get("比分")),
             "result": result,
             "handicap": int(row.get("让球", 0)),
-            "odds": odds,
-            "initialOdds": None,
+            "odds": final_odds,
+            "initialOdds": initial_odds if valid_odds(initial_odds) else None,
             "totalGoals": total_goals_from_score(row.get("比分")),
-            "source": "历史胜平负库",
-            "sourceFile": "lsspfpl.xlsx",
+            "source": "history.xlsx",
+            "sourceFile": "history.xlsx",
             "sourceRow": source_row,
+            "initialSourceFile": "history.xlsx" if valid_odds(initial_odds) else None,
+            "initialSourceRow": source_row if valid_odds(initial_odds) else None,
         }
-        key = (
-            record["league"],
-            record["home"],
-            record["away"],
-            record["score"],
-            record["handicap"],
-            *record["odds"],
-        )
-        initial = initial_by_key.get(key)
-        if initial:
-            matched_initial_keys.add(key)
-            record["initialOdds"] = initial["odds"]
-            record["initialSourceFile"] = initial["sourceFile"]
-            record["initialSourceRow"] = initial["sourceRow"]
-        else:
-            record["initialSourceFile"] = None
-            record["initialSourceRow"] = None
         records.append(record)
-
-    records.extend(
-        initial["record"]
-        for key, initial in initial_by_key.items()
-        if key not in matched_initial_keys
-    )
+    
     return records
 
 
 def build_hhad_history() -> list[dict]:
+    """
+    从 history.xlsx 的「胜平负让球」工作表读取让球数据。
+    每条记录包含初始赔率和最终赔率。
+    """
     records: list[dict] = []
-    initial_by_key: dict[tuple, dict] = {}
-    matched_initial_keys: set[tuple] = set()
-
-    rich = pd.read_excel(ROOT / "initspfpl.xlsx")
-    for source_row, (_, row) in enumerate(rich.iterrows(), start=2):
+    
+    # 读取新的统一文件
+    df = pd.read_excel(ROOT / "history.xlsx", sheet_name="胜平负让球")
+    
+    for source_row, (_, row) in enumerate(df.iterrows(), start=2):
+        # 读取最终赔率（必需）
         final_odds = [
             clean_number(row.get("让球-最终-胜")),
             clean_number(row.get("让球-最终-平")),
@@ -177,89 +128,32 @@ def build_hhad_history() -> list[dict]:
         result = clean_text(row.get("让球结果"))
         if not valid_odds(final_odds) or result not in {"胜", "平", "负"}:
             continue
+            
+        # 读取初始赔率（可选）
         initial_odds = [
             clean_number(row.get("让球-初始-胜")),
             clean_number(row.get("让球-初始-平")),
             clean_number(row.get("让球-初始-负")),
         ]
+        
         handicap = int(row.get("让球", 0))
-        key = (
-            clean_text(row.get("联赛类型")),
-            clean_text(row.get("主队")),
-            clean_text(row.get("客队")),
-            clean_text(row.get("比分")),
-            handicap,
-            *final_odds,
-        )
-        rich_record = {
-            "league": key[0],
-            "home": key[1],
-            "away": key[2],
-            "score": key[3],
-            "result": result,
-            "handicap": handicap,
-            "odds": final_odds,
-            "initialOdds": initial_odds if valid_odds(initial_odds) else None,
-            "source": "初始/最终让球赔率库",
-            "sourceFile": "initspfpl.xlsx",
-            "sourceRow": source_row,
-            "initialSourceFile": "initspfpl.xlsx",
-            "initialSourceRow": source_row,
-        }
-        initial_by_key[key] = {
-            "odds": rich_record["initialOdds"],
-            "sourceFile": "initspfpl.xlsx",
-            "sourceRow": source_row,
-            "record": rich_record,
-        }
-
-    legacy = pd.read_excel(ROOT / "lsspfpl.xlsx")
-    for source_row, (_, row) in enumerate(legacy.iterrows(), start=2):
-        odds = [
-            clean_number(row.get("让球-胜")),
-            clean_number(row.get("让球-平")),
-            clean_number(row.get("让球-负")),
-        ]
-        result = clean_text(row.get("让球结果"))
-        if not valid_odds(odds) or result not in {"胜", "平", "负"}:
-            continue
         record = {
             "league": clean_text(row.get("联赛类型")),
             "home": clean_text(row.get("主队")),
             "away": clean_text(row.get("客队")),
             "score": clean_text(row.get("比分")),
             "result": result,
-            "handicap": int(row.get("让球", 0)),
-            "odds": odds,
-            "initialOdds": None,
-            "source": "历史让球胜平负库",
-            "sourceFile": "lsspfpl.xlsx",
+            "handicap": handicap,
+            "odds": final_odds,
+            "initialOdds": initial_odds if valid_odds(initial_odds) else None,
+            "source": "history.xlsx",
+            "sourceFile": "history.xlsx",
             "sourceRow": source_row,
+            "initialSourceFile": "history.xlsx" if valid_odds(initial_odds) else None,
+            "initialSourceRow": source_row if valid_odds(initial_odds) else None,
         }
-        key = (
-            record["league"],
-            record["home"],
-            record["away"],
-            record["score"],
-            record["handicap"],
-            *record["odds"],
-        )
-        initial = initial_by_key.get(key)
-        if initial:
-            matched_initial_keys.add(key)
-            record["initialOdds"] = initial["odds"]
-            record["initialSourceFile"] = initial["sourceFile"]
-            record["initialSourceRow"] = initial["sourceRow"]
-        else:
-            record["initialSourceFile"] = None
-            record["initialSourceRow"] = None
         records.append(record)
-
-    records.extend(
-        initial["record"]
-        for key, initial in initial_by_key.items()
-        if key not in matched_initial_keys
-    )
+    
     return records
 
 
@@ -277,83 +171,44 @@ def normalize_goal_label(value: object) -> str:
 
 
 def build_goal_history() -> list[dict]:
+    """
+    从 history.xlsx 的「总进球数」工作表读取进球数据。
+    每条记录包含初始赔率和最终赔率。
+    """
     records: list[dict] = []
-    initial_by_key: dict[tuple, dict] = {}
-    matched_initial_keys: set[tuple] = set()
     labels = ["0", "1", "2", "3", "4", "5", "6", "7+"]
-
-    rich = pd.read_excel(ROOT / "lottery_goals_data_df1cda93.xlsx")
-    for source_row, (_, row) in enumerate(rich.iterrows(), start=2):
+    
+    # 读取新的统一文件
+    df = pd.read_excel(ROOT / "history.xlsx", sheet_name="总进球数")
+    
+    for source_row, (_, row) in enumerate(df.iterrows(), start=2):
+        # 读取最终赔率（必需）
         final_odds = [clean_number(row.get(f"最终{label}进球赔率")) for label in labels]
         if not valid_odds(final_odds):
             continue
+            
         goal = normalize_goal_label(row.get("进球数"))
         if not goal:
             continue
+            
+        # 读取初始赔率（可选）
         initial_odds = [clean_number(row.get(f"初始{label}进球赔率")) for label in labels]
-        key = (
-            clean_text(row.get("联赛类型")),
-            clean_text(row.get("主队名")),
-            clean_text(row.get("客队名")),
-            goal,
-            *final_odds,
-        )
-        rich_record = {
-            "league": key[0],
-            "home": key[1],
-            "away": key[2],
-            "goals": goal,
-            "odds": final_odds,
-            "initialOdds": initial_odds if valid_odds(initial_odds) else None,
-            "source": "初始/最终进球库",
-            "sourceFile": "lottery_goals_data_df1cda93.xlsx",
-            "sourceRow": source_row,
-            "initialSourceFile": "lottery_goals_data_df1cda93.xlsx",
-            "initialSourceRow": source_row,
-        }
-        initial_by_key[key] = {
-            "odds": initial_odds if valid_odds(initial_odds) else None,
-            "sourceFile": "lottery_goals_data_df1cda93.xlsx",
-            "sourceRow": source_row,
-            "record": rich_record,
-        }
-
-    legacy = pd.read_excel(ROOT / "历史进球数.xlsx")
-    for source_row, (_, row) in enumerate(legacy.iterrows(), start=2):
-        odds = [clean_number(row.get(f"{label}进球赔率")) for label in labels]
-        if not valid_odds(odds):
-            continue
-        goal = normalize_goal_label(row.get("进球数"))
-        if not goal:
-            continue
+        
         record = {
             "league": clean_text(row.get("联赛类型")),
             "home": clean_text(row.get("主队名")),
             "away": clean_text(row.get("客队名")),
             "goals": goal,
-            "odds": odds,
-            "initialOdds": None,
-            "source": "历史进球库",
-            "sourceFile": "历史进球数.xlsx",
+            "odds": final_odds,
+            "initialOdds": initial_odds if valid_odds(initial_odds) else None,
+            "source": "history.xlsx",
+            "sourceFile": "history.xlsx",
             "sourceRow": source_row,
+            "initialSourceFile": "history.xlsx" if valid_odds(initial_odds) else None,
+            "initialSourceRow": source_row if valid_odds(initial_odds) else None,
         }
-        key = (record["league"], record["home"], record["away"], goal, *odds)
-        initial = initial_by_key.get(key)
-        if initial:
-            matched_initial_keys.add(key)
-            record["initialOdds"] = initial["odds"]
-            record["initialSourceFile"] = initial["sourceFile"]
-            record["initialSourceRow"] = initial["sourceRow"]
-        else:
-            record["initialSourceFile"] = None
-            record["initialSourceRow"] = None
         records.append(record)
-
-    records.extend(
-        initial["record"]
-        for key, initial in initial_by_key.items()
-        if key not in matched_initial_keys
-    )
+    
     return records
 
 

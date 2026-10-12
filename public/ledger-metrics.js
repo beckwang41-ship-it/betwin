@@ -1,3 +1,5 @@
+import { ledgerCalendarDate } from "./ledger-date.js";
+
 export function settledLedgerCounts(totals = {}, coreByScope = {}) {
   return {
     fixtures: Math.max(
@@ -19,6 +21,17 @@ const finiteMetric = (value) => {
 
 const countMetric = (value) => Math.max(0, finiteMetric(value));
 
+export const STAKE_UNIT_YUAN = 2;
+
+export function formatStakeProfit(units, unitYuan = STAKE_UNIT_YUAN) {
+  const amount = finiteMetric(units);
+  const yuanPerUnit = Math.max(0, finiteMetric(unitYuan));
+  const sign = amount > 0 ? "+" : amount < 0 ? "-" : "";
+  const absoluteUnits = Math.abs(amount);
+  const yuan = absoluteUnits * yuanPerUnit;
+  return `${sign}${yuan.toFixed(2)} 元 (${sign}${absoluteUnits.toFixed(2)} 注)`;
+}
+
 export function capitalLedgerMetrics(single = {}, parlays = {}) {
   const total = countMetric(single.total) + countMetric(parlays.total);
   const settled = countMetric(single.settled) + countMetric(parlays.settled);
@@ -36,6 +49,108 @@ export function capitalLedgerMetrics(single = {}, parlays = {}) {
     simulatedProfit,
     simulatedReturn: stakeUnits ? stakeUnits + simulatedProfit : 0,
     roi: stakeUnits ? simulatedProfit / stakeUnits : null,
+  };
+}
+
+export function ledgerPerformanceMetrics(events = [], rollingWindow = 30) {
+  const windowSize = Math.max(1, Math.trunc(Number(rollingWindow) || 30));
+  const ordered = (Array.isArray(events) ? events : [])
+    .map((event, index) => ({
+      id: String(event?.id ?? index),
+      type: String(event?.type || "single"),
+      market: String(event?.market || ""),
+      capturedAt: String(event?.capturedAt || ""),
+      settledAt: String(event?.settledAt || ""),
+      correct: Boolean(event?.correct),
+      stakeUnits: finiteMetric(event?.stakeUnits),
+      simulatedProfit: finiteMetric(event?.simulatedProfit),
+    }))
+    .filter(
+      (event) =>
+        event.stakeUnits > 0 &&
+        /^\d{4}-\d{2}-\d{2}/.test(event.capturedAt),
+    )
+    .sort((left, right) =>
+      left.capturedAt.localeCompare(right.capturedAt) ||
+      left.type.localeCompare(right.type) ||
+      left.id.localeCompare(right.id),
+    );
+
+  let cumulativeProfit = 0;
+  let peakProfit = 0;
+  let maximumDrawdown = 0;
+  let currentMissStreak = 0;
+  let longestMissStreak = 0;
+  const points = ordered.map((event, index) => {
+    cumulativeProfit += event.simulatedProfit;
+    peakProfit = Math.max(peakProfit, cumulativeProfit);
+    maximumDrawdown = Math.max(maximumDrawdown, peakProfit - cumulativeProfit);
+    currentMissStreak = event.correct ? 0 : currentMissStreak + 1;
+    longestMissStreak = Math.max(longestMissStreak, currentMissStreak);
+
+    const windowStart = Math.max(0, index - windowSize + 1);
+    const window = ordered.slice(windowStart, index + 1);
+    const windowStake = window.reduce(
+      (sum, row) => sum + row.stakeUnits,
+      0,
+    );
+    const windowProfit = window.reduce(
+      (sum, row) => sum + row.simulatedProfit,
+      0,
+    );
+    return {
+      ...event,
+      index: index + 1,
+      cumulativeProfit: Number(cumulativeProfit.toFixed(4)),
+      drawdown: Number((peakProfit - cumulativeProfit).toFixed(4)),
+      rollingRoi:
+        window.length === windowSize && windowStake > 0
+          ? Number((windowProfit / windowStake).toFixed(6))
+          : null,
+    };
+  });
+
+  const dailyMap = new Map();
+  for (const point of points) {
+    const date = ledgerCalendarDate(point.capturedAt);
+    const current = dailyMap.get(date) || {
+      date,
+      entries: 0,
+      correct: 0,
+      stakeUnits: 0,
+      dailyProfit: 0,
+      cumulativeProfit: 0,
+      rollingRoi: null,
+    };
+    current.entries += 1;
+    current.correct += point.correct ? 1 : 0;
+    current.stakeUnits += point.stakeUnits;
+    current.dailyProfit += point.simulatedProfit;
+    current.cumulativeProfit = point.cumulativeProfit;
+    current.rollingRoi = point.rollingRoi;
+    dailyMap.set(date, current);
+  }
+  const daily = [...dailyMap.values()].map((row) => ({
+    ...row,
+    stakeUnits: Number(row.stakeUnits.toFixed(4)),
+    dailyProfit: Number(row.dailyProfit.toFixed(4)),
+  }));
+  const last = points.at(-1) || null;
+
+  return {
+    entries: ordered.length,
+    rollingWindow: windowSize,
+    rollingReady: ordered.length >= windowSize,
+    rollingRoi: last?.rollingRoi ?? null,
+    cumulativeProfit: last?.cumulativeProfit ?? 0,
+    maximumDrawdown: Number(maximumDrawdown.toFixed(4)),
+    currentDrawdown: Number((last?.drawdown || 0).toFixed(4)),
+    longestMissStreak,
+    currentMissStreak,
+    firstCapturedAt: ordered[0]?.capturedAt || null,
+    lastCapturedAt: last?.capturedAt || null,
+    points,
+    daily,
   };
 }
 

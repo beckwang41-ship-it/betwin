@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildGoalEqualityDistribution,
   buildGoalMultipleDistribution,
+  buildGoalMultipleRecords,
   exactGoalMultipleRelations,
   goalMultipleRelationsForMarket,
   exactGoalOddsEqualities,
@@ -172,9 +173,7 @@ test("倍数预测按完全相同的0球终赔统计实际2球至7+球前两名"
     odds: [18, 6, 4.5, 3.6, 5, 9, 14, 20],
   });
 
-  const distribution = buildGoalMultipleDistribution(history, {
-    sourceFile: "历史进球数.xlsx",
-  });
+  const distribution = buildGoalMultipleDistribution(history);
   const prediction = selectGoalMultiplePrediction(
     [18, 6.75, 4.05, 3.6, 4.8, 7.5, 13, 17.5],
     distribution,
@@ -182,11 +181,11 @@ test("倍数预测按完全相同的0球终赔统计实际2球至7+球前两名"
 
   assert.equal(prediction.available, true);
   assert.equal(prediction.zeroOdds, 18);
-  assert.equal(prediction.samples, 4);
+  assert.equal(prediction.samples, 5);
   assert.deepEqual(prediction.labels, ["3", "2"]);
   assert.deepEqual(prediction.counts, [2, 1]);
-  assert.deepEqual(prediction.probabilities, [0.5, 0.25]);
-  assert.equal(prediction.coverageProbability, 0.75);
+  assert.deepEqual(prediction.probabilities, [0.4, 0.2]);
+  assert.ok(Math.abs(prediction.coverageProbability - 0.6) < 1e-10);
   assert.deepEqual(prediction.relations, [
     { index: 3, label: "3", multiple: 5 },
   ]);
@@ -214,4 +213,22 @@ test("没有整数倍关系或没有同档历史时不生成倍数预测", () =>
     ).available,
     false,
   );
+});
+
+test("倍率样本包含所有数据库来源及独立进球记录，按批次和ID排序", () => {
+  const odds = [18, 6, 4.5, 3.6, 5, 9, 14, 20];
+  const rows = [
+    { historyId: 9, historyBatchId: 0, sourceFile: "历史进球数.xlsx", sourceRow: 9000, goals: "3", odds },
+    { historyId: 11, historyBatchId: 2, sourceFile: "history.xlsx", sourceRow: 3, goals: "4", odds },
+    { historyId: 10, historyBatchId: 1, sourceFile: "history.xlsx", sourceRow: 3, goals: "2", odds },
+    { historyId: 12, historyBatchId: 2, sourceFile: "新来源", sourceRow: 2, goals: "1", odds },
+    { historyId: 13, historyBatchId: 2, sourceFile: "新来源", sourceRow: 4, goals: "2", odds: [12, 4.01, 3.01, 3.4, 4.2, 7, 11, 18] },
+  ];
+  const records = buildGoalMultipleRecords(rows);
+  assert.deepEqual(records.map(r => r.historyId), [12, 11, 10, 9]);
+  // 表内含0/1球赛果；原有2至7+球分布口径不变。
+  const distribution = buildGoalMultipleDistribution(rows);
+  assert.equal(distribution[0].samples, 3);
+  assert.deepEqual(buildGoalMultipleDistribution(records), distribution);
+  assert.equal(records.filter(r => r.sourceFile === "history.xlsx").length, 2);
 });

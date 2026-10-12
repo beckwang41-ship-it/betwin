@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-28T06:10:14.523Z",
+  "generatedAt": "2026-09-04T01:40:20.404Z",
   "reportOnly": true,
   "affectsProduction": false,
   "data": {
     "database": "betwin.db",
-    "verifiedMatches": 9021,
-    "sourceUpdatedAt": "2026-08-28T05:00:08+00:00"
+    "verifiedMatches": 9117,
+    "sourceUpdatedAt": "2026-09-03T11:05:22+00:00"
   },
   "methodology": {
     "separation": "概率质量门禁与投注策略门禁分别报告；负ROI不否定概率模型，ROI改善也不能绕过概率门禁",
@@ -19,15 +19,15 @@
   "artifacts": {
     "adaptive": {
       "generatedAt": "2026-08-28T05:14:59.983Z",
-      "current": true
+      "current": false
     },
     "weighting": {
       "generatedAt": "2026-08-28T06:09:59.289Z",
-      "current": true
+      "current": false
     },
     "movement": {
       "generatedAt": "2026-08-28T05:18:25.513Z",
-      "current": true
+      "current": false
     }
   },
   "modules": {

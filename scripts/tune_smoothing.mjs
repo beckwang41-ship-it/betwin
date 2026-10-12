@@ -16,6 +16,8 @@ import {
   createThreeWaySmoothingResolvers,
 } from "../lib/three-way-smoothing.mjs";
 import { tuneHistoricalSmoothing } from "../lib/smoothing-tuning.mjs";
+import { HISTORY_TIMELINE_VERSION } from "../lib/history-timeline.mjs";
+import { SMOOTHING_VALIDATION_VERSION } from "../lib/smoothing-production.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const DATABASE_PATH =
@@ -107,7 +109,8 @@ try {
   const counts = store.getCounts();
   const goalHistory = store.getGoalHistory();
   const sourceUpdatedAt = store.getHistoricalSourceUpdatedAt();
-  const spf = candidateOnlyResult(tune(buildThreeWaySmoothingRows(history, "spf"), "spf", {
+  const pools = { spfHistory: store.getSpfHistory(), hhadHistory: store.getHhadHistory(), pairedHistory: store.getPairedSpfHhadHistory() };
+  const spf = candidateOnlyResult(tune(buildThreeWaySmoothingRows(pools, "spf"), "spf", {
     labels: OUTCOME_LABELS,
     outcomeField: "result",
     distance: () => Number.POSITIVE_INFINITY,
@@ -116,7 +119,7 @@ try {
       hhadTolerance: THRESHOLDS.hhad,
     }),
   }));
-  const hhad = candidateOnlyResult(tune(buildThreeWaySmoothingRows(history, "hhad"), "hhad", {
+  const hhad = candidateOnlyResult(tune(buildThreeWaySmoothingRows(pools, "hhad"), "hhad", {
     labels: OUTCOME_LABELS,
     outcomeField: "result",
     distance: () => Number.POSITIVE_INFINITY,
@@ -159,11 +162,13 @@ try {
   }));
 
   const config = {
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
     candidateOnly: true,
     runtimeEnabled: false,
     data: {
+      timelineVersion: HISTORY_TIMELINE_VERSION,
+      validationVersion: SMOOTHING_VALIDATION_VERSION,
       database: path.basename(DATABASE_PATH),
       verifiedMatches: counts.verifiedHistory,
       goalHistory: counts.goalHistory,
@@ -175,15 +180,15 @@ try {
       matchingVersion: THREE_WAY_MATCHING_VERSION,
       goalMatchingVersion: GOAL_MATCHING_VERSION,
       ordering:
-        "每个来源文件按 source_row 从小到大，每场只使用其之前的历史数据",
+        "旧累加来源按各自旧顺序回放；每日增量按数据库批次，整批预测后才进入训练，旧来源作为初始池；统一切分且不拆批次",
       warmup: WARMUP,
       validationFraction: VALIDATION_FRACTION,
       selection:
-        "前80%选择历史先验强度，最新20%只做独立门禁；本命令只生成候选报告，无论门禁结果如何都不会自动上线",
+        "按时间代理序列前80%选择强度、后20%检验，不拆批次；旧末段已被多次观察，本次属于研究复核而非全新独立测试；不自动上线",
       promotion:
         "生产启用状态由独立的smoothing-production.json人工批准记录管理，数据库刷新不会覆写批准文件",
       threeWayMatching:
-        "胜平负和让球同时存在时按生产规则联合匹配；联合样本为0时分别回退独立±7%匹配",
+        "双盘口使用配对历史联合匹配，联合为0不回退；缺少一个盘口才单盘口匹配；先验使用该玩法全部可用历史，包括未配对记录",
       prior:
         "同联赛宽赔率带样本足够时优先；否则依次回退到全联赛宽赔率带、同联赛全部历史、全部历史基础分布",
       formula: "(原始场次数 + 先验强度 × 历史先验概率) / (原始样本数 + 先验强度)",

@@ -50,7 +50,7 @@ test("共享三项匹配器联合命中，并在联合为零时拒绝独立回�
   assert.equal(joint.hhad.similar.length, 1);
   assert.equal(joint.jointRows.length, 1);
   assert.equal(joint.spf.similar[0].result, "胜");
-  assert.equal(joint.hhad.similar[0].result, "平");
+  assert.equal(joint.hhad.similar[0].result, "胜");
   assert.equal(
     joint.spf.similar[0].distance,
     joint.hhad.similar[0].distance,
@@ -66,6 +66,30 @@ test("共享三项匹配器联合命中，并在联合为零时拒绝独立回�
   assert.equal(fallback.spf.similar.length, 0);
   assert.equal(fallback.hhad.similar.length, 0);
   assert.equal(fallback.jointRows.length, 0);
+});
+
+test("联合样本分别保留两个玩法的原始赛果，不按比分重新结算", () => {
+  const spf = row({ score: "无比分", result: "负" });
+  const hhad = row({
+    score: "无比分",
+    result: "平",
+    handicap: -1,
+    odds: [2.1, 3.1, 3.8],
+  });
+  const selection = selectThreeWaySimilarity(
+    match(),
+    {
+      spfHistory: [spf],
+      hhadHistory: [hhad],
+      pairedHistory: [{ score: "无比分", spf, hhad }],
+    },
+    { spfTolerance: 0.07, hhadTolerance: 0.07 },
+  );
+
+  assert.equal(selection.spf.similar[0].result, "负");
+  assert.equal(selection.hhad.similar[0].result, "平");
+  assert.equal(selection.spf.jointSamples, 1);
+  assert.equal(selection.hhad.jointSamples, 1);
 });
 
 test("共享三项匹配器在同联赛口径下排除其他联赛", () => {

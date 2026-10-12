@@ -1,11 +1,11 @@
 import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  findSimilarSpfMovements,
-  findSimilarSpf,
-  predictSpfWithMovement,
-} from "../lib/predictor.mjs";
+import { createDataStore } from "../lib/database.mjs";
+import { buildThreeWayEvents } from "../lib/three-way-backtest.mjs";
+import { runProductionThreeWay } from "../lib/production-backtest.mjs";
+import { HISTORY_TIMELINE_VERSION } from "../lib/history-timeline.mjs";
+import { FORMAL_PRODUCTION_THRESHOLDS } from "../lib/reliability-validation.mjs";
 import {
   predictProductionGoals,
   selectProductionGoalSimilarity,
@@ -31,49 +31,10 @@ function topIndex(probabilities) {
   return probabilities.indexOf(Math.max(...probabilities));
 }
 
-function loadSpfRows(db) {
-  return db
-    .prepare(`
-      SELECT m.spf_source_file AS source_file,
-             m.spf_source_row AS source_row,
-             s.league, s.result,
-             s.initial_home_odds, s.initial_draw_odds, s.initial_away_odds,
-             s.final_home_odds, s.final_draw_odds, s.final_away_odds
-      FROM historical_matches m
-      JOIN historical_spf s ON s.id = m.spf_id
-      JOIN historical_hhad h ON h.id = m.hhad_id
-      JOIN historical_goals g ON g.id = m.goals_id
-      WHERE m.match_status = 'matched' AND m.goal_consistent = 1
-      ORDER BY m.spf_source_file, m.spf_source_row
-    `)
-    .all()
-    .map((row) => ({
-      sourceFile: row.source_file,
-      sourceRow: row.source_row,
-      league: row.league,
-      result: row.result,
-      initialOdds:
-        row.initial_home_odds &&
-        row.initial_draw_odds &&
-        row.initial_away_odds
-          ? [
-              row.initial_home_odds,
-              row.initial_draw_odds,
-              row.initial_away_odds,
-            ]
-          : null,
-      odds: [
-        row.final_home_odds,
-        row.final_draw_odds,
-        row.final_away_odds,
-      ],
-    }));
-}
-
 export function loadGoalRows(db) {
   return db
     .prepare(`
-      SELECT source_file, source_row, league, actual_goals,
+      SELECT id, history_batch_id, source_file, source_row, league, actual_goals,
              initial_g0, initial_g1, initial_g2, initial_g3,
              initial_g4, initial_g5, initial_g6, initial_g7plus,
              final_g0, final_g1, final_g2, final_g3,
@@ -96,6 +57,8 @@ export function loadGoalRows(db) {
       return {
         sourceFile: row.source_file,
         sourceRow: row.source_row,
+        historyId: row.id,
+        historyBatchId: row.history_batch_id,
         league: row.league,
         goals: row.actual_goals,
         initialOdds:
@@ -121,104 +84,6 @@ export function loadGoalRows(db) {
         odds,
       };
     });
-}
-
-function loadHhadRows(db) {
-  return db
-    .prepare(`
-      SELECT m.hhad_source_file AS source_file,
-             m.hhad_source_row AS source_row,
-             h.league, h.handicap, h.result,
-             h.initial_home_odds, h.initial_draw_odds, h.initial_away_odds,
-             h.final_home_odds, h.final_draw_odds, h.final_away_odds
-      FROM historical_matches m
-      JOIN historical_spf s ON s.id = m.spf_id
-      JOIN historical_hhad h ON h.id = m.hhad_id
-      JOIN historical_goals g ON g.id = m.goals_id
-      WHERE m.match_status = 'matched' AND m.goal_consistent = 1
-      ORDER BY m.hhad_source_file, m.hhad_source_row
-    `)
-    .all()
-    .map((row) => ({
-      sourceFile: row.source_file,
-      sourceRow: row.source_row,
-      league: row.league,
-      handicap: row.handicap,
-      result: row.result,
-      initialOdds:
-        row.initial_home_odds &&
-        row.initial_draw_odds &&
-        row.initial_away_odds
-          ? [
-              row.initial_home_odds,
-              row.initial_draw_odds,
-              row.initial_away_odds,
-            ]
-          : null,
-      odds: [
-        row.final_home_odds,
-        row.final_draw_odds,
-        row.final_away_odds,
-      ],
-    }));
-}
-
-function weightingOptions(tolerance, floor, power) {
-  return {
-    enabled: Number(floor) < 1,
-    tolerance,
-    floor,
-    power,
-    coreRatio: 0.5,
-  };
-}
-
-function runSpf(rows, warmup, tolerance, weightFloor, weightPower) {
-  return walkForward(rows, {
-    warmup,
-    predict(target, history) {
-      const similar = findSimilarSpf(history, target.odds, { tolerance });
-      const movementSimilar = findSimilarSpfMovements(
-        similar,
-        target.initialOdds,
-        target.odds,
-        { finalTolerance: tolerance },
-      );
-      const model = predictSpfWithMovement(
-        target.odds,
-        similar,
-        movementSimilar,
-        target.initialOdds,
-        {
-          maxWeight: 0.05,
-          applyCorrection: false,
-          blendOptions: {
-            empiricalOnly: true,
-            weighting: weightingOptions(
-              tolerance,
-              weightFloor,
-              weightPower,
-            ),
-          },
-        },
-      );
-      const actualIndex = model.labels.indexOf(target.result);
-      return {
-        actualIndex,
-        odds: target.odds,
-        marketProbabilities: model.market,
-        marketPredictionIndex: topIndex(model.market),
-        baseModelProbabilities: model.baseline,
-        baseModelPredictionIndex: topIndex(model.baseline),
-        modelProbabilities: model.final,
-        modelPredictionIndex: topIndex(model.final),
-        sampleSize: similar.length,
-        effectiveSampleSize: model.weighting.effectiveSamples,
-        movementSampleSize: movementSimilar.length,
-        movementApplied: model.movement.applied,
-      };
-    },
-  });
 }
 
 export function runGoals(rows, warmup, similarityOptions = {}) {
@@ -252,62 +117,12 @@ export function runGoals(rows, warmup, similarityOptions = {}) {
   });
 }
 
-function runHhad(rows, warmup, tolerance, weightFloor, weightPower) {
-  return walkForward(rows, {
-    warmup,
-    predict(target, history) {
-      const sameHandicapHistory = history.filter(
-        (row) => row.handicap === target.handicap,
-      );
-      const similar = findSimilarSpf(sameHandicapHistory, target.odds, {
-        tolerance,
-      });
-      const movementSimilar = findSimilarSpfMovements(
-        similar,
-        target.initialOdds,
-        target.odds,
-        { finalTolerance: tolerance },
-      );
-      const model = predictSpfWithMovement(
-        target.odds,
-        similar,
-        movementSimilar,
-        target.initialOdds,
-        {
-          applyCorrection: false,
-          blendOptions: {
-            empiricalOnly: true,
-            weighting: weightingOptions(
-              tolerance,
-              weightFloor,
-              weightPower,
-            ),
-          },
-        },
-      );
-      const actualIndex = model.labels.indexOf(target.result);
-      return {
-        actualIndex,
-        odds: target.odds,
-        marketProbabilities: model.market,
-        marketPredictionIndex: topIndex(model.market),
-        baseModelProbabilities: model.baseline,
-        baseModelPredictionIndex: topIndex(model.baseline),
-        modelProbabilities: model.final,
-        modelPredictionIndex: topIndex(model.final),
-        sampleSize: similar.length,
-        effectiveSampleSize: model.weighting.effectiveSamples,
-        movementSampleSize: movementSimilar.length,
-        movementApplied: model.movement.applied,
-      };
-    },
-  });
-}
-
-function summarize(run, { includeGoalPair = false } = {}) {
+export function summarize(run, { includeGoalPair = false } = {}) {
   const modeledCases = run.cases.filter((item) => item.sampleSize > 0);
   const result = {
     sources: run.sources,
+    targets: run.cases.length,
+    coverage: run.cases.length ? modeledCases.length / run.cases.length : 0,
     samples: {
       median: median(run.cases.map((item) => item.sampleSize)),
       medianEffective: median(
@@ -316,7 +131,7 @@ function summarize(run, { includeGoalPair = false } = {}) {
       zero: run.cases.filter((item) => item.sampleSize === 0).length,
     },
     market: summarizeCases(
-      run.cases,
+      modeledCases,
       "marketProbabilities",
       "marketPredictionIndex",
     ),
@@ -375,27 +190,24 @@ function printSection(title, result) {
 
 function main() {
   const warmup = Number(argument("warmup", 500));
-  const spfTolerance = Number(argument("spf-tolerance", 0.05));
+  const spfTolerance = Number(argument("spf-tolerance", FORMAL_PRODUCTION_THRESHOLDS.spf));
   const weightFloor = Number(argument("weight-floor", 1));
   const weightPower = Number(argument("weight-power", 1));
   const json = process.argv.includes("--json");
 
   const db = new DatabaseSync(DATABASE_PATH, { readOnly: true });
   try {
-    const spfRun = runSpf(
-      loadSpfRows(db),
-      warmup,
-      spfTolerance,
-      weightFloor,
-      weightPower,
-    );
-    const hhadRun = runHhad(
-      loadHhadRows(db),
-      warmup,
-      spfTolerance,
-      weightFloor,
-      weightPower,
-    );
+    if (weightFloor !== 1 || weightPower !== 1) throw new Error("正式回测使用生产等权口径；加权候选请使用研究入口");
+    const store = createDataStore(DATABASE_PATH);
+    let threeWay;
+    try {
+      threeWay = runProductionThreeWay(buildThreeWayEvents({
+        spfHistory: store.getSpfHistory(), hhadHistory: store.getHhadHistory(),
+        pairedHistory: store.getPairedSpfHhadHistory(),
+      }), { warmup, spfTolerance, hhadTolerance: spfTolerance });
+    } finally { store.close(); }
+    const spfRun = { ...threeWay, cases: threeWay.cases.filter(row => row.market === "spf") };
+    const hhadRun = { ...threeWay, cases: threeWay.cases.filter(row => row.market === "hhad") };
     const goalRun = runGoals(loadGoalRows(db), warmup);
     const result = {
       settings: {
@@ -406,7 +218,7 @@ function main() {
         weightPower,
       },
       discipline:
-        "每一场只使用同一来源文件中 source_row 更小的记录；不使用当前行或后续行",
+        `${HISTORY_TIMELINE_VERSION}：每日增量按数据库入库批次；整批预测后才加入训练；旧累加文件各自按原有顺序回测`,
       spf: summarize(spfRun),
       hhad: summarize(hhadRun),
       goals: summarize(goalRun, { includeGoalPair: true }),

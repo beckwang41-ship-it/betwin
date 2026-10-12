@@ -22,6 +22,13 @@ __pycache__/
 
 # Generated model data and reports
 /data/processed/
+/data/typesafe/
+/data/prediction-audit/
+/data/context-experiments/
+/data/context-pilot/
+/data/prediction-trials/
+/data/goal-pair-research/
+/data/*.cases.jsonl
 /data/challenger-model.json
 /output/
 /.playwright-cli/

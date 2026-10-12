@@ -1,0 +1,26 @@
+{
+  "version": "recent-form-residual-research-v1",
+  "config": {
+    "minimumTraining": 200,
+    "minimumEvaluation": 100,
+    "epochs": 120,
+    "learningRate": 0.1,
+    "l2": 0.05
+  },
+  "counts": {
+    "total": 2509,
+    "withoutFeatures": 2385,
+    "invalid": 61,
+    "pending": 63,
+    "eligibleSettled": 0
+  },
+  "comparisons": [],
+  "productionChanged": false,
+  "notes": [
+    "仅分析留档内冻结的战绩，不回填旧比赛；同算法版本、全部联赛分别比较。",
+    "固定正则化多分类残差模型，以原赔率模型概率为基线；只用此前已结算的样本训练。",
+    "每个版本至少200场训练，另积累100场滚动评估再讨论效果；这只是研究样本门槛，不代表验证通过。",
+    "总进球比较概率前两项的双选命中率；不等于已验证双选策略或收益提升。",
+    "战绩按用户赛前采集约定使用，未核验精确开赛时间；不自动启用，不据此承诺准确率或盈利。"
+  ]
+}

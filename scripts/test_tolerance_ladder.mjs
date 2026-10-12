@@ -150,6 +150,7 @@ function report(name, res) {
 const all = loadRows();
 const main = pickMainSource(all);
 const rows = all.filter((r) => r.source_file === main.file);
+console.warn("旧研究协议：仅分析数据库中样本最多的单一来源，不是全库阈值结论；全库批次回测请用 backtest:rolling。");
 console.log(`数据库: ${DB_PATH}`);
 console.log(`主时间序列来源: ${main.file}，共 ${rows.length} 场（warmup ${WARMUP}）`);
 console.log(`评估口径: 严格只使用 source_row 更早的记录；并列方向记为不出手\n`);
